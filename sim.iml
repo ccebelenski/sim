@@ -12,5 +12,7 @@
     <orderEntry type="library" name="org.slf4j:slf4j-jdk14:1.7.12" level="project" />
     <orderEntry type="library" name="com.googlecode.lanterna:lanterna:3.0.0-beta3" level="project" />
     <orderEntry type="library" name="scala-sdk-2.12.4" level="application" />
+    <orderEntry type="library" name="org.beryx:text-io:2.8.0" level="project" />
+    <orderEntry type="library" name="org.beryx:text-io-web:2.8.0" level="project" />
   </component>
 </module>

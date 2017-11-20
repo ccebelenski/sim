@@ -15,4 +15,7 @@ abstract class BasicCPU {
 
   def interrupt(interrupt: Interrupt)
 
+  def run()
+
+
 }
