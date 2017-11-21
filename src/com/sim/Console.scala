@@ -28,6 +28,9 @@ class Console {
     val help:Command = new HelpCommand
     Console.commandTree.put(help.commandToken, help)
 
+    val list:Command = new ListCommand
+    Console.commandTree.put(list.commandToken, list)
+
     version.process(null)
   }
 
