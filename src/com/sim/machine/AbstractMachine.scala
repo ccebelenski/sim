@@ -15,5 +15,4 @@ abstract class AbstractMachine extends Named{
 object AbstractMachine {
   val services:Iterable[AbstractMachine] = ServiceLoader.load(classOf[AbstractMachine]).asScala
 
-
 }

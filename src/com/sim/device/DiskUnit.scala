@@ -40,31 +40,14 @@ trait DiskUnit extends BasicUnit {
   }
 
   def setCapacity(capacity: String): Unit = {
-    if (attached) throw new DiskUnitAttachedException(this, "Unit Already Attached.")
-
-    val cap = Utils.getUint(capacity, UInt(10), UInt(2000000))
-
-    val div = if ((device.flags & BasicDevice.DEV_SECTORS) != 0) UInt(512) else UInt(1)
-    capac = (cap * UInt(1000000)) / div
-
   }
 
 
   def logCapacity(): Unit = {
-    val div = if ((device.flags & BasicDevice.DEV_SECTORS) != 0) UInt(512) else UInt(1)
-    val capac = this.capac * div
-    val cap_uints = if (device.dwidth / device.aincr == 16) "W" else "B"
-    val cstring = if (capac != 0) {
-      if (capac >= UInt(1000000)) "capacity=%dM%s".format((capac / UInt(1000000)).intValue, cap_uints)
-      else if (capac >= UInt(1000)) "capacity=%dK%s".format((capac / UInt(1000)).intValue, cap_uints)
-      else "capacity=%d%s".format(capac.intValue, cap_uints)
-    } else "undefined capacity"
-
-    logger.info(cstring)
   }
 
   def isAvailable: Boolean = {
-    attached
+  true
   }
 
   def isWriteProtected: Boolean = {
@@ -72,13 +55,8 @@ trait DiskUnit extends BasicUnit {
   }
 
   def getDiskSize: ULong = {
-
-    if (format == DiskFormatValue.Standard)
-      ULong(Files.size(path))
-
-    else throw new UnsupportedDiskFormatException(this, "Only standard format implemented.")
+ULong(0)
   }
-
 }
 
 class DiskBuffer {

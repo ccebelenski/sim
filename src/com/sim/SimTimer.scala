@@ -5,11 +5,11 @@ import com.sim.unsigned.{UInt, ULong}
 
 class SimTimer extends BasicDevice {
 
-  val description: String = "Timer Device"
+  override val description: String = "Timer Device"
   val name: String = "TIMER"
+  override var deviceName: String = ""
 
-
-  def timerInit() = ???
+  def init():Unit = ???
 
   def RTCCInit() = ???
 
@@ -21,7 +21,8 @@ class SimTimer extends BasicDevice {
 
   def sleep() = ???
 
-  def msSleep() = ???
+  // 443
+  def msSleep(msec: ULong) : ULong = idleMsSleep(msec)
 
   def idleMsSleep(msec: ULong): ULong = {
 
@@ -33,7 +34,6 @@ class SimTimer extends BasicDevice {
     ULong(end - now)
   }
 
-  def timespecDiff() = ???
 
   def timerActivateAfter() = ???
 
@@ -83,8 +83,49 @@ object SimTimer {
   val IDLE_STMIN = 2 // min sec for stability
   val IDLE_STDFLT = 20 // dft sec for stability
   val IDLE_STMAX = 600 // max sec for stability
-
+  val CLK_TPS = 10 // 10Hz system clock for internal timer
 
   var OSSleepMin_ms: ULong = ULong(0)
   var OSSleepInc_ms: ULong = ULong(0)
+  var sim_time : ULong = ULong(0)
+
+  // Internal calibrated Timer
+  var internal_timer: SimTimerUnit =  _
+
+  var sim_os_clock_resolution_ms = 0L
+  var sim_internal_clock_tps =0L
+
+  def sim_timer_init () : Boolean  =
+  {
+    val clock_start, clock_last, clock_now = 0L
+
+    for (tmr=0; tmr<=SIM_NTIMERS; tmr++) {
+    sim_timer_units[tmr].action = &sim_timer_tick_svc;
+    sim_timer_units[tmr].flags = UNIT_DIS | UNIT_IDLE;
+    sim_clock_cosched_queue[tmr] = QUEUE_LIST_END;
+  }
+    sim_stop_unit.action = &sim_timer_stop_svc;
+    SIM_INTERNAL_UNIT.flags = UNIT_IDLE;
+    sim_register_internal_device (&sim_timer_dev);          /* Register Clock Assist device */
+    sim_throttle_unit.action = &sim_throt_svc;
+    sim_register_clock_unit_tmr (&SIM_INTERNAL_UNIT, SIM_INTERNAL_CLK);
+    sim_idle_enab = FALSE;                                  /* init idle off */
+    sim_idle_rate_ms = sim_os_ms_sleep_init ();             /* get OS timer rate */
+    sim_set_rom_delay_factor (sim_get_rom_delay_factor ()); /* initialize ROM delay factor */
+
+    clock_last = clock_start = sim_os_msec ();
+    sim_os_clock_resolution_ms = 1000L
+    do {
+      var clock_diff = 0L
+
+      clock_now = sim_os_msec ();
+      clock_diff = clock_now - clock_last;
+      if ((clock_diff > 0) && (clock_diff < sim_os_clock_resoluton_ms))
+        sim_os_clock_resolution_ms = clock_diff;
+      clock_last = clock_now;
+    } while (clock_now < clock_start + 100);
+    sim_os_tick_hz = 1000/(sim_os_clock_resoluton_ms * (sim_idle_rate_ms/sim_os_clock_resoluton_ms));
+    return (sim_idle_rate_ms != 0);
+  }
+
 }
