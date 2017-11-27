@@ -13,7 +13,6 @@ trait DiskUnit extends BasicUnit {
 
   val logger: Logger = LoggerFactory.getLogger(classOf[DiskUnit])
 
-  var device: DiskDevice = _
   // debugging bit
   var dbit: UInt = UInt(0)
   // disk sector size

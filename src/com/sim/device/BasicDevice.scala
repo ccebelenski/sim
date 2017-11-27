@@ -10,7 +10,7 @@ import scala.collection.mutable.ArrayBuffer
 abstract class BasicDevice extends Named{
 
   val description: String = "No Description Available"
-  private val units: ArrayBuffer[BasicUnit] = new ArrayBuffer[BasicUnit]
+  val units: ArrayBuffer[BasicUnit] = new ArrayBuffer[BasicUnit]
   var deviceName:String
 
   def init() : Unit
@@ -23,7 +23,7 @@ abstract class BasicDevice extends Named{
     units.clear()
   }
 
-  def getUnits: Iterator[BasicUnit] = {
+  def getUnits(): Iterator[BasicUnit] = {
     units.toIterator
   }
 
