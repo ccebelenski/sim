@@ -49,8 +49,8 @@ object SimTimer {
   val IDLE_STMAX = 600 // max sec for stability
   val CLK_TPS = 10 // 10Hz system clock for internal timer
 
-  var OSSleepMin_ms: ULong = ULong(0)
-  var OSSleepInc_ms: ULong = ULong(0)
+  var OSSleepMin_ms: Long = 0L
+  var OSSleepInc_ms: Long = 0L
   var sim_time : Long = 0L
 
   // Internal calibrated Timer
@@ -108,38 +108,49 @@ object SimTimer {
   def computeMinimumSleep(): Long = {
     val sleepSamples = 100
     var i: Int = 0
-    var tot: ULong = ULong(0)
-    var tim: ULong = ULong(0)
+    var tot: Long = 0L
+    var tim: Long = 0L
 
     val currentPriority = Thread.currentThread().getPriority
     // Update our priority to get some more accurate numbers
     Thread.currentThread().setPriority(Thread.MAX_PRIORITY)
 
-    idleMsSleep(UInt(1)) // Start sampling on a tick boundary
-    for (i <- 0 to sleepSamples) tot += idleMsSleep(UInt(1))
-    tim = ULong(tot / sleepSamples)
+    idleMsSleep(1L) // Start sampling on a tick boundary
+    for (i <- 0 to sleepSamples) tot += idleMsSleep(1L)
+    tim = tot / sleepSamples
 
     SimTimer.OSSleepMin_ms = tim
 
-    idleMsSleep(UInt(1)) // Start samplng on a tick boundary
-    tot = ULong(0)
-    for (i <- 0 to sleepSamples) tot += idleMsSleep(SimTimer.OSSleepMin_ms + ULong(1))
-    tim = ULong(tot / sleepSamples)
+    idleMsSleep(1L) // Start samplng on a tick boundary
+    tot = 0L
+    for (i <- 0 to sleepSamples) tot += idleMsSleep(SimTimer.OSSleepMin_ms + 1L)
+    tim = tot / sleepSamples
     SimTimer.OSSleepInc_ms = tim - SimTimer.OSSleepMin_ms
 
     Thread.currentThread().setPriority(currentPriority)
     SimTimer.OSSleepMin_ms
   }
 
-  def idleMsSleep(msec: ULong): ULong = {
+  def idleMsSleep(msec: Long): Long = {
 
     val now = System.currentTimeMillis()
 
     Thread.sleep(msec.longValue)
 
     val end = System.currentTimeMillis()
-    ULong(end - now)
+    end - now
+
   }
   // 443
-  def msSleep(msec: ULong) : ULong = idleMsSleep(msec)
+  def msSleep(msec: Long) : Long = idleMsSleep(msec)
+
+  /* sim_timer_idle_capable - tell if the host is Idle capable and what the host OS tick size is */
+
+  def sim_timer_idle_capable () : Boolean =
+  {
+    sim_idle_rate_ms != 0
+  }
+
+
+
 }

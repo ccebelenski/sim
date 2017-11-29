@@ -7,8 +7,7 @@ class TimerTests {
 
   @Test
   def testTimerMinimumSleep() : Unit = {
-    val timer = new SimTimer
-    val result = timer.computeMinimumSleep()
+    val result = SimTimer.computeMinimumSleep()
 
     System.out.println(s"Result = $result")
   }
