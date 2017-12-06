@@ -11,9 +11,16 @@ import com.sim.unsigned.UInt
 abstract class BasicUnit(val device: BasicDevice) {
 
   var unitName:String
+  var time: Long = 0L
+  var usecs_remaining : Long = 0L
+
+
 
   device.addUnit(this)
 
 
   def init():Unit
+
+  def action():Unit
+
 }

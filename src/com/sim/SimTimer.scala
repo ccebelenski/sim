@@ -1,6 +1,6 @@
 package com.sim
 
-import com.sim.device.BasicDevice
+import com.sim.device.{BasicDevice, BasicUnit}
 import com.sim.unsigned.{UInt, ULong}
 
 class SimTimer extends BasicDevice {
@@ -25,7 +25,6 @@ class SimTimer extends BasicDevice {
 
 
 
-  def timerActivateAfter() = ???
 
   def timerActivateTime() = ???
 
@@ -52,6 +51,10 @@ object SimTimer {
   var OSSleepMin_ms: Long = 0L
   var OSSleepInc_ms: Long = 0L
   var sim_time : Long = 0L
+  var sim_rtime: Long = 0L
+  var sim_interval: Long = 0L
+  var noqueue_time: Long = 0L
+
 
   // Internal calibrated Timer
   var internal_timer: SimTimerUnit =  _
@@ -105,6 +108,10 @@ object SimTimer {
 
   def setROMDelayFactor() = ???
 
+
+  def timerActivateAfter(unit:BasicUnit, usecs:Long) = ???
+
+
   def computeMinimumSleep(): Long = {
     val sleepSamples = 100
     var i: Int = 0
@@ -152,5 +159,16 @@ object SimTimer {
   }
 
 
+  def updateSimTime() : Unit = {
+    var _x: Long = 0
+    val queueEmpty = EventQueue.clockQueue.isEmpty
+    if(queueEmpty) _x = noqueue_time
+    else _x = EventQueue.clockQueue.front.time
+
+    sim_time = sim_time + (_x - sim_interval)
+    sim_rtime = sim_rtime + (_x - sim_interval)
+    if(queueEmpty) noqueue_time = sim_interval
+    else EventQueue.clockQueue.front.time = sim_interval
+  }
 
 }
