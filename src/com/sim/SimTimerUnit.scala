@@ -1,7 +1,7 @@
 package com.sim
 
 import com.sim.device.{BasicDevice, BasicUnit}
-import com.sim.unsigned.{UInt, ULong}
+import com.sim.unsigned.{UByte, UInt, ULong}
 
 import scala.collection.JavaConverters._
 
@@ -319,5 +319,5 @@ class SimTimerUnit(override val device: SimTimer, val isCalibrated: Boolean = fa
 
   override def handles(value: UInt): Boolean = ???
 
-  override def action(action: UInt, value: UInt): UInt = ???
+  override def action(action: UInt, value: UByte, isWrite:Boolean): UByte = ???
 }

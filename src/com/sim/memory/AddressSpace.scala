@@ -22,11 +22,8 @@ abstract class AddressSpace(val lowAddress: UInt, val highAddress: UInt) {
     if ((address >= lowAddress) && (address <= highAddress)) true else false
   }
 
-  def put8(address: UInt, value: UInt): Unit
+  def put8(address: UInt, value: UByte): Unit
 
   def get8(address: UInt): UByte
-
-  def get16(address: UInt): UInt
-
 
 }

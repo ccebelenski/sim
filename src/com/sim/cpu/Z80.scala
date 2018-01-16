@@ -6,4 +6,10 @@ class Z80(isBanked:Boolean) extends BasicCPU(isBanked) {
   override val MMU: BasicMMU = new Z80MMU(this)
 
   override def init(): Unit = ???
+
+  override def resetCPU(): Unit = {
+
+    // Set up basic memory
+
+  }
 }

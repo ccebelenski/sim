@@ -74,4 +74,10 @@ object Utils {
     }
     returnValue
   }
+
+
+  def outln(msg:String) : Unit = {
+    if(Console.textTerminal != null) Console.textTerminal.println(msg)
+    else System.out.println(msg)
+  }
 }

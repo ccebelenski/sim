@@ -1,6 +1,6 @@
 package com.sim.device
 
-import com.sim.unsigned.UInt
+import com.sim.unsigned.{UByte, UInt}
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -19,15 +19,15 @@ abstract class PortMappedUnit(device: BasicDevice, val port: UInt, val size: UIn
     A.exists(a => a.port == port - this.port)
   }
 
-  override def action(action: UInt, value: UInt): UInt = {
+  override def action(action: UInt, value: UByte, isWrite:Boolean): UByte = {
     A.find(a => a.port == action - this.port) match {
-      case None => new UInt(0)
-      case Some(a) => a.action(value)
+      case None => UByte(0)
+      case Some(a) => a.action(value, isWrite)
     }
   }
 
   val A: ArrayBuffer[PortUnitAction] = new ArrayBuffer()
 
-  case class PortUnitAction(port: UInt, action: (UInt) => UInt)
+  case class PortUnitAction(port: UInt, action: (UInt, Boolean) => UByte)
 
 }
