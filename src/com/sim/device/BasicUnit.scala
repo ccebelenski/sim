@@ -1,8 +1,6 @@
 package com.sim.device
 
 import java.nio.file.Path
-
-import com.sim.memory.AddressPointer
 import com.sim.unsigned.UInt
 
 /**
@@ -14,13 +12,18 @@ abstract class BasicUnit(val device: BasicDevice) {
   var time: Long = 0L
   var usecs_remaining : Long = 0L
 
+  val isMemoryMapped = false
+  val isPortMapped = false
+
+  // Does this unit handle requests for this port/memory address/etc?
+  def handles(value: UInt) : Boolean
+  // Perform a unit action
+  def action(action: UInt, value: UInt) : UInt
 
 
   device.addUnit(this)
 
 
   def init():Unit
-
-  def action():Unit
 
 }

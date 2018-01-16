@@ -1,7 +1,8 @@
 package com.sim
 
 import com.sim.device.{BasicDevice, BasicUnit}
-import com.sim.unsigned.ULong
+import com.sim.unsigned.{UInt, ULong}
+
 import scala.collection.JavaConverters._
 
 class SimTimerUnit(override val device: SimTimer, val isCalibrated: Boolean = false) extends BasicUnit(device) {
@@ -315,4 +316,8 @@ class SimTimerUnit(override val device: SimTimer, val isCalibrated: Boolean = fa
 
     inst_per_sec
   }
+
+  override def handles(value: UInt): Boolean = ???
+
+  override def action(action: UInt, value: UInt): UInt = ???
 }

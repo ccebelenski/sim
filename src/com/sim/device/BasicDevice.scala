@@ -1,6 +1,7 @@
 package com.sim.device
 
 import com.sim.Named
+import com.sim.unsigned.UInt
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -12,6 +13,7 @@ abstract class BasicDevice extends Named{
   val description: String = "No Description Available"
   val units: ArrayBuffer[BasicUnit] = new ArrayBuffer[BasicUnit]
   var deviceName:String
+  var awidth : UInt = UInt(0)
 
   def init() : Unit
 

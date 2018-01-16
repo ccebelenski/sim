@@ -20,7 +20,7 @@ class EventQueue {
         SimTimer.noqueue_time = EventQueue.NOQUEUE_WAIT
       }
       if(unit.usecs_remaining != 0) SimTimer.timerActivateAfter(unit,unit.usecs_remaining)
-      else unit.action()
+      //else unit.action()
 
     }
 

@@ -1,5 +1,7 @@
 package com.sim.memory
 
-class PageFaultException(addressSpace: AddressSpace, address: AddressPointer) extends AddressSpaceException(addressSpace = addressSpace) {
+import com.sim.unsigned.UInt
+
+class PageFaultException(addressSpace: AddressSpace, address: UInt) extends AddressSpaceException(addressSpace = addressSpace) {
 
 }
