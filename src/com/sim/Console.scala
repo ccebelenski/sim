@@ -1,10 +1,7 @@
 package com.sim
 
-import java.awt.event.{KeyEvent, KeyListener}
-import javax.swing.JFrame
-
 import com.jterminal.JTerminal
-import org.beryx.textio.{TextIO, TextIoFactory, TextTerminal}
+import org.beryx.textio.{TextIoFactory, TextTerminal}
 
 import scala.collection.mutable
 
@@ -31,6 +28,12 @@ class Console {
     val list:Command = new ListCommand
     Console.commandTree.put(list.commandToken, list)
 
+    val show:Command = new ShowCommand
+    Console.commandTree.put(show.commandToken, show)
+
+    val set:Command = new SetCommand
+    Console.commandTree.put(set.commandToken, set)
+
     version.process(null)
   }
 
@@ -42,7 +45,7 @@ class Console {
   private def commandLoop() : Unit = {
     var exiting:Boolean = false
     while(!exiting) {
-      val cmd = readCommand
+      val cmd = readCommand()
       exiting = evalCommand(cmd.trim)
     }
   }
@@ -52,7 +55,7 @@ class Console {
     if(cmd == null || cmd.isEmpty) return false
     val cmdTokenList = cmd.toUpperCase.split(' ')
 
-    Console.commandTree.find(_._2.commandMatch(cmdTokenList(0))).foreach(_._2.process(cmdTokenList.slice(1,cmdTokenList.size)))
+    Console.commandTree.find(_._2.commandMatch(cmdTokenList(0))).foreach(_._2.process(cmdTokenList.slice(1,cmdTokenList.length)))
 
     false
 
@@ -64,5 +67,8 @@ object Console {
   var textTerminal : TextTerminal[_] = _
 
   val commandTree : mutable.HashMap[String, Command] = new mutable.HashMap[String,Command]()
+
+  val simEnvironment: SimEnvironment = new SimEnvironment
+
 
 }

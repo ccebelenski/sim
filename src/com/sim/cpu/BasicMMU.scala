@@ -61,10 +61,10 @@ abstract class BasicMMU(val cpu: BasicCPU) {
 
     for(i <- u.port to u.port + u.size ) {
       if(iotab(i & 0xff).isDefined) {
-        Utils.outln(s"MMU: IO Port: ${i & 0xff} already mapped to Unit: ${iotab(i & 0xff).get.portUnit.get.unitName}")
+        Utils.outln(s"MMU: IO Port: ${i & 0xff} already mapped to Unit: ${iotab(i & 0xff).get.portUnit.get.getName()}")
       } else {
         iotab(i & 0xff) = Some(MMU_ENTRY(portUnit = Some(u)))
-        Utils.outln(s"MMU: Mapping IO Port: ${i & 0xff} Unit: ${u.unitName}")
+        Utils.outln(s"MMU: Mapping IO Port: ${i & 0xff} Unit: ${u.getName()}")
       }
     }
   }
@@ -73,7 +73,7 @@ abstract class BasicMMU(val cpu: BasicCPU) {
 
     for(i <- u.port to u.port + u.size ) {
       if(iotab(i & 0xff).isDefined) {
-        Utils.outln(s"MMU: Unmapping IO Port: ${i & 0xff} Unit: ${u.unitName}")
+        Utils.outln(s"MMU: Unmapping IO Port: ${i & 0xff} Unit: ${u.getName()}")
         iotab(i & 0xff) = None
       } else {
         Utils.outln(s"MMU: IO Port: ${i & 0xff} is not mapped.")
@@ -128,10 +128,11 @@ abstract class BasicMMU(val cpu: BasicCPU) {
 
   }
 
+  // Store little endian...
   def put16(address: UInt, value: UShort) : Unit = {
 
-    put8(address, UByte((value & 0xFF).toByte))
-    put8(address + UInt(1), UByte(((value >> 8) & 0xFF).toByte))
+    put8(address + UInt(1), UByte((value & 0xFF).toByte))
+    put8(address, UByte(((value >> 8) & 0xFF).toByte))
   }
 
   def get8(address: UInt) : UByte = {
@@ -165,8 +166,9 @@ abstract class BasicMMU(val cpu: BasicCPU) {
     }
   }
 
+  // Retrieve little endian
   def get16(address: UInt): UShort = {
-    UShort((get8(address).toInt + (get8(address + UInt(1)) << 8).toInt ).toShort)
+    UShort((get8(address + UInt(1)) + (get8(address) << 8)).toShort)
   }
 
   def selectBank(bank:Int) : Unit = this.bankSelect = bank

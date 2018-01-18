@@ -2,8 +2,6 @@ package com.sim
 
 trait Named {
 
-  private var name: String = _
-
-  def setName(name:String) : Unit = {this.name = name}
+  val name: String = "UNNAMED"
   def getName() : String = name
 }

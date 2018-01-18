@@ -28,7 +28,7 @@ class ListCommand extends Command {
 class ListMachinesCommand extends Command {
   commandToken = "MACHINES"
   commandDescription = "List available simulator machines."
-  commandHelpText = "Lists the available machines the simulator can emulate.  These can be LOADed."
+  commandHelpText = "Lists the available machines the simulator can emulate."
   level = 1
 
   override def process(tokenArray: Array[String]): Boolean = {

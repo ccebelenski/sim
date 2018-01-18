@@ -6,8 +6,7 @@ import com.sim.unsigned.{UInt, ULong}
 class SimTimer extends BasicDevice {
 
   override val description: String = "Timer Device"
-  val name: String = "TIMER"
-  override var deviceName: String = ""
+  override val name: String = "TIMER"
 
   def init():Unit = ???
 

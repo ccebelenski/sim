@@ -7,13 +7,11 @@ import com.sim.machine.AbstractMachine
 class AltairMachine extends AbstractMachine{
 
 
-  override val description:String = "Altair Z80."
-  var name = "AltairZ80"
+  override val description:String = "ALTAIR machine."
+  override val name = "ALTAIR"
 
   // Add the CPU - Initially the only device?
   devices.append(new Z80(true))
-
-
 
 
 }
