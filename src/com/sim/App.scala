@@ -1,12 +1,5 @@
 package com.sim
 
-import java.awt.EventQueue
-import java.awt.event.{KeyEvent, KeyListener}
-import javax.swing.JFrame
-
-import com.jterminal.JTerminal
-
-
 /**
   * Created by christophercebelenski on 7/1/16.
   */

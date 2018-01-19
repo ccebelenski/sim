@@ -288,6 +288,7 @@ class SimTimerUnit(override val device: SimTimer, val isCalibrated: Boolean = fa
       //sim_rtcn_init_unit(& SIM_INTERNAL_UNIT, (CLK_INIT * CLK_TPS) / sim_int_clk_tps, SIM_INTERNAL_CLK);
       //SIM_INTERNAL_UNIT.action(& SIM_INTERNAL_UNIT); /* Force tick to activate timer */
 
+      name = "TIMER0"
       SimTimer.internal_timer = this
       return
     }

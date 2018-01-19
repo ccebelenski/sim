@@ -1,8 +1,9 @@
 package com.sim.cpu
+import com.sim.machine.AbstractMachine
 import com.sim.unsigned.UInt
 
-class Z80(isBanked:Boolean) extends BasicCPU(isBanked) {
-  override val name: String = "Z80"
+class Z80(isBanked:Boolean, override val machine:AbstractMachine) extends BasicCPU(isBanked, machine) {
+  name  = "Z80"
   override val MMU: BasicMMU = new Z80MMU(this)
 
   override def init(): Unit = ???
@@ -10,6 +11,11 @@ class Z80(isBanked:Boolean) extends BasicCPU(isBanked) {
   override def resetCPU(): Unit = {
 
     // Set up basic memory
+
+  }
+
+  def showCommand(stringBuilder: StringBuilder) = {
+    // TODO device specific stuff, probably registers, etc.
 
   }
 
@@ -47,4 +53,20 @@ class Z80(isBanked:Boolean) extends BasicCPU(isBanked) {
   override val registers: Map[String, Register] = Map("H" -> H, "L" -> L, "HL" -> HL)
 
   override def showRegisters(): Unit = ???
+
+  override def runcpu() : Unit = {
+
+    // tStates contains the number of t-states executed.  1 t-state is executed in 1 microsecond
+    // on a 1Mhz CPU.  tStates is used for real-time simulations.
+    var tStates: Long = 0L
+    var tStatesInSlice:Long = 0L // Number of t-states in 10mSec time-slice
+    var startTime:Long = 0L
+    var now:Long = 0L
+    var tStateModifier:Boolean = false
+    var switchCPUNow:Boolean = true
+
+
+
+  }
+
 }

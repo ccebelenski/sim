@@ -1,21 +1,32 @@
 package com.sim.cpu
 
-import com.sim.Utils
+import com.sim.{SimTimer, SimTimerUnit, Utils}
 import com.sim.device.BasicDevice
+import com.sim.machine.AbstractMachine
 import com.sim.unsigned.{UByte, UInt, UShort}
 
 /**
   * Created by christophercebelenski on 7/1/16.
   */
-abstract class BasicCPU(val isBanked: Boolean) extends BasicDevice {
+abstract class BasicCPU(val isBanked: Boolean, override val machine:AbstractMachine) extends BasicDevice(machine) {
 
   val KBLOG2 = UInt(10)
   val KB = UInt(1024)
 
 
+  def runcpu(): Unit
+
 
   val registers: Map[String,Register]
 
+  // Set up the master timer device
+  SimTimer.sim_timer_init() // set up some universal stuff.
+  val simTimerDevice = new SimTimer(machine)
+  val masterTimer = new SimTimerUnit(simTimerDevice, true)
+  SimTimer.internal_timer = masterTimer
+  machine.devices.append(simTimerDevice)
+
+  Utils.outln(s"SIM: OS Tick:${SimTimer.sim_os_tick_hz}Hz\tIdle Rate:${SimTimer.sim_idle_rate_ms}ms\tClock Res:${SimTimer.sim_os_clock_resolution_ms}ms")
 
   val MMU: BasicMMU
 
@@ -50,14 +61,15 @@ abstract class BasicCPU(val isBanked: Boolean) extends BasicDevice {
   }
   def examineRegister(nmemonic:String) : Unit = {
     registers.get(nmemonic) match {
-      case None =>
-        Utils.outln(s"SIM: Register $nmemonic is invalid.")
       case Some(r:Register8) =>
         Utils.outln(s"SIM: ${r.get8.toHexString}")
-      case Some(r:Register16) =>
-        Utils.outln(s"SIM: ${r.get16.toHexString}")
       case Some(r:LittleEndianCompositeRegister16) =>
         Utils.outln(s"SIM: ${r.get16.toHexString}")
+      case Some(r:Register16) =>
+        Utils.outln(s"SIM: ${r.get16.toHexString}")
+
+      case _ =>
+        Utils.outln(s"SIM: Register $nmemonic is invalid.")
     }
   }
 
