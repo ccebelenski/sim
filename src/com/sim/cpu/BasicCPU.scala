@@ -1,5 +1,7 @@
 package com.sim.cpu
 
+import java.util.function.Consumer
+
 import com.sim.{SimTimer, SimTimerUnit, Utils}
 import com.sim.device.BasicDevice
 import com.sim.machine.AbstractMachine
@@ -13,6 +15,15 @@ abstract class BasicCPU(val isBanked: Boolean, override val machine:AbstractMach
   val KBLOG2 = UInt(10)
   val KB = UInt(1024)
 
+  // Clock frequency, in Khz.  0 = as fast as possible
+  protected var clockFrequency: UInt = UInt(0)
+  protected var clockHasChanged = true
+
+  def setClockFrquency(freq:UInt) : Unit = {
+    clockFrequency = freq
+    clockHasChanged = true
+    Utils.outln(s"CPU: Clock frequency changed to: ${clockFrequency}Khz")
+  }
 
   def runcpu(): Unit
 
@@ -27,6 +38,10 @@ abstract class BasicCPU(val isBanked: Boolean, override val machine:AbstractMach
   machine.devices.append(simTimerDevice)
 
   Utils.outln(s"SIM: OS Tick:${SimTimer.sim_os_tick_hz}Hz\tIdle Rate:${SimTimer.sim_idle_rate_ms}ms\tClock Res:${SimTimer.sim_os_clock_resolution_ms}ms")
+
+  class X extends Consumer[String] {
+    override def accept(t: String): Unit = ???
+  }
 
   val MMU: BasicMMU
 
@@ -43,6 +58,7 @@ abstract class BasicCPU(val isBanked: Boolean, override val machine:AbstractMach
     if(newsize > MMU.MAXBANKSIZE) awidth = awidth + MMU.MAXBANKSLOG2
 
     Utils.outln(s"Memory size = ${MEMORYSIZE.toHexString}")
+
   }
 
   def getMemorySize: UInt = MEMORYSIZE
@@ -102,6 +118,8 @@ abstract class BasicCPU(val isBanked: Boolean, override val machine:AbstractMach
         Utils.outln(s"SIM: Register is not a 16 bit register.")
     }
   }
+
+
 
 }
 

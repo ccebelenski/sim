@@ -39,6 +39,7 @@ class SetMachineCommand extends Command {
         case None => Utils.outln(s"SIM: Machine $mn not valid.")
         case Some(x) =>
           Console.simEnvironment.simMachine = Some(x)
+          x.init()
           Utils.outln(s"SIM: Machine $mn defined.")
       }
     }

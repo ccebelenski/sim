@@ -10,8 +10,11 @@ class S100Machine extends AbstractMachine{
   override val description:String = "S100 machine."
   name = "S100"
 
-  // Add the CPU - Initially the only device?
-  devices.append(new Z80(true, this))
 
 
+
+  override def init():Unit = {
+    // Add the CPU - Initially the only device?
+    devices.append(new Z80(true, this))
+  }
 }

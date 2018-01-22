@@ -9,11 +9,7 @@ class Console {
 
   val textIO = TextIoFactory.getTextIO
 
-  initUI()
-
-  commandLoop()
-
-  private def initUI(): Unit = {
+  def initUI(): Unit = {
 
     Console.textTerminal = textIO.getTextTerminal
 
@@ -34,6 +30,9 @@ class Console {
     val set:Command = new SetCommand
     Console.commandTree.put(set.commandToken, set)
 
+    val exit:Command = new ExitCommand
+    Console.commandTree.put(exit.commandToken, exit)
+
     version.process(null)
   }
 
@@ -42,9 +41,10 @@ class Console {
     input
   }
 
-  private def commandLoop() : Unit = {
+  def commandLoop() : Unit = {
     var exiting:Boolean = false
     while(!exiting) {
+      Console.userInterrupt = false // Reset the interrupt
       val cmd = readCommand()
       exiting = evalCommand(cmd.trim)
     }
@@ -55,10 +55,13 @@ class Console {
     if(cmd == null || cmd.isEmpty) return false
     val cmdTokenList = cmd.toUpperCase.split(' ')
 
-    Console.commandTree.find(_._2.commandMatch(cmdTokenList(0))).foreach(_._2.process(cmdTokenList.slice(1,cmdTokenList.length)))
-
-    false
-
+    Console.commandTree.find(_._2.commandMatch(cmdTokenList(0))) match {
+      case None=>
+        Utils.outln("SIM: Invalid command")
+        false
+      case Some(x) =>
+        x._2.process(cmdTokenList.slice(1,cmdTokenList.length))
+    }
   }
 }
 
@@ -70,5 +73,6 @@ object Console {
 
   val simEnvironment: SimEnvironment = new SimEnvironment
 
-
+  // This is set by the user interrupt - should be re-set when the command prompt is displayed.
+  var userInterrupt : Boolean = false
 }

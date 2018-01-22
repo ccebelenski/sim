@@ -36,6 +36,7 @@ abstract class AbstractMachine extends Named{
     devices.find(d => d.getName().equalsIgnoreCase(deviceName))
   }
 
+  def init() : Unit
 }
 
 object AbstractMachine {
