@@ -101,6 +101,10 @@ abstract class BasicMMU(val cpu: BasicCPU) {
 
   }
 
+  @inline
+  def put8(register16: Register16, value: Register8) : Unit = {
+    put8(register16.get16.toUInt, value.get8.toUByte)
+  }
 
   def put8(address: UInt, value: UByte) : Unit = {
 
@@ -167,8 +171,13 @@ abstract class BasicMMU(val cpu: BasicCPU) {
   }
 
   // Retrieve little endian
+  @inline
   def get16(address: UInt): UShort = {
     UShort((get8(address + UInt(1)) + (get8(address) << 8)).toShort)
+  }
+  @inline
+  def get16(register16: Register16) : UShort = {
+    get16(register16.get16)
   }
 
   def selectBank(bank:Int) : Unit = this.bankSelect = bank
