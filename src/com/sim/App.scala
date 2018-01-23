@@ -21,7 +21,6 @@ object App {
     con.initUI()
 
     Console.textTerminal.registerUserInterruptHandler((term: (_$1) forSome {type _$1}) => {
-      Console.textTerminal.println("\nSIM: Interrupted.")
       Console.userInterrupt = true
     }, true)
 

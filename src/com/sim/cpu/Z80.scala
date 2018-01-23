@@ -147,9 +147,174 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
     false
   }
 
-  val incTable = for(temp <- 0 to 255) yield {
-    val t1 = (if((temp & 0xff) == 0) 1 else 0) << 6
-    val t2 = (if((temp & 0xf) == 0) 1 else 0) << 4
-    UByte(((temp & 0xa8) | (t1 | t2)).toByte)
-  }
+  private val incTable : Array[UByte] = {
+    for(temp <- 0 to 255) yield {
+      val t1 = (if((temp & 0xff) == 0) 1 else 0) << 6
+      val t2 = (if((temp & 0xf) == 0) 1 else 0) << 4
+      UByte(((temp & 0xa8) | (t1 | t2)).toByte)
+    }
+  }.toArray
+
+  private val incZ80Table : Array[UByte] = {
+    for(temp <- 0 to 255) yield {
+      val t1 = (if((temp & 0xff) == 0) 1 else 0) << 6
+      val t2 = (if((temp & 0xf) == 0) 1 else 0) << 4
+      val t3 = (if(temp == 0x80) 1 else 0) << 2
+      UByte(((temp & 0xa8) | (t1 | (t2 | t3))).toByte)
+    }
+  }.toArray
+
+
+  private val parityTable : Array[UByte]= {
+    for(i <- 0 to 255) yield {
+      if((((i & 1)        + ((i & 2) >> 1)    + ((i & 4) >> 2)    + ((i & 8) >> 3) +
+        ((i & 16) >> 4) + ((i & 32) >> 5)   + ((i & 64) >> 6)   + ((i & 128) >> 7)) % 2) != 0)
+      UByte(0) else UByte(4)
+    }
+  }.toArray
+
+  private val decTable : Array[UByte] = {
+    for(temp <- 0 to 255) yield {
+      val t1 = (if ((temp & 0xff) == 0) 1 else 0) << 6
+      val t2 = (if((temp & 0xf) == 0xf) 1 else 0) << 4
+      UByte((((temp & 0xa8) | (t1 | t2)) | 2).toByte)
+    }
+  }.toArray
+
+  private val decZ80Table : Array[UByte] = {
+    for(temp <- 0 to 255) yield {
+      val t1 = (if ((temp & 0xff) == 0) 1 else 0) << 6
+      val t2 = (if((temp & 0xf) == 0xf) 1 else 0) << 4
+      val t3 = (if(temp == 0x7f) 1 else 0) << 2
+      UByte(((temp & 0xa8) | (t1 | (t2 | t3)) | 2).toByte)
+    }
+  }.toArray
+
+  private val cbitsTable: Array[UByte] = {
+    for(cbits <- 0 to 511) yield {
+      UByte(((cbits & 0x10) | ((cbits >> 8) & 1)).toByte)
+    }
+  }.toArray
+
+  private val cbitsZ80Table: Array[UByte] = {
+    for(cbits <- 0 to 511) yield {
+      UByte(((cbits & 0x10) | (((cbits >> 6) ^ (cbits >> 5)) & 4) |
+        ((cbits >> 8) & 1)).toByte)
+    }
+  }.toArray
+
+  private val cbitsDup8Table : Array[UShort] = {
+    for(cbits <- 0 to 511) yield {
+      val t1 = if((cbits & 0xff) == 0) 1 else 0
+      UShort(((cbits & 0x10) | ((cbits >> 8) & 1) | ((cbits & 0xff) << 8) | (cbits & 0xa8) | t1 << 6).toShort)
+    }
+  }.toArray
+
+  private val cbitsZ80DupTable : Array[UShort] = {
+    for(cbits <- 0 to 511) yield {
+      val t1 = if((cbits & 0xff) == 0) 1 else 0
+      UShort(((cbits & 0x10) | (((cbits >> 6) ^ (cbits >> 5)) & 4) |
+        ((cbits >> 8) & 1) | (cbits & 0xa8)).toShort)
+    }
+  }.toArray
+
+  private val cbitsDup16Table : Array[UByte] = {
+    for(cbits <- 0 to 511) yield {
+      UByte(((cbits & 0x10) | ((cbits >> 8) & 1) | (cbits & 0x28)).toByte)
+    }
+  }.toArray
+
+  private val cbits2Table : Array[UByte] = {
+    for(cbits <- 0 to 511) yield {
+      UByte(((cbits & 0x10) | ((cbits >> 8) & 1) | 2).toByte)
+    }
+  }.toArray
+
+  private val cbits2Z80Table : Array[UByte] = {
+    for(cbits <- 0 to 511) yield {
+      UByte(((((cbits >> 6) ^ (cbits >> 5)) & 4) | (cbits & 0x10) | 2 | ((cbits >> 8) & 1)).toByte)
+    }
+  }.toArray
+
+  private val cbits2Z80DupTable : Array[UByte] = {
+    for(cbits <- 0 to 511) yield {
+      UByte(((((cbits >> 6) ^ (cbits >> 5)) & 4) | (cbits & 0x10) | 2 | ((cbits >> 8) & 1) |
+        (cbits & 0xa8)).toByte)
+    }
+  }.toArray
+
+  private val rrcaTable : Array[UShort] = {
+    for(temp <- 0 to 255) yield {
+      val sum = temp >> 1
+      UShort((((temp & 1) << 15) | (sum << 8) | (sum & 0x28) | (temp & 1)).toShort)
+    }
+  }.toArray
+
+  private val rraTable : Array[UShort] = {
+    for(temp <- 0 to 255) yield {
+      val sum = temp >> 1
+      UShort(((sum << 8) | (sum & 0x28) | (temp & 1)).toShort)
+    }
+  }.toArray
+
+  private val addTable: Array[UShort] = {
+    for(sum <- 0 to 511) yield {
+      val t1 = if((sum & 0xff) == 0) 1 else 0
+      UShort((((sum & 0xff) << 8) | (sum & 0xa8) | (t1 << 6)).toShort)
+    }
+  }.toArray
+
+  private val subTable: Array[UShort] = {
+    for(sum <- 0 to 255) yield {
+      val t1 = if((sum & 0xff) == 0) 1 else 0
+      UShort((((sum & 0xff) << 8) | (sum & 0xa8) | (t1 << 6) | 2).toShort)
+    }
+  }.toArray
+
+  private val andTable: Array[UShort] = {
+    for(sum <- 0 to 255) yield {
+      val t1 = if(sum == 0) 1 else 0
+      UShort(((sum << 8) | (sum & 0xa8) | (t1 << 6) | 0x10 | parityTable(sum)).toShort)
+    }
+  }.toArray
+
+  private val xororTable: Array[UShort] = {
+    for(sum <- 0 to 255) yield {
+      val t1 = if(sum == 0) 1 else 0
+      UShort(((sum << 8) | (sum & 0xa8) | (t1 << 6) | parityTable(sum)).toShort)
+    }
+  }.toArray
+
+  @inline
+  private def PARITY(value: Int) : UByte  = parityTable(value & 0xff)
+
+  private val rotateShiftTable: Array[UByte] = {
+    for(sum <- 0 to 255) yield {
+      val t1 = if((sum & 0xff) == 0) 1 else 0
+      UByte(((sum & 0xa8) | (t1 << 6) | PARITY(sum)).toByte)
+    }
+  }.toArray
+
+  private val negTable: Array[UByte] = {
+    for(temp <- 0 to 255) yield {
+      val t1 = if((temp & 0x0f) !=0) 1 else 0
+      val t2 = if(temp == 0x80) 1 else 0
+      UByte(((t1 << 4) | (t2 << 2) | 2 | {if (temp !=0) 1 else 0}).toByte)
+    }
+  }.toArray
+
+  private val rrdrldTable : Array[UByte] = {
+    for(acu <- 0 to 255) yield {
+      val t1 = if((acu & 0xff) == 0) 1 else 0
+      UByte(((acu << 8) | (acu & 0xa8) | (t1 << 6) | parityTable(acu)).toByte)
+    }
+  }.toArray
+
+  private def cpTable : Array[UByte] = {
+    for(sum <- 0 to 255) yield {
+      val t1 = if((sum & 0xff) == 0) 1 else 0
+      UByte(((sum & 0x80) | (t1 << 6)).toByte)
+    }
+  }.toArray
+
 }
