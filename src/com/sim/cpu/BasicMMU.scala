@@ -139,6 +139,10 @@ abstract class BasicMMU(val cpu: BasicCPU) {
     put8(address, UByte(((value >> 8) & 0xFF).toByte))
   }
 
+  def get8(address: Register16) : UByte = {
+    get8(address.get16)
+  }
+
   def get8(address: UInt) : UByte = {
     var addr: Int = (address & ADDRMASK).toInt
     val pageaddr = if(cpu.isBanked && (addr < COMMON)) addr | bankSelect << MAXBANKSIZELOG2.toInt else addr

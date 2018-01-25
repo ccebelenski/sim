@@ -102,7 +102,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
 
       INCR(1)
       val instr = MMU.get8(PC.get16)
-      PC.set16(UShort((PC.get16 + 1).shortValue))
+      PC.increment()
 
       instr.byteValue match {
 
@@ -122,6 +122,28 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
         case(0x04) => // INC B
           tStates = tStates + 4
           B.set8((B.get8 + UByte(1)).toUByte)
+          AF.set16( UShort(((AF.get16 & ~0xfe) | incTable(B.get8.toInt) | SET_PV2(UByte(0x80.toByte),B)).toShort))
+        case(0x05) => // DEC B
+          tStates = tStates + 4
+          B.set8((B.get8 - UByte(1)).toUByte)
+          AF.set16( UShort(((AF.get16 & ~0xfe) | decTable(B.get8.toInt) | SET_PV2(UByte(0x7f.toByte),B)).toShort))
+        case(0x06) => // LD B,nn
+          tStates = tStates + 7
+          B.set8(MMU.get8(PC))
+          PC.increment()
+        case(0x07) => // RLCA
+          tStates = tStates + 4
+          AF.set16(UShort((((AF.get16 >> 7) & 0x0128) | ((AF.get16 << 1) & ~0x1ff) | (AF.get16 & 0xc4) | ((AF.get16 >> 15) & 1)).toShort))
+        case(0x08) => // EX AF, AF'
+          tStates = tStates + 4
+          AF.swap(AFP)
+        case(0x09) => // ADD HL, BC
+          tStates = tStates + 11
+          val sum = HL.get16 + BC.get16
+          AF.set16(UShort( ( (AF.get16 & ~0x3b) | (( sum >> 8) & 0x28) | cbitsTable((HL.get16 ^ BC.get16 ^ sum) >> 8) ).toShort  ))
+          HL.set16(UShort(sum.toShort))
+
+
 
 
       }
@@ -317,4 +339,8 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
     }
   }.toArray
 
+  @inline
+  private def SET_PV2(x:UByte, temp:Register8) : UByte = {
+    UByte(({if(temp.get8 == x) 1 else 0} << 2).toByte)
+  }
 }

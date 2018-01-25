@@ -198,6 +198,14 @@ class Register16(override val nmenomic: String) extends Register(nmenomic) {
   @inline
   def set16(value: Register16): Unit = this.value = value.get16
 
+  def increment(): Unit = set16(UShort((get16 + 1).shortValue()))
+
+  def swap(register16: Register16) : Unit = {
+    val temp = register16.value
+    register16.value = this.value
+    this.value = temp
+  }
+
   override val aWidth = 16
 
   override def toString: String = s"$nmenomic:{$value.toHexString}"
