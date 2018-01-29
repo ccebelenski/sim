@@ -57,7 +57,7 @@ abstract class BasicCPU(val isBanked: Boolean, override val machine: AbstractMac
     awidth = MMU.MAXBANKSIZELOG2
     if (newsize > MMU.MAXBANKSIZE) awidth = awidth + MMU.MAXBANKSLOG2
 
-    Utils.outln(s"Memory size = ${MEMORYSIZE.toHexString}")
+    Utils.outln(s"SIM: Memory size = ${Utils.formatBytes(MEMORYSIZE.toLong,true)} Banked: $isBanked")
 
   }
 
@@ -66,41 +66,54 @@ abstract class BasicCPU(val isBanked: Boolean, override val machine: AbstractMac
   def resetCPU(): Unit
 
   /* UI Routines */
-  def examine(address: UInt): Unit = {
-    val byte = MMU.get8(address)
-    Utils.outln(s"${address.toHexString}:${byte.toHexString}")
+  def examine(address: Int): UByte = {
+    val byte = MMU.get8(UInt(address))
+    Utils.outln(f"SIM: 0x$address%04X:0x${byte.byteValue}%02X")
+    byte
   }
 
-  def examineWord(address: UInt): Unit = {
-    val word = MMU.get16(address)
-    Utils.outln(s"${address.toHexString}:${word.toHexString}")
-
+  def examineWord(address: Int): UShort = {
+    val word = MMU.get16(UInt(address))
+    Utils.outln(f"SIM: 0x$address%04X:0x${word.shortValue}%04X")
+    word
   }
 
-  def examineRegister(nmemonic: String): Unit = {
+  def examineRegister(nmemonic: String): Int = {
     registers.get(nmemonic) match {
       case Some(r: Register8) =>
-        Utils.outln(s"SIM: ${r.get8.toHexString}")
-      case Some(r: LittleEndianCompositeRegister16) =>
-        Utils.outln(s"SIM: ${r.get16.toHexString}")
+        Utils.outln(f"SIM: $r")
+        r.get8.intValue
+      case Some(r: CompositeRegister16) =>
+        Utils.outln(f"SIM: $r")
+        r.get16.intValue
       case Some(r: Register16) =>
-        Utils.outln(s"SIM: ${r.get16.toHexString}")
-
+        Utils.outln(f"SIM: $r")
+        r.get16.intValue
       case _ =>
         Utils.outln(s"SIM: Register $nmemonic is invalid.")
+        0
     }
   }
 
-  def deposit(address: UInt, byte: UByte): Unit = {
+  def deposit(address: Int, byte: UByte): Unit = {
     MMU.put8(address, byte)
 
   }
 
-  def depositWord(address: UInt, word: UShort): Unit = {
+  def deposit(address:Int, byte: Int) : Unit = {
+    MMU.put8(address, UByte((byte & 0xff).byteValue()))
+  }
+
+
+  def depositWord(address: Int, word: UShort): Unit = {
     MMU.put16(address, word)
   }
 
-  def showRegisters(): Unit
+  def depositWord(address:Int, word:Int): Unit = {
+    MMU.put16(address, UShort((word & 0xffff).shortValue))
+  }
+
+  def showRegisters(): String
 
   def setRegister8(nmemonic: String, value: UByte): Unit = {
     registers.get(nmemonic) match {
@@ -141,29 +154,58 @@ class Register8(override val nmenomic: String) extends Register(nmenomic) {
   def set8(value: UByte): Unit = this.value = value
 
   @inline
-  def set8(value: Register8) : Unit = set8(value.get8)
+  def set8(value: Register8): Unit = set8(value.get8)
+
+  //@inline
+  // def set8(value: Byte): Unit = set8(UByte(value))
+
+  def increment(): Unit = value = new UByte((value.byteValue + 1).toByte)
+
+  def decrement(): Unit = value = new UByte((value.byteValue + 1).toByte)
 
   override val aWidth = 8
 
-  override def toString: String = s"$nmenomic:{$value.toHexString}"
+  override def toString: String = f"$nmenomic:0x${value.intValue}%02X"
+
+  def apply(value: UByte): Unit = set8(value)
+
+  def apply(value: Register8): Unit = set8(value.get8)
+
+  def apply(value: Int): Unit = set8(UByte((value & 0xff).byteValue()))
+
+  def +(value: Int): Byte = {
+    ((this.value + value) & 0xff).byteValue()
+  }
+
+  def -(value: Int): Byte = {
+    ((this.value - value) & 0xff).byteValue()
+  }
 
 }
 
+object Register8 {
+  implicit def reg82UByte(reg8: Register8): UByte = reg8.get8
+
+  implicit def reg82Byte(reg8: Register8): Byte = reg8.get8.byteValue
+
+  implicit def reg82Int(reg8: Register8): Int = reg8.get8.intValue
+}
+
 // In the case of HL, H is most significant, L is least.  L would be written to memory first because Z80 is little endian
-class LittleEndianCompositeRegister16(override val nmenomic: String, val msb: Register8, val lsb: Register8) extends Register16(nmenomic) {
+class CompositeRegister16(override val nmenomic: String, val high: Register8, val low: Register8) extends Register16(nmenomic) {
   @inline
-  def get8msb: UByte = msb.get8
+  def get8high: UByte = high.get8
 
   @inline
-  def get8lsb: UByte = lsb.get8
+  def get8low: UByte = low.get8
 
   @inline
-  override def get16: UShort = (lsb.get8 + (msb.get8 << 8)).toUShort
+  override def get16: UShort = (low.get8  | (high.get8 << 8)).toUShort
 
   @inline
   override def set16(value: UShort): Unit = {
-    lsb.set8(UByte((value & 0xff).toByte))
-    msb.set8(UByte(((value >> 8) & 0xFF).toByte))
+    low.set8(UByte((value & 0xff).toByte))
+    high.set8(UByte(((value >> 8) & 0xFF).toByte))
   }
 
   @inline
@@ -172,18 +214,18 @@ class LittleEndianCompositeRegister16(override val nmenomic: String, val msb: Re
   }
 
   @inline
-  def set8msb(value: UByte): Unit = {
-    msb.set8(value)
+  def set8high(value: UByte): Unit = {
+    high.set8(value)
   }
 
   @inline
-  def set8lsb(value: UByte): Unit = {
-    lsb.set8(value)
+  def set8low(value: UByte): Unit = {
+    low.set8(value)
   }
 
   override val aWidth = 16
 
-  override def toString: String = s"${msb.nmenomic}${lsb.nmenomic}:${get16.toHexString}"
+  override def toString: String = f"$nmenomic:0x${get16.intValue}%04X"
 }
 
 class Register16(override val nmenomic: String) extends Register(nmenomic) {
@@ -198,15 +240,62 @@ class Register16(override val nmenomic: String) extends Register(nmenomic) {
   @inline
   def set16(value: Register16): Unit = this.value = value.get16
 
+  @inline
+  def set16(value:Int): Unit = this.value = UShort(value.shortValue())
+
+  @inline
   def increment(): Unit = set16(UShort((get16 + 1).shortValue()))
 
-  def swap(register16: Register16) : Unit = {
+  @inline
+  def decrement(): Unit = set16(UShort((get16 - 1).shortValue()))
+
+  def swap(register16: Register16): Unit = {
     val temp = register16.value
     register16.value = this.value
     this.value = temp
   }
 
+  def +(value: Int): Int = {
+    (this.value + value) & 0xffff
+  }
+
+  def -(value: Int): Int = {
+    (this.value - value) & 0xffff
+  }
+
+  def &(value: Int): Int = {
+    this.value & value
+  }
+
+  def >>(value: Int): Int = {
+    (this.value >> value) & 0xffff
+  }
+
+  def <<(value: Int): Int = {
+    (this.value << value) & 0xffff
+  }
+
+  def ^(value: Int): Int = {
+    this.value ^ value
+  }
+
   override val aWidth = 16
 
-  override def toString: String = s"$nmenomic:{$value.toHexString}"
+  override def toString: String = f"$nmenomic:0x${value.intValue}%04X"
+
+  def apply(value: UShort): Unit = set16(value)
+
+  def apply(value: Register16): Unit = set16(value.get16)
+
+  def apply(value: Int): Unit = set16(UShort((value & 0xffff).shortValue()))
+}
+
+object Register16 {
+  implicit def reg162UShort(value: Register16): UShort = value.get16
+
+  implicit def reg162Short(value: Register16): Short = value.get16.shortValue
+
+  implicit def reg162Int(value: Register16): Int = value.get16.toInt
+
+  //implicit def int2reg16(value: Int): Register16 = new Register16(value)
 }

@@ -10,24 +10,29 @@ class MemoryAddressSpace(lowAddress: UInt, highAddress: UInt) extends AddressSpa
   private val M: Array[UByte] = new Array[UByte]((highAddress - lowAddress).toInt)
   private val tt = Console.textTerminal
 
+  for(x <- 0 to ((highAddress - lowAddress)-1).toInt) M(x) = UByte(0)
 
   override def put8(address: UInt, value: UByte): Unit = {
-    if (address <= lowAddress || address >= highAddress) {
+    if (address < lowAddress || address > highAddress) {
       Utils.outln(s"Memory: Illegal memory write access. Addr: ${address.toHexString}")
     } else {
-      M(address.toInt) = value
+      M(scaleAddress(address)) = value
 
     }
   }
 
   override def get8(address: UInt): UByte = {
-    if (address <= lowAddress || address >= highAddress) {
+    if (address < lowAddress || address > highAddress) {
       Utils.outln(s"Memory: Illegal memory read access. Addr: ${address.toHexString}")
       UByte(0)
     } else {
-      M(address.toInt)
+      M(scaleAddress(address))
     }
   }
 
+  @inline
+  private def scaleAddress(address:UInt) : Int = {
+    M.length - (highAddress - address)
+  }
 
 }

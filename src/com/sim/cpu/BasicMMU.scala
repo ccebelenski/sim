@@ -47,7 +47,7 @@ abstract class BasicMMU(val cpu: BasicCPU) {
       val as = new MemoryAddressSpace(UInt(addr), UInt(addr) + PAGESIZE - UInt(1))
       val entry = MMU_ENTRY(memory = Some(as))
       mtab(page) = Some(entry)
-      Utils.outln(s"MMU: Mapped RAM memory space.  Page: ${page.toHexString}, Addr: ${addr.toHexString} - ${as.highAddress.toHexString}")
+      Utils.outln(f"MMU: Mapped RAM memory space.  Page: 0x$page%04X, Addr: 0x$addr%04X - 0x${as.highAddress.intValue}%04X")
     }
 
   }
@@ -61,10 +61,10 @@ abstract class BasicMMU(val cpu: BasicCPU) {
 
     for(i <- u.port to u.port + u.size ) {
       if(iotab(i & 0xff).isDefined) {
-        Utils.outln(s"MMU: IO Port: ${i & 0xff} already mapped to Unit: ${iotab(i & 0xff).get.portUnit.get.getName()}")
+        Utils.outln(f"MMU: IO Port: 0x${i & 0xff}%02X already mapped to Unit: ${iotab(i & 0xff).get.portUnit.get.getName()}")
       } else {
         iotab(i & 0xff) = Some(MMU_ENTRY(portUnit = Some(u)))
-        Utils.outln(s"MMU: Mapping IO Port: ${i & 0xff} Unit: ${u.getName()}")
+        Utils.outln(f"MMU: Mapping IO Port: 0x${i & 0xff}%02X Unit: ${u.getName()}")
       }
     }
   }
@@ -73,10 +73,10 @@ abstract class BasicMMU(val cpu: BasicCPU) {
 
     for(i <- u.port to u.port + u.size ) {
       if(iotab(i & 0xff).isDefined) {
-        Utils.outln(s"MMU: Unmapping IO Port: ${i & 0xff} Unit: ${u.getName()}")
+        Utils.outln(f"MMU: Unmapping IO Port: 0x${i & 0xff}%02X Unit: ${u.getName()}")
         iotab(i & 0xff) = None
       } else {
-        Utils.outln(s"MMU: IO Port: ${i & 0xff} is not mapped.")
+        Utils.outln(f"MMU: IO Port: 0x${i & 0xff}%02X is not mapped.")
       }
     }
   }
@@ -88,11 +88,11 @@ abstract class BasicMMU(val cpu: BasicCPU) {
       if(e.isDefined) {
         if (e.get.memory.isDefined) {
           val as = e.get.memory.get
-          val msg = s"Page: ${x.toHexString} : ${as.lowAddress.toHexString} - ${as.highAddress.toHexString} : Type: ${as.getClass} Mapped: RO: ${as.isReadOnly}"
+          val msg = f"Page: 0x$x%04X : 0x${as.lowAddress.intValue}%04X - 0x${as.highAddress.intValue}%04X : Type: ${as.getClass} Mapped: RO: ${as.isReadOnly}"
           Utils.outln(msg)
         } else if (e.get.memoryUnit.isDefined) {
           val unit = e.get.memoryUnit.get
-          val msg = s"Page: ${x.toHexString} : ${unit.lowAddress.toHexString} - ${unit.highAddress.toHexString} : Type: ${unit.getClass}"
+          val msg = f"Page: 0x$x%04X : 0x${unit.lowAddress.intValue}%04X - 0x${unit.highAddress.intValue}%04X : Type: ${unit.getClass}"
           Utils.outln(msg)
         }
       }
@@ -103,22 +103,28 @@ abstract class BasicMMU(val cpu: BasicCPU) {
 
   @inline
   def put8(register16: Register16, value: Register8) : Unit = {
-    put8(register16.get16.toUInt, value.get8.toUByte)
+    put8(register16.get16.toInt, value.get8.toUByte)
   }
 
-  def put8(address: UInt, value: UByte) : Unit = {
+  @inline
+  def put8(register16: Register16, value: UByte) : Unit = {
+    put8(register16.get16.toInt, value)
+  }
 
-    var addr: Int = (address & ADDRMASK).toInt
+
+  def put8(address: Int, value: UByte) : Unit = {
+
+    var addr: Int = address & ADDRMASK
     val pageaddr = if(cpu.isBanked && (addr < COMMON)) addr | bankSelect << MAXBANKSIZELOG2.toInt else addr
     val m = mtab(pageaddr >> LOG2PAGESIZE.toInt)
     m match {
-      case None => Utils.outln(s"MMU: Write to non-existent memory.  Addr: ${addr.toHexString}")
+      case None => Utils.outln(f"MMU: Write to non-existent memory.  Addr: 0x$addr%04X")
       case Some(e: MMU_ENTRY) => {
         if(e.memory.isDefined) {
           val as = e.memory.get
-          if(as.containsAddress(UInt(addr))) e.memory.get.put8(UInt(addr),value)
+          if(as.containsAddress(UInt(addr))) as.put8(UInt(addr),value)
           else {
-            val msg = s"MMU: Page table error - Addr: ${addr.toHexString} address space: ${as.lowAddress.toHexString} - ${as.highAddress.toHexString}"
+            val msg = f"MMU: Page table error - Addr: 0x$addr%04X address space: 0x${as.lowAddress.intValue}%04X - 0x${as.highAddress.intValue}%04X"
             Utils.outln(msg)
           }
         }else if(e.portUnit.isDefined) {
@@ -126,17 +132,17 @@ abstract class BasicMMU(val cpu: BasicCPU) {
         } else if(e.memoryUnit.isDefined) {
           // TODO This needs work
           e.memoryUnit.get.action(UInt(addr),value, isWrite = true)
-        } else Utils.outln(s"MMU: Mis-configured page/address entry - no type found. Addr: ${addr.toHexString}")
+        } else Utils.outln(f"MMU: Mis-configured page/address entry - no type found. Addr: 0x$addr%04X")
       }
     }
 
   }
 
   // Store little endian...
-  def put16(address: UInt, value: UShort) : Unit = {
+  def put16(address: Int, value: UShort) : Unit = {
 
-    put8(address + UInt(1), UByte((value & 0xFF).toByte))
-    put8(address, UByte(((value >> 8) & 0xFF).toByte))
+    put8(address, UByte((value & 0xFF).toByte))
+    put8(address + 1, UByte(((value >> 8) & 0xFF).toByte))
   }
 
   def get8(address: Register16) : UByte = {
@@ -149,14 +155,14 @@ abstract class BasicMMU(val cpu: BasicCPU) {
     val m = mtab(pageaddr >> LOG2PAGESIZE.toInt)
     m match {
       case None =>
-        Utils.outln(s"MMU: Read from non-existent memory.  Addr: ${addr.toHexString}")
+        Utils.outln(f"MMU: Read from non-existent memory.  Addr: $addr%04X")
         UByte(0)
       case Some(e: MMU_ENTRY) => {
         if(e.memory.isDefined) {
           val as = e.memory.get
           if(as.containsAddress(UInt(addr))) e.memory.get.get8(UInt(addr))
           else {
-            val msg = s"MMU: Page table error - Addr: ${addr.toHexString} address space: ${as.lowAddress.toHexString} - ${as.highAddress.toHexString}"
+            val msg = f"MMU: Page table error - Addr: 0x$addr%04X address space: 0x${as.lowAddress.intValue}%04X - 0x${as.highAddress.intValue}%04X"
             Utils.outln(msg)
             UByte(0)
           }
@@ -167,7 +173,7 @@ abstract class BasicMMU(val cpu: BasicCPU) {
           // TODO This needs work.
           e.memoryUnit.get.action(UInt(addr),UByte(0),isWrite = false)
         } else {
-          Utils.outln(s"MMU: Mis-configured page/address entry - no type found. Addr: ${addr.toHexString}")
+          Utils.outln(f"MMU: Mis-configured page/address entry - no type found. Addr: 0x$addr%04X")
           UByte(0)
         }
       }
@@ -177,7 +183,7 @@ abstract class BasicMMU(val cpu: BasicCPU) {
   // Retrieve little endian
   @inline
   def get16(address: UInt): UShort = {
-    UShort((get8(address + UInt(1)) + (get8(address) << 8)).toShort)
+    UShort((get8(address) | (get8(address+ UInt(1)) << 8)).toShort)
   }
   @inline
   def get16(register16: Register16) : UShort = {

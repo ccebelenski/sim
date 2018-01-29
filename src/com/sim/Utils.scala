@@ -80,4 +80,16 @@ object Utils {
     if(Console.textTerminal != null) Console.textTerminal.println(msg)
     else System.out.println(msg)
   }
+  def out(msg:String): Unit = {
+    if(Console.textTerminal != null) Console.textTerminal.print(msg)
+    else System.out.print(msg)
+  }
+
+  def formatBytes(bytes:Long, si:Boolean) : String = {
+    val unit = if (si) 1000 else 1024
+    if (bytes < unit) return bytes + " B"
+    val exp = (Math.log(bytes) / Math.log(unit)).toInt
+    val pre = (if (si) "kMGTPE" else "KMGTPE").charAt(exp - 1) + (if (si) "" else "i")
+    f"${bytes / Math.pow(unit, exp)}%.1f ${pre}B"
+  }
 }
