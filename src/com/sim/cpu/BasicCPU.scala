@@ -28,6 +28,23 @@ abstract class BasicCPU(val isBanked: Boolean, override val machine: AbstractMac
   def runcpu(): Unit
 
 
+  @inline
+  def setFlag(reg:Register8, flag:Int, clear:Boolean) : Unit = {
+    if(clear) reg(reg & ~flag) else reg(reg | flag)
+  }
+  @inline
+  def setFlag(reg:Register16, flag:Int, clear:Boolean) : Unit = {
+    if(clear) reg(reg & ~flag) else reg(reg | flag)
+  }
+  @inline
+  def testFlag(reg:Register8, flag:Int) : Boolean = {
+    if((reg & flag) != 0) true else false
+  }
+  @inline
+  def testFlag(reg:Register16, flag:Int): Boolean = {
+    if((reg & flag) != 0) true else false
+  }
+
   val registers: Map[String, Register]
 
   // Set up the master timer device
@@ -185,6 +202,10 @@ class Register8(override val nmenomic: String) extends Register(nmenomic) {
   def &(value: Int): Int = {
     this.value & value
   }
+
+  def |(value: Int): Int = {
+    this.value | value
+  }
 }
 
 object Register8 {
@@ -269,6 +290,10 @@ class Register16(override val nmenomic: String) extends Register(nmenomic) {
 
   def &(value: Int): Int = {
     this.get16 & value
+  }
+
+  def |(value: Int): Int = {
+    this.get16 | value
   }
 
   def >>(value: Int): Int = {

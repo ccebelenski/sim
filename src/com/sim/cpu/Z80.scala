@@ -89,15 +89,22 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
     s"$PC  $SP  $AF  $BC  $DE  $HL  $IX  $IY  $R\n                     $AFP $BCP $DEP $HLP"
   }
 
+  val FLAG_C = 1
+  val FLAG_N = 2
+  val FLAG_P = 4
+  val FLAG_H = 16
+  val FLAG_Z = 64
+  val FLAG_S = 128
+
   override def showFlags(): String = {
-    val carry = if ((F & 1) != 0) true else false
-    val addsub = if ((AF & 2) != 0) true else false
-    val pv = if ((AF & 4) != 0) true else false
+    val carry = if ((F & FLAG_C) != 0) true else false
+    val addsub = if ((AF & FLAG_N) != 0) true else false
+    val pv = if ((AF & FLAG_P) != 0) true else false
     val bit3 = if ((AF & 8) != 0) true else false
-    val h = if ((AF & 16) != 0) true else false
+    val h = if ((AF & FLAG_H) != 0) true else false
     val bit5 = if ((AF & 32) != 0) true else false
-    val z = if ((AF & 64) != 0) true else false
-    val s = if ((AF & 128) != 0) true else false
+    val z = if ((AF & FLAG_Z) != 0) true else false
+    val s = if ((AF & FLAG_S) != 0) true else false
     val str = f"${F.toBinaryString}%8s".replaceAll(" ", "0")
     s"F=$str  :  S=$s  Z=$z  H=$h  P/V=$pv  N=$addsub  C=$carry"
 
@@ -144,76 +151,294 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
       instr.byteValue match {
 
         case (0x00) => // NOP
-          tStates = tStates + 4
+          addTStates(4)
         case (0x01) => // LD BC, nnnn
-          tStates = tStates + 10
+          addTStates(10)
           BC(MMU.get16(PC))
-          PC(UShort((PC + 2).shortValue()))
+          PC(PC + 2)
         case (0x02) => // LD (BC),A
-          tStates = tStates + 7
+          addTStates(7)
           memoryBreak = CHECK_BREAK_BYTE(BC)
           if (!memoryBreak) MMU.put8(BC, A)
         case (0x03) => // INC BC
-          tStates = tStates + 6
+          addTStates(6)
           BC.increment()
         case (0x04) => // INC B
-          tStates = tStates + 4
+          addTStates(4)
           B.increment()
           AF((AF & ~0xfe) | incTable(B) | SET_PV2(0x80, B))
         case (0x05) => // DEC B
-          tStates = tStates + 4
+          addTStates(4)
           B.decrement()
           AF((AF & ~0xfe) | decTable(B) | SET_PV2(0x7f, B))
         case (0x06) => // LD B,nn
-          tStates = tStates + 7
+          addTStates(7)
           B(MMU.get8(PC))
           PC.increment()
         case (0x07) => // RLCA
-          tStates = tStates + 4
+          addTStates(4)
           AF(((AF >> 7) & 0x0128) | ((AF << 1) & ~0x1ff) | (AF & 0xc4) | ((AF >> 15) & 1))
         case (0x08) => // EX AF, AF'
-          tStates = tStates + 4
+          addTStates(4)
           AF.swap(AFP)
         case (0x09) => // ADD HL, BC
-          tStates = tStates + 11
+          addTStates(11)
           // NB The table is based on the raw int result values, not the 16 bit values
           val sum: Int = HL.intValue + BC.intValue
           AF((AF & ~0x3b) | ((sum >> 8) & 0x28) | cbitsTable((HL ^ BC ^ sum) >> 8))
           HL(sum)
-        case (0x0a) => // LD A, BC
-          tStates = tStates + 7
+        case (0x0a) => // LD A, (BC)
+          addTStates(7)
           memoryBreak = CHECK_BREAK_BYTE(BC)
           if (!memoryBreak) A(MMU.get8(BC))
         case (0x0b) => // DEC BC
-          tStates = tStates + 6
+          addTStates(6)
           BC.decrement()
         case (0x0c) => // INC C
-          tStates = tStates + 4
+          addTStates(4)
           C.increment()
           AF((AF & ~0xfe) | incTable(C) | SET_PV2(0x80, C))
         case (0x0d) => // DEC C
-          tStates = tStates + 4
+          addTStates(4)
           C.decrement()
           AF((AF & ~0xfe) | decTable(C) | SET_PV2(0x7f, C))
         case (0x0e) => // LD C,nn
-          tStates = tStates + 7
+          addTStates(7)
           C(MMU.get8(PC))
           PC.increment()
         case (0x0f) => // RRCA
-          tStates = tStates + 4
+          addTStates(4)
           AF((AF & 0xc4) | rrcaTable(A))
         case (0x10) => // DJNZ dd
           B.decrement()
-          if(B.get8 == 0) {
+          if (B.get8 == 0) {
             // Jump
-            tStates = tStates + 13
+            addTStates(13)
             PC(PC + MMU.get8(PC).byteValue + 1)
           } else {
             PC.increment()
-            tStates = tStates + 8
+            addTStates(8)
           }
+        case (0x11) => // LD DE, nnnn
+          addTStates(10)
+          DE(MMU.get16(PC))
+          PC(PC + 2)
+        case (0x12) => // LD (DE),A
+          addTStates(7)
+          memoryBreak = CHECK_BREAK_BYTE(DE)
+          if (!memoryBreak) MMU.put8(DE, A)
+        case (0x13) => // INC DE
+          addTStates(6)
+          DE.increment()
+        case (0x14) => // INC D
+          addTStates(4)
+          D.increment()
+          AF((AF & ~0xfe) | incTable(D) | SET_PV2(0x80, D))
+        case (0x15) => // DEC D
+          addTStates(4)
+          D.decrement()
+          AF((AF & ~0xfe) | decTable(D) | SET_PV2(0x7f, D))
+        case (0x16) => // LD D,nn
+          addTStates(7)
+          D(MMU.get8(PC))
+          PC.increment()
+        case (0x17) => // RLA
+          addTStates(4)
+          AF(((AF << 8) & 0x0100) | ((AF >> 7) & 0x28) | ((AF << 1) & ~0x01ff) |
+            (AF & 0xc4) | ((AF >> 15) & 1))
+        case (0x18) => // JR dd
+          addTStates(12)
+          PC(PC + MMU.get8(PC) + 1)
+        case (0x19) => // ADD HL, DE
+          addTStates(11)
+          // NB The table is based on the raw int result values, not the 16 bit values
+          val sum: Int = HL.intValue + DE.intValue
+          AF((AF & ~0x3b) | ((sum >> 8) & 0x28) | cbitsTable((HL ^ DE ^ sum) >> 8))
+          HL(sum)
+        case (0x1a) => // LD A, (DE)
+          addTStates(7)
+          memoryBreak = CHECK_BREAK_BYTE(DE)
+          if (!memoryBreak) A(MMU.get8(DE))
+        case (0x1b) => // DEC DE
+          addTStates(6)
+          DE.decrement()
+        case (0x1c) => // INC E
+          addTStates(4)
+          E.increment()
+          AF((AF & ~0xfe) | incTable(E) | SET_PV2(0x80, E))
+        case (0x1d) => // DEC E
+          addTStates(4)
+          E.decrement()
+          AF((AF & ~0xfe) | decTable(E) | SET_PV2(0x7f, E))
+        case (0x1e) => // LD E,nn
+          addTStates(7)
+          E(MMU.get8(PC))
+          PC.increment()
+        case (0x1f) => // RRA
+          addTStates(4)
+          AF(((AF & 1) << 15) | (AF & 0xc4) | rraTable(A))
+        case (0x20) => // JR NZ,dd
+          if ((F & 64) != 0) { // Z flag
+            addTStates(7)
+            PC.increment()
+          } else {
+            PC(PC + MMU.get8(PC) + 1)
+            addTStates(12)
+          }
+        case (0x21) => // LD HL, nnnn
+          addTStates(10)
+          HL(MMU.get16(PC))
+          PC(PC + 2)
+        case (0x22) => // LD (nnnn), HL
+          addTStates(16)
+          memoryBreak = CHECK_BREAK_WORD(PC)
+          if (!memoryBreak) MMU.put16(PC, HL)
+          PC(PC + 2)
+        case (0x23) => // INC HL
+          addTStates(6)
+          HL.increment()
+        case (0x24) => // INC H
+          addTStates(4)
+          H.increment()
+          AF((AF & ~0xfe) | incTable(H) | SET_PV2(0x80, H))
+        case (0x25) => // DEC H
+          addTStates(4)
+          H.decrement()
+          AF((AF & ~0xfe) | decTable(H) | SET_PV2(0x7f, H))
+        case (0x26) => // LD H,nn
+          addTStates(7)
+          H(MMU.get8(PC))
+          PC.increment()
+        case (0x27) => // DAA
+          addTStates(4)
+          var acu = A.get8.intValue
+          val temp = acu & 0xf // low digit
+        val cbits = testFlag(F, FLAG_C) // carry
+          if (testFlag(F, FLAG_N)) {
+            // last operation was a subtract
+            val hd = if (cbits || (acu > 0x99)) true else false
+            // H = 16
+            if (testFlag(F, FLAG_H) || (temp > 9)) {
+              // adjust low digit
+              if (temp > 5) setFlag(F, FLAG_H, clear = false)
+              acu = (acu - 6) & 0xff
+            }
+            if (hd) acu = acu - 0x160 // adjust high digit
+
+          } else {
+            // last operation was an add
+            if (testFlag(F, FLAG_H) || (temp > 9)) {
+              if (temp > 9) setFlag(F, FLAG_H, clear = {
+                if (temp > 9) true else false
+              })
+              acu = acu + 6
+            }
+            if (cbits || ((acu & 0x1f0) > 0x90))
+              acu = acu + 0x60 // adjust high bit
+          }
+          AF((AF & 0x12) | rrdrldTable(acu & 0xff) | ((acu >> 8) & 1) | {
+            if (cbits) 1 else 0
+          })
+        case (0x28) => // JR Z,dd
+          if (testFlag(F, FLAG_Z)) {
+            addTStates(12)
+            PC(PC + MMU.get8(PC) + 1)
+          } else {
+            PC.increment()
+            addTStates(7)
+          }
+        case (0x29) => // ADD HL, HL
+          addTStates(11)
+          // NB The table is based on the raw int result values, not the 16 bit values
+          val sum: Int = HL.intValue + HL.intValue
+          AF((AF & ~0x3b) | cbitsDup16Table(sum >> 8))
+          HL(sum)
+        case (0x2a) => // LD HL,(nnnn)
+          addTStates(16)
+          CHECK_BREAK_WORD(PC)
+          HL(MMU.get16(MMU.get16(PC)))
+          PC(PC + 2)
+        case (0x2b) => // DEC HL
+          addTStates(6)
+          HL.decrement()
+        case (0x2c) => // INC L
+          addTStates(4)
+          L.increment()
+          AF((AF & ~0xfe) | incTable(L) | SET_PV2(0x80, L))
+        case (0x2d) => // DEC L
+          addTStates(4)
+          L.decrement()
+          AF((AF & ~0xfe) | decTable(L) | SET_PV2(0x7f, L))
+        case (0x2e) => // LD L,nn
+          addTStates(7)
+          L(MMU.get8(PC))
+          PC.increment()
+        case (0x2f) => // CPL
+          addTStates(4)
+          AF((~AF.get16 & ~0xff) | (AF & 0xc5) | ((~AF.get16 >> 8) & 0x28) | 0x12)
+        case (0x30) => // JR NC,dd
+          if (!testFlag(F, FLAG_C)) {
+            addTStates(12)
+            PC(PC + MMU.get8(PC) + 1)
+          } else {
+            PC.increment()
+            addTStates(7)
+          }
+        case (0x31) => // LD SP, nnnn
+          addTStates(10)
+          SP(MMU.get16(PC))
+          PC(PC + 2)
+        case (0x32) => // LD (nnnn), A
+          addTStates(13)
+          memoryBreak = CHECK_BREAK_WORD(PC)
+          MMU.put8(MMU.get16(PC).intValue, A)
+          PC(PC + 2)
+        case (0x33) => // INC SP
+          addTStates(6)
+          SP.increment()
+        case (0x34) => // INC (HL)
+          addTStates(11)
+          CHECK_BREAK_BYTE(HL)
+          val temp = MMU.get8(HL) + 1
+          MMU.put8(HL, UByte(temp.byteValue()))
+          AF((AF & ~0xfe) | incTable(temp) | SET_PV2(0x80, temp))
+        case (0x35) => // DEC (HL)
+          addTStates(11)
+          CHECK_BREAK_BYTE(HL)
+          val temp = MMU.get8(HL) - 1
+          MMU.put8(HL, UByte(temp.byteValue()))
+          AF((AF & ~0xfe) | decTable(temp) | SET_PV2(0x7f, temp))
+        case (0x36) => // LD (HL),nn
+          addTStates(10)
+          CHECK_BREAK_BYTE(HL)
+          MMU.put8(HL, MMU.get8(PC))
+          PC.increment()
+        case (0x37) => // SCF
+          addTStates(4)
+          AF((AF & ~0x3b) | ((AF >> 8) & 0x28) | 1)
+        case (0x38) => // JR C,dd
+          if (testFlag(F, FLAG_C)) {
+            addTStates(12)
+            PC(PC + MMU.get8(PC) + 1)
+          } else {
+            PC.increment()
+            addTStates(7)
+          }
+        case (0x39) => // ADD HL, SP
+          addTStates(11)
+          // NB The table is based on the raw int result values, not the 16 bit values
+          val sum: Int = HL.intValue + SP.intValue
+          AF((AF & ~0x3b) | ((sum >> 8) & 0x28) | cbitsTable((HL ^ SP ^ sum) >> 8))
+          HL(sum)
+        case (0x3a) => // LD A,(nnnn)
+          addTStates(13)
+          val tmp: UShort = MMU.get16(PC)
+          CHECK_BREAK_BYTE(tmp)
+          A(MMU.get8(tmp))
+          PC(PC + 2)
+
         case (0x76) => // HALT
-          tStates = tStates + 4
+          addTStates(4)
           PC(PC - 1)
           execute = false
       }
@@ -231,6 +456,9 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
   }
 
   @inline
+  private def addTStates(x: Long): Unit = tStates = tStates + x
+
+  @inline
   private def INCR(count: Int): Unit = {
     R.set8(UByte(((R.get8 & ~0x7f) | ((R.get8 + count) & 0x7f)).toByte)) // Increment R
   }
@@ -240,6 +468,12 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
   private def CHECK_BREAK_BYTE(reg: Register16): Boolean = {
     false
   }
+
+  @inline
+  private def CHECK_BREAK_BYTE(v: UShort): Boolean = false
+
+  @inline // TODO Implement memory break points.
+  private def CHECK_BREAK_WORD(reg: Register16): Boolean = false
 
   private val incTable: Array[UByte] = {
     for (temp <- 0 to 255) yield {
@@ -423,4 +657,10 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
   @inline
   private def SET_PV2(x: Int, temp: Register8): UByte = SET_PV2(UByte(x.toByte), temp)
 
+  @inline
+  private def SET_PV2(x: Int, temp: Int): UByte = {
+    UByte(({
+      if (temp == x) 1 else 0
+    } << 2).toByte)
+  }
 }

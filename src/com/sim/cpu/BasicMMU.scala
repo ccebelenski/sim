@@ -111,6 +111,10 @@ abstract class BasicMMU(val cpu: BasicCPU) {
     put8(register16.get16.toInt, value)
   }
 
+  @inline
+  def put(address: UShort, value: Register8) : Unit = {
+    put8(address.intValue, value.get8)
+  }
 
   def put8(address: Int, value: UByte) : Unit = {
 
