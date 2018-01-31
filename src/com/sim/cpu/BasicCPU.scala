@@ -114,6 +114,7 @@ abstract class BasicCPU(val isBanked: Boolean, override val machine: AbstractMac
   }
 
   def showRegisters(): String
+  def showFlags():String
 
   def setRegister8(nmemonic: String, value: UByte): Unit = {
     registers.get(nmemonic) match {
@@ -161,7 +162,7 @@ class Register8(override val nmenomic: String) extends Register(nmenomic) {
 
   def increment(): Unit = value = new UByte((value.byteValue + 1).toByte)
 
-  def decrement(): Unit = value = new UByte((value.byteValue + 1).toByte)
+  def decrement(): Unit = value = new UByte((value.byteValue - 1).toByte)
 
   override val aWidth = 8
 
@@ -181,6 +182,9 @@ class Register8(override val nmenomic: String) extends Register(nmenomic) {
     ((this.value - value) & 0xff).byteValue()
   }
 
+  def &(value: Int): Int = {
+    this.value & value
+  }
 }
 
 object Register8 {
@@ -250,33 +254,33 @@ class Register16(override val nmenomic: String) extends Register(nmenomic) {
   def decrement(): Unit = set16(UShort((get16 - 1).shortValue()))
 
   def swap(register16: Register16): Unit = {
-    val temp = register16.value
-    register16.value = this.value
-    this.value = temp
+    val temp = register16.get16
+    register16.set16(this.get16)
+    this.set16(temp)
   }
 
   def +(value: Int): Int = {
-    (this.value + value) & 0xffff
+    (this.get16 + value) & 0xffff
   }
 
   def -(value: Int): Int = {
-    (this.value - value) & 0xffff
+    (this.get16 - value) & 0xffff
   }
 
   def &(value: Int): Int = {
-    this.value & value
+    this.get16 & value
   }
 
   def >>(value: Int): Int = {
-    (this.value >> value) & 0xffff
+    (this.get16 >> value) & 0xffff
   }
 
   def <<(value: Int): Int = {
-    (this.value << value) & 0xffff
+    (this.get16 << value) & 0xffff
   }
 
   def ^(value: Int): Int = {
-    this.value ^ value
+    this.get16 ^ value
   }
 
   override val aWidth = 16

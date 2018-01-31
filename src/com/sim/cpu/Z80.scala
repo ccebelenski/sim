@@ -89,6 +89,21 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
     s"$PC  $SP  $AF  $BC  $DE  $HL  $IX  $IY  $R\n                     $AFP $BCP $DEP $HLP"
   }
 
+  override def showFlags(): String = {
+    val carry = if ((F & 1) != 0) true else false
+    val addsub = if ((AF & 2) != 0) true else false
+    val pv = if ((AF & 4) != 0) true else false
+    val bit3 = if ((AF & 8) != 0) true else false
+    val h = if ((AF & 16) != 0) true else false
+    val bit5 = if ((AF & 32) != 0) true else false
+    val z = if ((AF & 64) != 0) true else false
+    val s = if ((AF & 128) != 0) true else false
+    val str = f"${F.toBinaryString}%8s".replaceAll(" ", "0")
+    s"F=$str  :  S=$s  Z=$z  H=$h  P/V=$pv  N=$addsub  C=$carry"
+
+  }
+
+
   override def runcpu(): Unit = {
 
     // tStates contains the number of t-states executed.  1 t-state is executed in 1 microsecond
@@ -140,14 +155,14 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
           if (!memoryBreak) MMU.put8(BC, A)
         case (0x03) => // INC BC
           tStates = tStates + 6
-          BC(BC + 1)
+          BC.increment()
         case (0x04) => // INC B
           tStates = tStates + 4
-          B(B + 1)
+          B.increment()
           AF((AF & ~0xfe) | incTable(B) | SET_PV2(0x80, B))
         case (0x05) => // DEC B
           tStates = tStates + 4
-          B.set8((B - UByte(1)).toUByte)
+          B.decrement()
           AF((AF & ~0xfe) | decTable(B) | SET_PV2(0x7f, B))
         case (0x06) => // LD B,nn
           tStates = tStates + 7
@@ -161,7 +176,8 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
           AF.swap(AFP)
         case (0x09) => // ADD HL, BC
           tStates = tStates + 11
-          val sum = HL + BC
+          // NB The table is based on the raw int result values, not the 16 bit values
+          val sum: Int = HL.intValue + BC.intValue
           AF((AF & ~0x3b) | ((sum >> 8) & 0x28) | cbitsTable((HL ^ BC ^ sum) >> 8))
           HL(sum)
         case (0x0a) => // LD A, BC
@@ -174,8 +190,28 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
         case (0x0c) => // INC C
           tStates = tStates + 4
           C.increment()
-          AF((AF.get16 & ~0xfe) | incTable(C) | SET_PV2(0x80, C))
-
+          AF((AF & ~0xfe) | incTable(C) | SET_PV2(0x80, C))
+        case (0x0d) => // DEC C
+          tStates = tStates + 4
+          C.decrement()
+          AF((AF & ~0xfe) | decTable(C) | SET_PV2(0x7f, C))
+        case (0x0e) => // LD C,nn
+          tStates = tStates + 7
+          C(MMU.get8(PC))
+          PC.increment()
+        case (0x0f) => // RRCA
+          tStates = tStates + 4
+          AF((AF & 0xc4) | rrcaTable(A))
+        case (0x10) => // DJNZ dd
+          B.decrement()
+          if(B.get8 == 0) {
+            // Jump
+            tStates = tStates + 13
+            PC(PC + MMU.get8(PC).byteValue + 1)
+          } else {
+            PC.increment()
+            tStates = tStates + 8
+          }
         case (0x76) => // HALT
           tStates = tStates + 4
           PC(PC - 1)
@@ -191,6 +227,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
     // TODO simulation halted
     Utils.outln(s"$name: Halted.")
     Utils.outln(showRegisters())
+    Utils.outln(showFlags())
   }
 
   @inline
