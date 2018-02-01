@@ -206,6 +206,9 @@ class Register8(override val nmenomic: String) extends Register(nmenomic) {
   def |(value: Int): Int = {
     this.value | value
   }
+  def ^(value: Int): Int = {
+    this.value ^ value
+  }
 }
 
 object Register8 {
