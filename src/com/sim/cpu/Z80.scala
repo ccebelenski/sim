@@ -1001,6 +1001,78 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
           AF(xororTable(A))
 
 
+        case (0xb8) => // CP B
+          addTStates(4)
+          val temp:Int = B.get8.intValue
+          val acu:Int  = A.get8.intValue
+          AF( AF & ~0x28 | temp & 0x28)
+          val sum:Int  = acu - temp
+          val cbits:Int  = acu ^ temp ^ sum
+          AF( (AF & 0xff) | cpTable(sum & 0xff) | (temp & 0x28) | SET_PV(cbits) | cbits2Table(cbits & 0x1ff))
+        case (0xb9) => // CP C
+          addTStates(4)
+          val temp:Int = C.get8.intValue
+          val acu:Int  = A.get8.intValue
+          AF( AF & ~0x28 | temp & 0x28)
+          val sum:Int  = acu - temp
+          val cbits:Int  = acu ^ temp ^ sum
+          AF( (AF & 0xff) | cpTable(sum & 0xff) | (temp & 0x28) | SET_PV(cbits) | cbits2Table(cbits & 0x1ff))
+        case (0xba) => // CP D
+          addTStates(4)
+          val temp:Int = D.get8.intValue
+          val acu:Int  = A.get8.intValue
+          AF( AF & ~0x28 | temp & 0x28)
+          val sum:Int  = acu - temp
+          val cbits:Int  = acu ^ temp ^ sum
+          AF( (AF & 0xff) | cpTable(sum & 0xff) | (temp & 0x28) | SET_PV(cbits) | cbits2Table(cbits & 0x1ff))
+        case (0xbb) => // CP E
+          addTStates(4)
+          val temp:Int = E.get8.intValue
+          val acu:Int  = A.get8.intValue
+          AF( AF & ~0x28 | temp & 0x28)
+          val sum:Int  = acu - temp
+          val cbits:Int  = acu ^ temp ^ sum
+          AF( (AF & 0xff) | cpTable(sum & 0xff) | (temp & 0x28) | SET_PV(cbits) | cbits2Table(cbits & 0x1ff))
+        case (0xbc) => // CP H
+          addTStates(4)
+          val temp:Int = H.get8.intValue
+          val acu:Int  = A.get8.intValue
+          AF( AF & ~0x28 | temp & 0x28)
+          val sum:Int  = acu - temp
+          val cbits:Int  = acu ^ temp ^ sum
+          AF( (AF & 0xff) | cpTable(sum & 0xff) | (temp & 0x28) | SET_PV(cbits) | cbits2Table(cbits & 0x1ff))
+        case (0xbd) => // CP L
+          addTStates(4)
+          val temp:Int = L.get8.intValue
+          val acu:Int  = A.get8.intValue
+          AF( AF & ~0x28 | temp & 0x28)
+          val sum:Int  = acu - temp
+          val cbits:Int  = acu ^ temp ^ sum
+          AF( (AF & 0xff) | cpTable(sum & 0xff) | (temp & 0x28) | SET_PV(cbits) | cbits2Table(cbits & 0x1ff))
+        case (0xbe) => // CP (HL)
+          addTStates(7)
+          CHECK_BREAK_BYTE(HL)
+          val temp:Int = MMU.get8(HL).intValue
+          val acu:Int  = A.get8.intValue
+          AF( AF & ~0x28 | temp & 0x28)
+          val sum:Int  = acu - temp
+          val cbits:Int  = acu ^ temp ^ sum
+          AF( (AF & 0xff) | cpTable(sum & 0xff) | (temp & 0x28) | SET_PV(cbits) | cbits2Table(cbits & 0x1ff))
+        case(0xbf) => // CP A
+          addTStates(4)
+          F((A & 0x28) | 0x42)
+
+        case (0xc0) => // RET NZ
+          if(testFlag(F,FLAG_Z)) addTStates(5)
+          else {
+            CHECK_BREAK_WORD(SP)
+            addTStates(11)
+            POP(PC)
+          }
+        case (0xc1) => // POP BC
+          addTStates(10)
+          CHECK_BREAK_WORD(SP)
+          POP(BC)
       }
 
 
@@ -1226,4 +1298,23 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
 
   @inline
   private def SET_PV(cbits: Int): Int = (cbits >> 6) ^ (cbits >> 5) & 4
+
+  @inline
+  def POP(x:Register16) : Unit = {
+   val y = MMU.get8(SP)
+    SP.increment()
+    x(y + (MMU.get8(SP) << 8).shortValue)
+    SP.increment()
+  }
+
+  @inline
+  def PUSH(x:Register16): Unit = {
+
+    SP.decrement()
+    MMU.put8(SP,UByte((x.get16 >> 8).byteValue))
+    SP.decrement()
+    MMU.put8(SP, UByte((x.get16 & 0xff).byteValue))
+
+  }
+
 }
