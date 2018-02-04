@@ -25,8 +25,9 @@ abstract class BasicCPU(val isBanked: Boolean, override val machine: AbstractMac
     Utils.outln(s"CPU: Clock frequency changed to: ${clockFrequency}Khz")
   }
 
-  def runcpu(): Unit
+  def runcpu(): Unit // Main CPU execution loop
 
+  def onHalt(): Unit // called when CPU is about to be halted and returning to cmd line
 
   @inline
   def setFlag(reg:Register8, flag:Int, clear:Boolean) : Unit = {

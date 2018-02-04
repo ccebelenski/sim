@@ -229,6 +229,22 @@ class Z80Tests {
   }
 
   @Test
+  def test0xd6() : Unit = {
+    z80.deposit(0x0000, 0xd6)
+    z80.deposit(0x0001, 0x02)
+    z80.deposit(0x0003, 0x76)
+    z80.PC(0x0000)
+    z80.A(0x05)
+    z80.runcpu()
+    assertTrue(z80.PC.get16 == 0x0003)
+    assertTrue(z80.A.get8 == 0x03)
+    assertTrue(!z80.testFlag(z80.F,z80.FLAG_Z))
+    assertTrue(!z80.testFlag(z80.F,z80.FLAG_P))
+    assertTrue(z80.testFlag(z80.F,z80.FLAG_N))
+
+
+  }
+  @Test
   // HALT
   def test0x76(): Unit = {
     mmu.put8(Z80Tests.PC, UByte(0x76))

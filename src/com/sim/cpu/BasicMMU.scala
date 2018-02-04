@@ -112,7 +112,7 @@ abstract class BasicMMU(val cpu: BasicCPU) {
   }
 
   @inline
-  def put(address: UShort, value: Register8) : Unit = {
+  def put8(address: UShort, value: Register8) : Unit = {
     put8(address.intValue, value.get8)
   }
 
@@ -140,6 +140,16 @@ abstract class BasicMMU(val cpu: BasicCPU) {
       }
     }
 
+  }
+
+  def out8(address:Int, value: UByte) : Unit = {
+    // TODO
+
+  }
+
+  def in8(address:Int) : UByte = {
+    // TODO
+    UByte(0)
   }
 
   // Store little endian...
@@ -183,6 +193,11 @@ abstract class BasicMMU(val cpu: BasicCPU) {
       }
     }
   }
+
+//  @inline
+//  def get8(address:Int): UByte = {
+//    get8(UInt(address))
+//  }
 
   // Retrieve little endian
   @inline
