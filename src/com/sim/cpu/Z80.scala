@@ -14,6 +14,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
 
   var tStates: Long = 0L
 
+  override def createDefaultUnitOptions: Unit = {}
 
   override def resetCPU(): Unit = {
 
