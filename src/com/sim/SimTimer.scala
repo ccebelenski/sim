@@ -7,7 +7,7 @@ import com.sim.unsigned.{UInt, ULong}
 class SimTimer(override val machine: AbstractMachine) extends BasicDevice(machine) {
 
   override val description: String = "Timer Device"
-  name = "TIMER"
+  override val name = "TIMER"
 
   // TODO - probably display master system timer information.
   def showCommand(sb: StringBuilder) = {

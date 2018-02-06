@@ -8,7 +8,7 @@ class S100Machine extends AbstractMachine{
 
 
   override val description:String = "S100 machine."
-  name = "S100"
+  override val name = "S100"
 
 
 

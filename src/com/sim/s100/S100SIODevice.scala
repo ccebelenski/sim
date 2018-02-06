@@ -6,7 +6,7 @@ import com.sim.machine.AbstractMachine
 class S100SIODevice(machine:AbstractMachine) extends BasicDevice(machine:AbstractMachine){
 
   override val description :String = "MITS 2SIO interface card"
-  name = "SIO"
+  override val name = "SIO"
 
   override def init(): Unit = ???
 

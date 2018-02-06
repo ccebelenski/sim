@@ -18,7 +18,7 @@ class Z80Tests {
     if (Z80Tests.machine == null) {
       Z80Tests.machine = new S100Machine()
       Z80Tests.machine.init()
-      Z80Tests.z80 = Z80Tests.machine.findDevice("Z80").get.asInstanceOf[Z80]
+      Z80Tests.z80 = Z80Tests.machine.findDevice("Z80A").get.asInstanceOf[Z80]
       Z80Tests.mmu = Z80Tests.z80.MMU
       Z80Tests.z80.setMemorySize(UInt(0xFFFF))
       Z80Tests.mmu.mapRAM(UInt(0x0000), UInt(0xc000))
@@ -232,11 +232,11 @@ class Z80Tests {
   def test0xd6() : Unit = {
     z80.deposit(0x0000, 0xd6)
     z80.deposit(0x0001, 0x02)
-    z80.deposit(0x0003, 0x76)
+    z80.deposit(0x0002, 0x76)
     z80.PC(0x0000)
     z80.A(0x05)
     z80.runcpu()
-    assertTrue(z80.PC.get16 == 0x0003)
+    assertTrue(z80.PC.get16 == 0x0002)
     assertTrue(z80.A.get8 == 0x03)
     assertTrue(!z80.testFlag(z80.F,z80.FLAG_Z))
     assertTrue(!z80.testFlag(z80.F,z80.FLAG_P))
@@ -251,6 +251,22 @@ class Z80Tests {
     z80.runcpu()
     assertTrue(z80.tStates == 4)
     assertTrue(PC.get16 == 0)
+  }
+
+
+  @Test
+  def test0xdd0x34() : Unit = {
+    // INC (IX+dd)
+    z80.deposit(0x0000, 0xdd)
+    z80.deposit(0x0001, 0x34)
+    z80.deposit(0x0002, 0x01)
+    z80.deposit(0x0003, 0x76)
+    z80.PC(0x0000)
+    z80.IX(0x4000)
+    z80.deposit(0x4001, 0x01)
+    z80.runcpu()
+    assertTrue(z80.IX.get16 == 0x4000)
+    assertTrue(z80.examine(0x4001).intValue == 0x02)
   }
 }
 

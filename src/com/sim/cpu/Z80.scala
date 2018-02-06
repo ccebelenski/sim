@@ -7,7 +7,7 @@ import com.sim.{SimTimer, Utils}
 import scala.annotation.switch
 
 class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends BasicCPU(isBanked, machine) {
-  name = "Z80"
+  override val name = "Z80"
   override val MMU: BasicMMU = new Z80MMU(this)
 
   override def init(): Unit = ???
@@ -1379,15 +1379,65 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
               AF( (AF & ~0xfe) | decZ80Table(IXH))
 
             case (0x26) => // LD IXH,nn
+              addTStates(9)
+              IXH(MMU.get8(PC))
+              PC.increment()
             case (0x29) => // ADD IX,IX
+              addTStates(15)
+              val sum:Int = IX + IX
+              AF( ( AF & ~0x3b) | cbitsDup16Table(sum >> 8))
+              IX(sum)
+
             case (0x2a) => // LD IX,(nnnn)
+              addTStates(15)
+              val tmp:Int = MMU.get16(PC).intValue
+              CHECK_BREAK_WORD(tmp)
+              IX( MMU.get16(UInt(tmp)))
+              PC(PC + 2)
+
             case (0x2b) => // DEC IX
+              addTStates(9)
+              IX.decrement()
             case (0x2c) => // INC IXL
+              addTStates(9)
+              IXL.increment()
+              AF ((AF & ~0xfe) | incZ80Table(IXL.intValue))
+
             case (0x2d) => // DEC IXL
+              addTStates(9)
+              IXL.decrement()
+              AF ((AF & ~0xfe) | decZ80Table(IXL.intValue & 0xff))
+
             case (0x2e) => // LD IXL,nn
+              addTStates(9)
+              IXL(MMU.get8(PC))
+              PC.increment()
+
             case (0x34) => // INC (IX+dd)
-            case (0x35) => // DEc (IX+dd)
+              addTStates(23)
+              val adr:Int = IX.intValue + MMU.get8(PC).intValue
+              PC.increment()
+              CHECK_BREAK_BYTE(adr)
+              val temp:UByte = UByte((MMU.get8(UInt(adr)) + UByte(1)).toByte)
+              MMU.put8(adr,temp)
+              AF ( (AF & ~0xfe) | incZ80Table(temp.intValue))
+
+
+            case (0x35) => // DEC (IX+dd)
+              addTStates(23)
+              val adr:Int = IX.intValue + MMU.get8(PC).intValue
+              PC.increment()
+              CHECK_BREAK_BYTE(adr)
+              val temp:UByte = UByte((MMU.get8(UInt(adr)) - UByte(1)).toByte)
+              MMU.put8(adr,temp)
+              AF ( (AF & ~0xfe) | decZ80Table(temp.intValue & 0xff))
             case (0x36) => // LD (IX+dd),nn
+              addTStates(19)
+              val adr:Int = IX.intValue + MMU.get8(PC).intValue
+              PC.increment()
+              CHECK_BREAK_BYTE(adr)
+              MMU.put8(adr, MMU.get8(PC))
+              PC.increment()
             case (0x39) => // ADD IX,SP
               addTStates(15)
               val sum : Int = IX.intValue + SP.intValue
@@ -1395,17 +1445,55 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
               IX(sum)
 
             case (0x44) => // LD B,IXH
+              addTStates(9)
+              B(IXH)
+
             case (0x45) => // LD B,IXL
+              addTStates(9)
+              B(IXL)
             case (0x46) => // LD B,(IX+dd)
+              addTStates(19)
+              val adr:Int = IX.intValue + MMU.get8(PC).intValue
+              PC.increment()
+              CHECK_BREAK_BYTE(adr)
+              B(MMU.get8(UInt(adr)))
             case (0x4c) => // LD C,IXH
+              addTStates(9)
+              C(IXH)
+
             case (0x4d) => // LD C,IXL
+              addTStates(9)
+              C(IXL)
             case (0x4e) => // LD C,(IX+dd)
+              addTStates(19)
+              val adr:Int = IX.intValue + MMU.get8(PC).intValue
+              PC.increment()
+              CHECK_BREAK_BYTE(adr)
+              C(MMU.get8(UInt(adr)))
             case (0x54) => // LD D,IXH
+              addTStates(9)
+              D(IXH)
             case (0x55) => // LD D,IXL
+              addTStates(9)
+              D(IXL)
             case (0x56) => // LD D,(IX+dd)
+              addTStates(19)
+              val adr:Int = IX.intValue + MMU.get8(PC).intValue
+              PC.increment()
+              CHECK_BREAK_BYTE(adr)
+              D(MMU.get8(UInt(adr)))
             case (0x5c) => // LD E,IXH
+              addTStates(9)
+              E(IXH)
             case (0x5d) => // LD E,IXL
+              addTStates(9)
+              E(IXL)
             case (0x5e) => // LD E,(IX+dd)
+              addTStates(19)
+              val adr:Int = IX.intValue + MMU.get8(PC).intValue
+              PC.increment()
+              CHECK_BREAK_BYTE(adr)
+              E(MMU.get8(UInt(adr)))
             case (0x60) => // LD IXH,B
             case (0x61) => // LD IXH,C
             case (0x62) => // LD IXH,D
@@ -1413,6 +1501,11 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
             case (0x64) => // LD IXH,IXH
             case (0x65) => // LD IXH,IXL
             case (0x66) => // LD H,(IX+dd)
+              addTStates(19)
+              val adr:Int = IX.intValue + MMU.get8(PC).intValue
+              PC.increment()
+              CHECK_BREAK_BYTE(adr)
+              H(MMU.get8(UInt(adr)))
             case (0x67) => // LD IXH,A
             case (0x68) => // LD IXL,8
             case (0x69) => // LD IXL,C
@@ -1421,6 +1514,11 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
             case (0x6c) => // LD IXL,IXH
             case (0x6d) => // LD IXL,IXL
             case (0x6e) => // LD L,(IX+dd)
+              addTStates(19)
+              val adr:Int = IX.intValue + MMU.get8(PC).intValue
+              PC.increment()
+              CHECK_BREAK_BYTE(adr)
+              L(MMU.get8(UInt(adr)))
             case (0x6f) => // LD IXL,A
             case (0x70) => // LD (IX+dd),B
             case (0x71) => // LD (IX+dd),C
@@ -1636,17 +1734,53 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
 
 
             case (0x44) => // LD B,IYH
+              addTStates(9)
+              B(IYH)
             case (0x45) => // LD B,IYL
+              addTStates(9)
+              B(IYL)
             case (0x46) => // LD B,(IY+dd)
+              addTStates(19)
+              val adr:Int = IY.intValue + MMU.get8(PC).intValue
+              PC.increment()
+              CHECK_BREAK_BYTE(adr)
+              B(MMU.get8(UInt(adr)))
             case (0x4c) => // LD C,IYH
+              addTStates(9)
+              C(IYH)
             case (0x4d) => // LD C,IYL
+              addTStates(9)
+              C(IYL)
             case (0x4e) => // LD C,(IY+dd)
+              addTStates(19)
+              val adr:Int = IY.intValue + MMU.get8(PC).intValue
+              PC.increment()
+              CHECK_BREAK_BYTE(adr)
+              C(MMU.get8(UInt(adr)))
             case (0x54) => // LD D,IYH
+              addTStates(9)
+              D(IYH)
             case (0x55) => // LD D,IYL
+              addTStates(9)
+              D(IYL)
             case (0x56) => // LD D,(IY+dd)
+              addTStates(19)
+              val adr:Int = IY.intValue + MMU.get8(PC).intValue
+              PC.increment()
+              CHECK_BREAK_BYTE(adr)
+              D(MMU.get8(UInt(adr)))
             case (0x5c) => // LD E,IYH
+              addTStates(9)
+              E(IYH)
             case (0x5d) => // LD E,IYL
+              addTStates(9)
+              E(IYL)
             case (0x5e) => // LD E,(IY+dd)
+              addTStates(19)
+              val adr:Int = IY.intValue + MMU.get8(PC).intValue
+              PC.increment()
+              CHECK_BREAK_BYTE(adr)
+              E(MMU.get8(UInt(adr)))
             case (0x60) => // LD IYH,B
             case (0x61) => // LD IYH,C
             case (0x62) => // LD IYH,D
@@ -1654,6 +1788,11 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
             case (0x64) => // LD IYH,IYH
             case (0x65) => // LD IYH,IYL
             case (0x66) => // LD H,(IY+dd)
+              addTStates(19)
+              val adr:Int = IY.intValue + MMU.get8(PC).intValue
+              PC.increment()
+              CHECK_BREAK_BYTE(adr)
+              H(MMU.get8(UInt(adr)))
             case (0x67) => // LD IYH,A
             case (0x68) => // LD IYL,B
             case (0x69) => // LD IYL,C
@@ -1661,6 +1800,11 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
             case (0x6b) => // LD IYL,E
             case (0x6c) => // LD IYL,IYH
             case (0x6e) => // LD L,(IY+dd)
+              addTStates(19)
+              val adr:Int = IY.intValue + MMU.get8(PC).intValue
+              PC.increment()
+              CHECK_BREAK_BYTE(adr)
+              L(MMU.get8(UInt(adr)))
             case (0x6f) => // LD IYL,A
             case (0x70) => // LD (IY+dd),B
             case (0x71) => // LD (IY+dd),C
