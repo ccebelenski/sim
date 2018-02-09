@@ -74,5 +74,6 @@ object Console {
   val simEnvironment: SimEnvironment = new SimEnvironment
 
   // This is set by the user interrupt - should be re-set when the command prompt is displayed.
+  @volatile
   var userInterrupt : Boolean = false
 }
