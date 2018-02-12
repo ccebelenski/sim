@@ -60,7 +60,7 @@ class ShowDeviceCommand extends Command {
           case None => Utils.outln(s"SIM: Device $devname not present.")
           case Some(v) => {
 
-            v.showCommand()
+            Utils.outln(v.showCommand().toString)
 
           }
         }

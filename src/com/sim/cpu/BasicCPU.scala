@@ -48,14 +48,6 @@ abstract class BasicCPU(val isBanked: Boolean, override val machine: AbstractMac
 
   val registers: Map[String, Register]
 
-  // Set up the master timer device
-  SimTimer.sim_timer_init() // set up some universal stuff.
-  val simTimerDevice = new SimTimer(machine)
-  val masterTimer = new SimTimerUnit(simTimerDevice, true)
-  SimTimer.internal_timer = masterTimer
-  machine.devices.append(simTimerDevice)
-
-  Utils.outln(s"SIM: OS Tick:${SimTimer.sim_os_tick_hz}Hz\tIdle Rate:${SimTimer.sim_idle_rate_ms}ms\tClock Res:${SimTimer.sim_os_clock_resolution_ms}ms")
 
   class X extends Consumer[String] {
     override def accept(t: String): Unit = ???

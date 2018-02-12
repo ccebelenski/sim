@@ -36,6 +36,7 @@ class S100SIOUnit(device: BasicDevice, mmu: BasicMMU, ports: List[UInt], size: U
   // Supports file attaching
   override val supportsAttach = true
 
+  override def cancel(): Unit = ???
 
-
+  override def completeAction(): Unit = ???
 }

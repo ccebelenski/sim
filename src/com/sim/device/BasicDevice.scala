@@ -22,6 +22,8 @@ abstract class BasicDevice(val machine:AbstractMachine) extends Named{
   val defaultUnitOptions: ArrayBuffer[UnitOption] = new ArrayBuffer[UnitOption]
   createDefaultUnitOptions
 
+
+
   // device and machine names are always upper case
   override def getName(): String = super.getName().toUpperCase + deviceIdentifier
 

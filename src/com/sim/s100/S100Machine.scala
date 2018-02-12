@@ -1,6 +1,6 @@
 package com.sim.s100
 
-import com.sim.Named
+import com.sim.{Named, SimTimer}
 import com.sim.cpu.Z80
 import com.sim.machine.AbstractMachine
 
@@ -15,6 +15,7 @@ class S100Machine extends AbstractMachine{
 
   override def init():Unit = {
     // Add the CPU - Initially the only device?
+    // NB the system timer will be added by the machine
     devices.append(new Z80(true, this))
   }
 }

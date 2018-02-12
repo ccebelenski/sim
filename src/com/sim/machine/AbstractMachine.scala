@@ -2,7 +2,7 @@ package com.sim.machine
 
 import java.util.ServiceLoader
 
-import com.sim.{Named, Utils}
+import com.sim._
 import com.sim.device.BasicDevice
 
 import scala.collection.JavaConverters._
@@ -14,8 +14,22 @@ abstract class AbstractMachine extends Named{
 
   var devices: ListBuffer[BasicDevice] = new ListBuffer[BasicDevice]
 
+  // Create a new system event queue
+  val eventQueue : EventQueue = new EventQueue
+
+
   // device and machine names are always upper case
   override def getName(): String = super.getName().toUpperCase
+
+
+  // Set up the master timer device - always present
+  SimTimer.sim_timer_init() // set up some universal stuff.
+  val simTimerDevice = new SimTimer(this)
+  val masterTimer = new SimTimerUnit(simTimerDevice, true)
+  masterTimer.init() // Init will define this as the master timer. (calibrated)
+  this.devices.append(simTimerDevice)
+
+  Utils.outln(s"SIM: OS Tick:${SimTimer.sim_os_tick_hz}Hz\tIdle Rate:${SimTimer.sim_idle_rate_ms}ms\tClock Res:${SimTimer.sim_os_clock_resolution_ms}ms")
 
   /**
     * Show command for SHOW MACHINE

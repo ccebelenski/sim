@@ -80,6 +80,8 @@ class SimTimerUnit(override val device: SimTimer, val isCalibrated: Boolean = fa
     val time: Long = if (rtc_currd == 0) 1L else rtc_currd
     //841
 
+    this.isTimerUnit = true
+
     rtc_clock_start_gtime = SimTimer.sim_time
     rtc_rtime = System.currentTimeMillis()
 
@@ -236,7 +238,7 @@ class SimTimerUnit(override val device: SimTimer, val isCalibrated: Boolean = fa
       }
     })
     //AIO_SET_INTERRUPT_LATENCY(rtc_currd * ticksper);   /* set interrrupt latency */
-    return rtc_currd
+    rtc_currd
   }
 
   /* 
@@ -251,13 +253,8 @@ class SimTimerUnit(override val device: SimTimer, val isCalibrated: Boolean = fa
   def rtcn_configure_calibrated_clock(): Unit = {
 
     /* Look for a timer running slower than the host system clock */
-    SimTimer.sim_int_clk_tps = Math.min(SimTimer.CLK_TPS, SimTimer.sim_os_tick_hz)
-    //    for (tmr=0; tmr<SIM_NTIMERS; tmr++) {
-    //    if ((rtc_hz) &&
-    //      (rtc_hz <= (uint32)sim_os_tick_hz) &&
-    //      (sim_clock_unit))
-    //      break;
-    //  }
+    SimTimer.sim_internal_clock_tps = Math.min(SimTimer.CLK_TPS, SimTimer.sim_os_tick_hz)
+
     if (SimTimer.internal_timer == null && rtc_hz <= SimTimer.sim_os_tick_hz) {
       //sim_debug (DBG_CAL, &sim_timer_dev, "_rtcn_configure_calibrated_clock(newtmr=%d) - Cleaning up stopped timer %s support\n", newtmr, sim_uname(sim_clock_unit[sim_calb_tmr]));
       /* Migrate any coscheduled devices to the standard queue */
@@ -285,10 +282,13 @@ class SimTimerUnit(override val device: SimTimer, val isCalibrated: Boolean = fa
       //SIM_INTERNAL_UNIT.action = & sim_timer_clock_tick_svc;
       //SIM_INTERNAL_UNIT.flags = UNIT_IDLE;
       //sim_register_internal_device(& sim_int_timer_dev); /* Register Internal timer device */
+      SimTimer.internal_timer = this
+
       //sim_rtcn_init_unit(& SIM_INTERNAL_UNIT, (CLK_INIT * CLK_TPS) / sim_int_clk_tps, SIM_INTERNAL_CLK);
+      this.action(UInt(0),UByte(0),false)
       //SIM_INTERNAL_UNIT.action(& SIM_INTERNAL_UNIT); /* Force tick to activate timer */
 
-      SimTimer.internal_timer = this
+
       return
     }
     //if (sim_calb_tmr == SIM_NTIMERS) {      /* was old the internal timer? */
@@ -317,5 +317,14 @@ class SimTimerUnit(override val device: SimTimer, val isCalibrated: Boolean = fa
 
   override def handles(value: UInt): Boolean = ???
 
-  override def action(action: UInt, value: UByte, isWrite:Boolean): UByte = ???
+  override def action(action: UInt, value: UByte, isWrite: Boolean): UByte = {
+    sim_rtcn_calb(SimTimer.sim_internal_clock_tps)
+    device.machine.eventQueue.activateAfter(this, 1000000 / SimTimer.sim_internal_clock_tps)
+    UByte(0)
+  }
+
+  override def cancel(): Unit = ???
+
+  override def completeAction(): Unit = ???
+
 }
