@@ -3,7 +3,7 @@ package com.sim.machine
 import java.util.ServiceLoader
 
 import com.sim._
-import com.sim.device.BasicDevice
+import com.sim.device.{BasicDevice, BasicUnit}
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
@@ -49,6 +49,19 @@ abstract class AbstractMachine extends Named{
   def findDevice(deviceName:String) : Option[BasicDevice] = {
     devices.find(d => d.getName().equalsIgnoreCase(deviceName))
   }
+
+  def findUnitDevice(deviceName:String) : Option[BasicUnit] = {
+    var result: Option[BasicUnit] = None
+    devices.foreach( d=> {
+      d.units.find( u => u.getName().equalsIgnoreCase(deviceName)) match {
+        case None => {}
+        case Some(x) => result = Some(x)
+      }
+    })
+
+    result
+  }
+
 
   def init() : Unit
 }

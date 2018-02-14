@@ -103,7 +103,7 @@ class SimTimer(override val machine: AbstractMachine) extends BasicDevice(machin
     }
 
 
-  override def createDefaultUnitOptions: Unit = {} // No options yet
+  override def createUnitOptions: Unit = {} // No options yet
 
   override def init(): Unit =
   {

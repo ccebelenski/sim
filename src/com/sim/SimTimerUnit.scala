@@ -327,4 +327,5 @@ class SimTimerUnit(override val device: SimTimer, val isCalibrated: Boolean = fa
 
   override def completeAction(): Unit = ???
 
+  override def showCommand(): Unit = ???
 }

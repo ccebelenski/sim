@@ -39,4 +39,6 @@ class S100SIOUnit(device: BasicDevice, mmu: BasicMMU, ports: List[UInt], size: U
   override def cancel(): Unit = ???
 
   override def completeAction(): Unit = ???
+
+  override def showCommand(): Unit = ???
 }

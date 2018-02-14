@@ -13,4 +13,6 @@ class TestUnit(device:BasicDevice) extends BasicUnit(device: BasicDevice){
   override def completeAction(): Unit = ???
 
   override def init(): Unit = ???
+
+  override def showCommand(): Unit = ???
 }

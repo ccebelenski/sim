@@ -36,6 +36,8 @@ abstract class BasicUnit(val device: BasicDevice) extends Ordered[BasicUnit]{
   val supportsAttach: Boolean = false
 
 
+  def showCommand(): Unit
+
   // device and machine names are always upper case
   def getName(): String = device.getName() + unitNumber
 
@@ -53,6 +55,8 @@ abstract class BasicUnit(val device: BasicDevice) extends Ordered[BasicUnit]{
   val dn = s"${getName()}:"
 
   device.addUnit(this)
+  // Copy unit options
+  device.unitOptions.foreach(u => this.unitOptions.append(u.copy))
 
 
   def init():Unit

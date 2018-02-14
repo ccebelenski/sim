@@ -57,10 +57,17 @@ class ShowDeviceCommand extends Command {
       case Some(m: AbstractMachine) => {
         val devname = tokenArray(0)
         m.findDevice(devname) match {
-          case None => Utils.outln(s"SIM: Device $devname not present.")
+          case None =>
+            // Device not found, look for a unit with that name.
+            m.findUnitDevice(devname) match {
+              case None =>  Utils.outln(s"SIM: Device $devname not present.")
+              case Some(u) => u.showCommand()
+            }
+
+
           case Some(v) => {
 
-            Utils.outln(v.showCommand().toString)
+            v.showCommand()
 
           }
         }

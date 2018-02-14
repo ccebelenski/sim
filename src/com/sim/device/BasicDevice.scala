@@ -18,9 +18,9 @@ abstract class BasicDevice(val machine:AbstractMachine) extends Named{
   var deviceIdentifier:String = "A"
   private var enabled : Boolean = false
 
-  // Default unit options - these are copied to each unit created.
-  val defaultUnitOptions: ArrayBuffer[UnitOption] = new ArrayBuffer[UnitOption]
-  createDefaultUnitOptions
+  // unit options - these are copied to each unit created.
+  val unitOptions: ArrayBuffer[UnitOption] = new ArrayBuffer[UnitOption]
+  createUnitOptions
 
 
 
@@ -28,11 +28,11 @@ abstract class BasicDevice(val machine:AbstractMachine) extends Named{
   override def getName(): String = super.getName().toUpperCase + deviceIdentifier
 
   def init() : Unit
-  def createDefaultUnitOptions: Unit
+  def createUnitOptions: Unit
 
   def addUnit(unit:BasicUnit) : Unit = {
     units.append(unit)
-    defaultUnitOptions.foreach(duo => unit.unitOptions.append(duo.copy))
+    unitOptions.foreach(duo => unit.unitOptions.append(duo.copy))
   }
 
   def clearUnits(): Unit = {
@@ -58,11 +58,13 @@ abstract class BasicDevice(val machine:AbstractMachine) extends Named{
     sb.append(s"$dn$description\n")
     sb.append(s"${dn}Enabled: $isEnabled Units:${units.length}\n")
     sb.append(s"${dn}aWidth: ${awidth.toHexString}\n")
+    sb.append(s"${dn}\tUnits:\n\n")
+    if(units.isEmpty) sb.append(s"$dn\tNo Units.")
     units.foreach(u => {
       sb.append(s"$dn\tUnit: ${u.getName()}\tenabled: ${u.isEnabled}\n")
     })
 
-    showCommand(sb) // Device specific information
+    //showCommand(sb) // Device specific information
     Utils.outln(sb.toString())
 
   }
