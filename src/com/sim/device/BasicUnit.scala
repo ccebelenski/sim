@@ -35,8 +35,12 @@ abstract class BasicUnit(val device: BasicDevice) extends Ordered[BasicUnit]{
   // Does this unit support being attached?
   val supportsAttach: Boolean = false
 
+  val dn = s"${getName()}:"
 
-  def showCommand(): Unit
+  // Add ourselves to the device.  this will add the options, and call init()
+  device.addUnit(this)
+
+  def showCommand(sb:StringBuilder): Unit
 
   // device and machine names are always upper case
   def getName(): String = device.getName() + unitNumber
@@ -52,11 +56,6 @@ abstract class BasicUnit(val device: BasicDevice) extends Ordered[BasicUnit]{
   // Complete an action (event queue)
   def completeAction(): Unit
 
-  val dn = s"${getName()}:"
-
-  device.addUnit(this)
-  // Copy unit options
-  device.unitOptions.foreach(u => this.unitOptions.append(u.copy))
 
 
   def init():Unit

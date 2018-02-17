@@ -35,8 +35,10 @@ class ShowMachineCommand extends Command {
 
     Console.simEnvironment.simMachine match {
       case None => Utils.outln("SIM: No machine.  SET a MACHINE.")
-      case Some(m: AbstractMachine) => m.showMachine
-    }
+      case Some(m: AbstractMachine) =>
+
+        m.showMachine
+   }
 
     false
   }
@@ -50,30 +52,33 @@ class ShowDeviceCommand extends Command {
 
   override def process(tokenArray: Array[String]): Boolean = {
 
+    val sb:StringBuilder = new StringBuilder
     if (tokenArray.length == 0) {
-      Utils.outln(s"SIM: Please specify a device.")
+      sb.append(s"SIM: Please specify a device.")
     } else Console.simEnvironment.simMachine match {
-      case None => Utils.outln("SIM: No machine.  SET a MACHINE.")
+      case None => sb.append("SIM: No machine.  SET a MACHINE.")
       case Some(m: AbstractMachine) => {
         val devname = tokenArray(0)
         m.findDevice(devname) match {
           case None =>
             // Device not found, look for a unit with that name.
             m.findUnitDevice(devname) match {
-              case None =>  Utils.outln(s"SIM: Device $devname not present.")
-              case Some(u) => u.showCommand()
+              case None =>  sb.append(s"SIM: Device $devname not present.")
+              case Some(u) => u.showCommand(sb)
             }
 
 
           case Some(v) => {
 
-            v.showCommand()
+            v.showCommand(sb)
 
           }
         }
       }
     }
 
+
+    Utils.outln(sb.toString)
     false
   }
 }

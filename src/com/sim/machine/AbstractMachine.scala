@@ -25,9 +25,11 @@ abstract class AbstractMachine extends Named{
   // Set up the master timer device - always present
   SimTimer.sim_timer_init() // set up some universal stuff.
   val simTimerDevice = new SimTimer(this)
+  addDevice(simTimerDevice)
   val masterTimer = new SimTimerUnit(simTimerDevice, true)
-  masterTimer.init() // Init will define this as the master timer. (calibrated)
-  this.devices.append(simTimerDevice)
+  // If there was no master timer already (true in this case) the timer will cause itself to do that. This
+  // guarantees there's only one master timer, created here.
+
 
   Utils.outln(s"SIM: OS Tick:${SimTimer.sim_os_tick_hz}Hz\tIdle Rate:${SimTimer.sim_idle_rate_ms}ms\tClock Res:${SimTimer.sim_os_clock_resolution_ms}ms")
 
@@ -53,15 +55,26 @@ abstract class AbstractMachine extends Named{
   def findUnitDevice(deviceName:String) : Option[BasicUnit] = {
     var result: Option[BasicUnit] = None
     devices.foreach( d=> {
-      d.units.find( u => u.getName().equalsIgnoreCase(deviceName)) match {
+      d.getUnits().find( u => u.getName().equalsIgnoreCase(deviceName)) match {
         case None => {}
-        case Some(x) => result = Some(x)
+        case Some(x:BasicUnit) => result = Some(x)
+        case _ => throw new Exception("System check: Unknown findUnitDevice")
       }
     })
 
     result
   }
 
+  def addDevice(device:BasicDevice) : Unit = {
+    // TODO Name management
+    device.createUnitOptions
+    device.init()
+    devices.append(device)
+  }
+
+  def removeDevice(deviceName:String) : Unit = {
+    // TODO
+  }
 
   def init() : Unit
 }

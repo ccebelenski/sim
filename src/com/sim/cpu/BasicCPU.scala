@@ -149,6 +149,11 @@ abstract class BasicCPU(val isBanked: Boolean, override val machine: AbstractMac
   }
 
 
+  override def showCommand(stringBuilder: StringBuilder) : Unit = {
+    super.showCommand(stringBuilder)
+    stringBuilder.append(s"$getName> Registers:\n" + showRegisters() + "\n")
+    stringBuilder.append(s"$getName> Flags:\n" + showFlags() + "\n")
+  }
 }
 
 abstract class Register(val nmenomic: String) {

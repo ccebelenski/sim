@@ -327,5 +327,70 @@ class SimTimerUnit(override val device: SimTimer, val isCalibrated: Boolean = fa
 
   override def completeAction(): Unit = ???
 
-  override def showCommand(): Unit = ???
+  override def showCommand(sb:StringBuilder): Unit = {
+    //super.showCommand(sb)
+    sb.append(s"  Clock device is ${getName()} ${if (this == SimTimer.internal_timer) "Internal Calibrated Timer"}\n")
+    sb.append(s"${if (SimTimer.sim_asynch_timer) "Asynchronus" else if (rtc_hz != 0) "Calibrated" else "Uncalibrated"} Timer:\n")
+    if (rtc_hz != 0) {
+      sb.append(f"  Running at:                $rtc_hz%d Hz\n")
+      sb.append(f"  Tick Size:                 $rtc_clock_tick_size%s\n")
+      sb.append(f"  Ticks in current second:   $rtc_ticks%d\n")
+    }
+    sb.append(s"  Seconds Running:           $rtc_elapsed (%s)\n")
+    if (this == SimTimer.internal_timer) {
+      sb.append(s"  Calibration Opportunities: $rtc_calibrations\n")
+      if (SimTimer.sim_idle_calib_pct != 0)
+        sb.append(s"  Calib Skip Idle Thresh %%:  ${SimTimer.sim_idle_calib_pct}\n")
+      if (rtc_clock_calib_skip_idle != 0)
+        sb.append(s"  Calibs Skip While Idle:    $rtc_clock_calib_skip_idle\n")
+      //if (rtc_clock_calib_backwards != 0)
+      //sb.append( s"  Calibs Skip Backwards:     ${rtc_clock_calib_backwards}\n")
+      if (rtc_clock_calib_gap2big != 0)
+        sb.append(s"  Calibs Skip Gap Too Big:   $rtc_clock_calib_gap2big\n")
+    }
+    if (rtc_gtime != 0)
+      sb.append(s"  Instruction Time:          $rtc_gtime\n")
+    if ((!SimTimer.sim_asynch_timer) && (SimTimer.sim_throt_type == SimTimer.SIM_THROT_NONE)) {
+      sb.append(s"  Real Time:                 $rtc_rtime\n")
+      sb.append(s"  Virtual Time:              $rtc_vtime\n")
+      sb.append(s"  Next Interval:             $rtc_nxintv\n")
+      sb.append(s"  Base Tick Delay:           $rtc_based\n")
+      sb.append(s"  Initial Insts Per Tick:    $rtc_initd\n")
+    }
+    sb.append(s"  Current Insts Per Tick:    $rtc_currd\n")
+    sb.append(s"  Initializations:           $rtc_calib_initializations\n")
+    sb.append(s"  Ticks:                     $rtc_clock_ticks\n")
+    if (rtc_clock_ticks_tot + rtc_clock_ticks != rtc_clock_ticks)
+      sb.append(s"  Total Ticks:               ${rtc_clock_ticks_tot + rtc_clock_ticks}\n")
+    if (rtc_clock_skew_max != 0.0)
+      sb.append(s"  Peak Clock Skew:           $rtc_clock_skew_max ${if (rtc_clock_skew_max < 0) "fast" else "slow"}\n")
+    if (rtc_calib_ticks_acked != 0)
+      sb.append(s"  Ticks Acked:               $rtc_calib_ticks_acked\n")
+    if (rtc_calib_ticks_acked_tot + rtc_calib_ticks_acked != rtc_calib_ticks_acked)
+      sb.append(s"  Total Ticks Acked:         ${rtc_calib_ticks_acked_tot + rtc_calib_ticks_acked}\n")
+    if (rtc_calib_tick_time != 0)
+      sb.append(s"  Tick Time:                 $rtc_calib_tick_time\n")
+    if (rtc_calib_tick_time_tot + rtc_calib_tick_time != rtc_calib_tick_time)
+      sb.append(s"  Total Tick Time:           ${rtc_calib_tick_time_tot + rtc_calib_tick_time}\n")
+    if (rtc_clock_catchup_ticks != 0)
+      sb.append(s"  Catchup Ticks Sched:       $rtc_clock_catchup_ticks\n")
+    if (rtc_clock_catchup_ticks_tot + rtc_clock_catchup_ticks != rtc_clock_catchup_ticks)
+      sb.append(s"  Total Catchup Ticks Sched: ${rtc_clock_catchup_ticks_tot + rtc_clock_catchup_ticks}\n")
+
+    if (rtc_clock_init_base_time != 0) {
+      sb.append(s"  Initialize Base Time:      $rtc_clock_init_base_time\n")
+    }
+    if (rtc_clock_tick_start_time != 0) {
+      sb.append(s"  Tick Start Time:           $rtc_clock_tick_start_time\n")
+    }
+    sb.append(s"  Wall Clock Time Now:       ${System.currentTimeMillis()}\n")
+    if (rtc_clock_catchup_eligible) {
+      sb.append(s"  Catchup Tick Time:         ${rtc_clock_catchup_base_time + rtc_calib_tick_time}\n")
+      sb.append(s"  Catchup Base Time:         $rtc_clock_catchup_base_time\n")
+    }
+    if (rtc_clock_time_idled != 0)
+      sb.append(s"  Total Time Idled:          ${rtc_clock_time_idled / 1000}\n")
+  }
+
+
 }

@@ -11,7 +11,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
   override val name = "Z80"
   override val MMU: BasicMMU = new Z80MMU(this)
   override val description: String = "Z80 CPU"
-  override def init(): Unit = ???
+  override def init(): Unit = {}// TODO
 
   var tStates: Long = 0L
 
@@ -46,8 +46,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
   }
 
   override def showCommand(stringBuilder: StringBuilder) : Unit = {
-    // TODO device specific stuff, probably registers, etc.
-
+    super.showCommand(stringBuilder)
   }
 
   val H = new Register8("H")

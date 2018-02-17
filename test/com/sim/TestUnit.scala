@@ -14,5 +14,5 @@ class TestUnit(device:BasicDevice) extends BasicUnit(device: BasicDevice){
 
   override def init(): Unit = ???
 
-  override def showCommand(): Unit = ???
+  override def showCommand(sb:StringBuilder): Unit = ???
 }
