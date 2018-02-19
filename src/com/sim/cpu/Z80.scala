@@ -1,5 +1,7 @@
 package com.sim.cpu
 
+import java.net.HttpURLConnection
+
 import com.sim.device.{BinaryUnitOption, ValueUnitOption}
 import com.sim.machine.AbstractMachine
 import com.sim.unsigned.{UByte, UInt, UShort}
@@ -1730,12 +1732,14 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
               CPIDXdd(IX)
 
             // ******************************************************************************** CB PREFIX
-            case (0xcb) => // CB PREFIX
-              val adr:Int = IX.intValue + MMU.get8(PC).intValue
+            case (0xcb) => {
+              // CB PREFIX
+              val adr: Int = IX.intValue + MMU.get8(PC).intValue
               PC.increment()
-              val op:Int = MMU.get8(PC).intValue & 7
-              var acu:Int = 0
-              op match {
+              INCR(1)
+              val op: Int = MMU.get8(PC).intValue
+              var acu: Int = 0
+              (op & 7) match {
                 case 0 =>
                   PC.increment()
                   acu = B.intValue
@@ -1772,6 +1776,40 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
                 case _ =>
 
               }
+              (op & 0xc0) match {
+                case (0x00) => {
+                  // Shift/rotate
+                  (op & 0x38) match {
+                    case (0x00) => // RLC
+                    case (0x08) => // RRC
+                    case (0x10) => // RL
+                    case (0x18) => // RR
+                    case (0x20) => // SLA
+                    case (0x28) => // SRA
+                    case (0x30) => // SLIA
+                    case (0x38) => // SRL
+                    case _ =>
+                  }
+                }
+
+
+                case (0x40) => // BIT
+                case (0x80) => // RES
+                case (0xc0) => // SET
+                case _ =>
+              }
+              (op & 7) match {
+                case (0) =>
+                case (1) =>
+                case (2) =>
+                case (3) =>
+                case (4) =>
+                case (5) =>
+                case (6) =>
+                case (7) =>
+                case _ =>
+              }
+            }
             case (0xe1) => // POP IX
             case (0xe3) => // EX (SP),IX
             case (0xe5) => // PUSH IX
@@ -1780,6 +1818,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
             case _ =>
               PC.decrement()
           }
+
         case (0xde) => // SBC A,nn
         case (0xdf) => // RST 18H
         case (0xe0) => // RET PO
@@ -2144,7 +2183,39 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
             case (0xbc) => // CP IYH
             case (0xbd) => // CP IYL
             case (0xbe) => // CP (IY+dd)
-            case (0xcb) => // CB Prefix
+            case (0xcb) => // ******************************************************** CB Prefix
+              val adr: Int = IY + MMU.get8(PC).intValue
+              PC.increment()
+              val op: Int = MMU.get8(PC).intValue
+              (op & 7) match {
+
+                case _ =>
+              }
+              (op & 0xc0) match {
+
+                case (0x00) => // shift/rotate
+                  (op & 0x38) match {
+                    case (0x00) => // RLC
+                    case (0x08) => // RRC
+                    case (0x10) => // RL
+                    case (0x18) => // RR
+                    case (0x20) => // SLA
+                    case (0x28) => // SRA
+                    case (0x30) => // SLIA
+                    case (0x38) => // SRL
+
+                    case _ =>
+                  }
+
+                case (0x40) => // BIT
+                case (0x80) => // RES
+                case (0xc0) => // SET
+                case _ =>
+              }
+              (op & 7) match {
+
+                case _ =>
+              }
             case (0xe1) => // POP IY
             case (0xe3) => // EX (SP),IY
             case (0xe5) => // PUSH IY
@@ -2171,31 +2242,43 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
     onHalt()
   }
 
-  override def onHalt(): Unit = {
+  override def onHalt(): Unit
+
+  = {
     Utils.outln(s"$name: Halted.")
     Utils.outln(showRegisters())
     Utils.outln(showFlags())
   }
 
   @inline
-  private def addTStates(x: Long): Unit = tStates = tStates + x
+  private def addTStates(x: Long): Unit
+
+  = tStates = tStates + x
 
   @inline
-  private def INCR(count: Int): Unit = {
+  private def INCR(count: Int): Unit
+
+  = {
     R.set8(UByte(((R.get8 & ~0x7f) | ((R.get8 + count) & 0x7f)).toByte)) // Increment R
   }
 
   @inline
   // TODO Implement memory break points.
-  private def CHECK_BREAK_BYTE(reg: Register16): Boolean = {
+  private def CHECK_BREAK_BYTE(reg: Register16): Boolean
+
+  = {
     false
   }
 
   @inline
-  private def CHECK_BREAK_BYTE(v: UShort): Boolean = false
+  private def CHECK_BREAK_BYTE(v: UShort): Boolean
+
+  = false
 
   @inline // TODO Implement memory break points.
-  private def CHECK_BREAK_WORD(reg: Register16): Boolean = false
+  private def CHECK_BREAK_WORD(reg: Register16): Boolean
+
+  = false
 
   @inline
   def CHECK_BREAK_BYTE(v: Int): Boolean = false
@@ -2343,7 +2426,9 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
   }.toArray
 
   @inline
-  private def PARITY(value: Int): UByte = parityTable(value & 0xff)
+  private def PARITY(value: Int): UByte
+
+  = parityTable(value & 0xff)
 
   private val rotateShiftTable: Array[UByte] = {
     for (sum <- 0 to 255) yield {
@@ -2369,7 +2454,9 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
     }
   }.toArray
 
-  private def cpTable: Array[UByte] = {
+  private def cpTable: Array[UByte]
+
+  = {
     for (sum <- 0 to 255) yield {
       val t1 = if ((sum & 0xff) == 0) 1 else 0
       UByte(((sum & 0x80) | (t1 << 6)).toByte)
@@ -2377,27 +2464,37 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
   }.toArray
 
   @inline
-  private def SET_PV2(x: UByte, temp: Register8): UByte = {
+  private def SET_PV2(x: UByte, temp: Register8): UByte
+
+  = {
     UByte(({
       if (temp.get8 == x) 1 else 0
     } << 2).toByte)
   }
 
   @inline
-  private def SET_PV2(x: Int, temp: Register8): UByte = SET_PV2(UByte(x.toByte), temp)
+  private def SET_PV2(x: Int, temp: Register8): UByte
+
+  = SET_PV2(UByte(x.toByte), temp)
 
   @inline
-  private def SET_PV2(x: Int, temp: Int): UByte = {
+  private def SET_PV2(x: Int, temp: Int): UByte
+
+  = {
     UByte(({
       if (temp == x) 1 else 0
     } << 2).toByte)
   }
 
   @inline
-  private def SET_PV(cbits: Int): Int = (cbits >> 6) ^ (cbits >> 5) & 4
+  private def SET_PV(cbits: Int): Int
+
+  = (cbits >> 6) ^ (cbits >> 5) & 4
 
   @inline
-  private def POP(x: Register16): Unit = {
+  private def POP(x: Register16): Unit
+
+  = {
     val y = MMU.get8(SP)
     SP.increment()
     x(y + (MMU.get8(SP) << 8).shortValue)
@@ -2405,12 +2502,16 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
   }
 
   @inline
-  private def PUSH(x: Register16): Unit = {
+  private def PUSH(x: Register16): Unit
+
+  = {
     PUSH(x.get16.intValue)
   }
 
   @inline
-  private def PUSH(x: Int): Unit = {
+  private def PUSH(x: Int): Unit
+
+  = {
     SP.decrement()
     MMU.put8(SP, UByte((x >> 8).byteValue))
     SP.decrement()
@@ -2419,7 +2520,9 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
 
 
   @inline
-  private def JPC(cond: => Boolean): Unit = {
+  private def JPC(cond: => Boolean): Unit
+
+  = {
     addTStates(10)
     if (cond) {
       PC(MMU.get16(PC))
@@ -2427,7 +2530,9 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
   }
 
   @inline
-  private def CALLC(cond: => Boolean): Unit = {
+  private def CALLC(cond: => Boolean): Unit
+
+  = {
     if (cond) {
       val addr = MMU.get16(PC)
       CHECK_BREAK_WORD(SP - 2)
@@ -2442,7 +2547,9 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
 
   //**** Utility helpers *****
   @inline
-  private def ADDIDX(r1: Register8, r2: Register8): Unit = {
+  private def ADDIDX(r1: Register8, r2: Register8): Unit
+
+  = {
     val tmp: Int = r2.intValue
     val acu: Int = r1.intValue
     val sum: Int = acu + tmp
@@ -2450,7 +2557,9 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
   }
 
   @inline
-  private def ADD(r1: Register16, r2: Register16): Unit = {
+  private def ADD(r1: Register16, r2: Register16): Unit
+
+  = {
     val sum: Int = r1.intValue + r2.intValue
     if (r1.nmenomic == r2.nmenomic) AF((AF & ~0x3b) | cbitsDup16Table(sum >> 8))
     else AF((AF & ~0x3b) | ((sum >> 8) & 0x28) | cbitsTable((r1 ^ r2 ^ sum) >> 8))
@@ -2458,7 +2567,9 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
   }
 
   @inline
-  private def ADD(r1: Register8, r2: Register8): Unit = {
+  private def ADD(r1: Register8, r2: Register8): Unit
+
+  = {
     val temp = r2.get8
     val acu = r1.get8
     val sum: Int = acu.intValue + temp.intValue
@@ -2467,7 +2578,9 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
   }
 
   @inline
-  private def ADC(r1: Register8, r2: Register8): Unit = {
+  private def ADC(r1: Register8, r2: Register8): Unit
+
+  = {
     val temp = r2.get8
     val acu = r1.get8
     val sum: Int = acu.intValue + temp.intValue + {
