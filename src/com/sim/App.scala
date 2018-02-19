@@ -17,7 +17,6 @@ object App {
     var con: Console = new Console()
 
 
-    //con.textIO.getTextTerminal.registerUserInterruptHandler()
     con.initUI()
 
     Console.textTerminal.registerUserInterruptHandler((term: (_$1) forSome {type _$1}) => {

@@ -35,7 +35,7 @@ class SetMachineCommand extends Command {
     if(tokenArray.size != 1) Utils.outln(s"SIM: Please specify a machine.")
     else {
       val mn = tokenArray(0)
-      AbstractMachine.services.find(am => am.getName() == mn) match {
+      AbstractMachine.services.find(am => am.getName == mn) match {
         case None => Utils.outln(s"SIM: Machine $mn not valid.")
         case Some(x) =>
           Console.simEnvironment.simMachine = Some(x)

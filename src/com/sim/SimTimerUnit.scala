@@ -231,7 +231,7 @@ class SimTimerUnit(override val device: SimTimer, val isCalibrated: Boolean = fa
       rtc_currd = 1
     //sim_debug (DBG_CAL, &sim_timer_dev, "calibrated tmr=%d, tickper=%d (base=%d, nxintv=%u, result: %d)\n", tmr, ticksper, rtc_based, rtc_nxintv, rtc_currd);
     /* Adjust calibration for other timers which depend on this timer's calibration */
-    device.getUnits().foreach(u => {
+    device.getUnits.foreach(u => {
       val simunit = u.asInstanceOf[SimTimerUnit]
       if (simunit != this && simunit.rtc_hz != 0) {
         simunit.rtc_currd = (simunit.rtc_currd * ticksper) / simunit.rtc_hz
@@ -329,7 +329,7 @@ class SimTimerUnit(override val device: SimTimer, val isCalibrated: Boolean = fa
 
   override def showCommand(sb:StringBuilder): Unit = {
     //super.showCommand(sb)
-    sb.append(s"  Clock device is ${getName()} ${if (this == SimTimer.internal_timer) "Internal Calibrated Timer"}\n")
+    sb.append(s"  Clock device is ${getName} ${if (this == SimTimer.internal_timer) "Internal Calibrated Timer"}\n")
     sb.append(s"${if (SimTimer.sim_asynch_timer) "Asynchronus" else if (rtc_hz != 0) "Calibrated" else "Uncalibrated"} Timer:\n")
     if (rtc_hz != 0) {
       sb.append(f"  Running at:                $rtc_hz%d Hz\n")

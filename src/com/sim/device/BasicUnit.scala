@@ -35,15 +35,12 @@ abstract class BasicUnit(val device: BasicDevice) extends Ordered[BasicUnit]{
   // Does this unit support being attached?
   val supportsAttach: Boolean = false
 
-  val dn = s"${getName()}:"
-
-  // Add ourselves to the device.  this will add the options, and call init()
-  device.addUnit(this)
+  val dn = s"${getName}:"
 
   def showCommand(sb:StringBuilder): Unit
 
   // device and machine names are always upper case
-  def getName(): String = device.getName() + unitNumber
+  def getName: String = device.getName + unitNumber
 
   // Does this unit handle requests for this port/memory address/etc?
   def handles(value: UInt) : Boolean
@@ -63,7 +60,7 @@ abstract class BasicUnit(val device: BasicDevice) extends Ordered[BasicUnit]{
   // General enable function - devices can implement their own for device specific things
   def setEnable(state: Boolean) : Unit = {
     enabled = state
-    Utils.outln(s"UNIT: Unit ${getName()} Enabled: $state")
+    Utils.outln(s"UNIT: Unit ${getName} Enabled: $state")
   }
 
   def isEnabled: Boolean = enabled

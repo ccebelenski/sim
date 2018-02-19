@@ -37,7 +37,7 @@ class Console {
   }
 
   private def readCommand(): String = {
-    val input = textIO.newStringInputReader().read("Sim>")
+    val input = textIO.newStringInputReader().withMinLength(0).read("Sim> ")
     input
   }
 

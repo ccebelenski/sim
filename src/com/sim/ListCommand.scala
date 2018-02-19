@@ -36,7 +36,7 @@ class ListMachinesCommand extends Command {
     val sb:StringBuilder = new StringBuilder
 
     AbstractMachine.services.foreach(am => {
-      sb.append(am.getName())
+      sb.append(am.getName)
       sb.append("\t")
       sb.append(am.description)
       sb.append("\n")

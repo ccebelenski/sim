@@ -22,7 +22,7 @@ class S100SIODevice(machine:AbstractMachine) extends BasicDevice(machine:Abstrac
     unitOptions.append(new BinaryUnitOption("BELL","Control-G sounds the bell", value = false))
     unitOptions.append(new BinaryUnitOption("SLEEP","Sleep after SIO status checks", value = false))
     unitOptions.append(new BinaryUnitOption("INTERRUPT","Status port 0 creates an interrupt when a character becomes available", value = false))
-    unitOptions.append(new ValueUnitOption("PORT","Set port to PORT", value = 0))
+    unitOptions.append(new ValueUnitOption("IOPORT","Set I/O port to IOPORT", value = 0))
 
   }
 }

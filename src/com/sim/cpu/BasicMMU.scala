@@ -61,10 +61,10 @@ abstract class BasicMMU(val cpu: BasicCPU) {
 
     u.ports.foreach(i => {
       if (iotab(i & 0xff).isDefined) {
-        Utils.outln(f"MMU: IO Port: 0x${i & 0xff}%02X already mapped to Unit: ${iotab(i & 0xff).get.getName()}")
+        Utils.outln(f"MMU: IO Port: 0x${i & 0xff}%02X already mapped to Unit: ${iotab(i & 0xff).get.getName}")
       } else {
         iotab(i & 0xff) = Some(u)
-        Utils.outln(f"MMU: Mapping IO Port: 0x${i & 0xff}%02X Unit: ${u.getName()}")
+        Utils.outln(f"MMU: Mapping IO Port: 0x${i & 0xff}%02X Unit: ${u.getName}")
       }
     })
   }
@@ -73,7 +73,7 @@ abstract class BasicMMU(val cpu: BasicCPU) {
 
     u.ports.foreach(i => {
       if (iotab(i & 0xff).isDefined) {
-        Utils.outln(f"MMU: Unmapping IO Port: 0x${i & 0xff}%02X Unit: ${u.getName()}")
+        Utils.outln(f"MMU: Unmapping IO Port: 0x${i & 0xff}%02X Unit: ${u.getName}")
         iotab(i & 0xff) = None
       } else {
         Utils.outln(f"MMU: IO Port: 0x${i & 0xff}%02X is not mapped.")

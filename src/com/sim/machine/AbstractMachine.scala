@@ -19,7 +19,7 @@ abstract class AbstractMachine extends Named{
 
 
   // device and machine names are always upper case
-  override def getName(): String = super.getName().toUpperCase
+  override def getName: String = super.getName.toUpperCase
 
 
   // Set up the master timer device - always present
@@ -27,6 +27,7 @@ abstract class AbstractMachine extends Named{
   val simTimerDevice = new SimTimer(this)
   addDevice(simTimerDevice)
   val masterTimer = new SimTimerUnit(simTimerDevice, true)
+  simTimerDevice.addUnit(masterTimer)
   // If there was no master timer already (true in this case) the timer will cause itself to do that. This
   // guarantees there's only one master timer, created here.
 
@@ -39,23 +40,23 @@ abstract class AbstractMachine extends Named{
   def showMachine : Unit = {
 
     val sb = new StringBuilder
-    sb.append(s"SIM: Simulated Machine: ${getName()} : $description\n")
+    sb.append(s"SIM: Simulated Machine: ${getName} : $description\n")
     sb.append(s"SIM: Available devices:\n")
     if(devices.isEmpty) sb.append(s"SIM: \t No devices.\n")
-    devices.foreach(d => sb.append(s"SIM: \t ${d.getName()}\tEna: ${d.isEnabled}\n"))
+    devices.foreach(d => sb.append(s"SIM: \t ${d.getName}\tEna: ${d.isEnabled}\n"))
 
     Utils.outln(sb.toString())
   }
 
 
   def findDevice(deviceName:String) : Option[BasicDevice] = {
-    devices.find(d => d.getName().equalsIgnoreCase(deviceName))
+    devices.find(d => d.getName.equalsIgnoreCase(deviceName))
   }
 
   def findUnitDevice(deviceName:String) : Option[BasicUnit] = {
     var result: Option[BasicUnit] = None
     devices.foreach( d=> {
-      d.getUnits().find( u => u.getName().equalsIgnoreCase(deviceName)) match {
+      d.getUnits.find( u => u.getName.equalsIgnoreCase(deviceName)) match {
         case None => {}
         case Some(x:BasicUnit) => result = Some(x)
         case _ => throw new Exception("System check: Unknown findUnitDevice")

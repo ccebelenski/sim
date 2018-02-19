@@ -25,23 +25,51 @@ abstract class BasicDevice(val machine:AbstractMachine) extends Named{
 
 
   // device and machine names are always upper case
-  override def getName(): String = super.getName().toUpperCase + deviceIdentifier
+  override def getName: String = super.getName.toUpperCase + deviceIdentifier
 
   def init() : Unit
   def createUnitOptions: Unit
 
-  def addUnit(unit:BasicUnit) : Unit = {
+  def addUnit(unit:BasicUnit) : Unit = synchronized {
     if(unit.device != this) throw new Exception("System check: Unit misconfiguration. Unit does not belong to device.")
+    unit.unitNumber = findFirstFreeUnitNumber
     units.append(unit)
     unitOptions.foreach(duo => unit.unitOptions.append(duo.copy))
     unit.init()
   }
 
-  def clearUnits(): Unit = {
+  def removeUnit(unit:BasicUnit) : Unit = synchronized {
+    var unitsCopy = new ArrayBuffer[BasicUnit]
+    unitsCopy.appendAll(units)
+    units.clear()
+    unitsCopy.foreach(u => {
+      if(u != unit) units.append(u)
+    })
+    unitsCopy.clear() // prob not necessary
+  }
+
+  private def findFirstFreeUnitNumber: Int = {
+    if(units.isEmpty) return 0
+    val ulist = units.toList.sortBy(u => u.unitNumber)
+    val length = ulist.length
+    var left:Int = 0
+    var right:Int = length -1
+    while(left <= right) {
+      val middle:Int = (right + left) >> 1
+      if(ulist(middle).unitNumber != middle) {
+        if(middle == 0 || ulist(middle -1).unitNumber == middle - 1) return middle
+        right = middle -1
+      } else left = middle + 1
+    }
+    length
+  }
+
+  def clearUnits(): Unit = synchronized {
+    // TODO
     units.clear()
   }
 
-  def getUnits(): Iterator[BasicUnit] = {
+  def getUnits: Iterator[BasicUnit] = synchronized {
     units.toIterator
   }
 
@@ -55,7 +83,7 @@ abstract class BasicDevice(val machine:AbstractMachine) extends Named{
 
 
   def showCommand(sb:StringBuilder): Unit = {
-    val dn = s"${getName()}: "
+    val dn = s"${getName}: "
     sb.append(s"$dn$description\n")
     sb.append(s"${dn}Enabled: $isEnabled Units:${units.length}\n")
 //    sb.append(s"${dn}aWidth: ${awidth.toHexString}\n")
@@ -66,10 +94,10 @@ abstract class BasicDevice(val machine:AbstractMachine) extends Named{
       uo.showOption(sb)
     }}
 
-    sb.append(s"\n${dn}\tUnits:\n\n")
-    if(units.isEmpty) sb.append(s"$dn\tNo Units.\n")
+    sb.append(s"\n${dn}Units:\n")
+    if(units.isEmpty) sb.append("\tNo Units.\n")
     units.foreach(u => {
-      sb.append(s"$dn\tUnit: ${u.getName}\tenabled: ${u.isEnabled}\n")
+      sb.append(s"  Unit: ${u.getName}\tenabled: ${u.isEnabled}\n")
     })
 
   }

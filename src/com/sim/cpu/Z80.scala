@@ -11,7 +11,8 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
   override val name = "Z80"
   override val MMU: BasicMMU = new Z80MMU(this)
   override val description: String = "Z80 CPU"
-  override def init(): Unit = {}// TODO
+
+  override def init(): Unit = {} // TODO
 
   var tStates: Long = 0L
 
@@ -45,7 +46,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
 
   }
 
-  override def showCommand(stringBuilder: StringBuilder) : Unit = {
+  override def showCommand(stringBuilder: StringBuilder): Unit = {
     super.showCommand(stringBuilder)
   }
 
@@ -1129,8 +1130,8 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
         // ******************************************************************************** CB
         case (0xcb) => // CB prefix
           INCR(1)
-          val adr:Int = HL.get16.intValue
-          val op :Int = MMU.get8(PC).intValue
+          val adr: Int = HL.get16.intValue
+          val op: Int = MMU.get8(PC).intValue
           var acu: Int = 0
           var cbits: Int = 0
           var temp: Int = 0
@@ -1689,17 +1690,88 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
               AF(andTable(((AF >> 8) & IX) & 0xff))
 
             case (0xa6) => // AND (IX+dd)
+              addTStates(19)
+              ANDIDXdd(IX)
 
             case (0xac) => // XOR IXH
+              addTStates(9)
+              AF(xororTable(((AF & IX) >> 8) & 0xff))
+
             case (0xad) => // XOR IXL
+              addTStates(9)
+              AF(xororTable(((AF >> 8) ^ IX) & 0xff))
+
             case (0xae) => // XOR (IX+DD)
+              addTStates(19)
+              XORIDXdd(IX)
+
             case (0xb4) => // OR IXH
+              addTStates(9)
+              AF(xororTable(((AF | IX) >> 8) & 0xff))
+
             case (0xb5) => // OR IXL
+              addTStates(9)
+              AF(xororTable(((AF >> 8) | IX) & 0xff))
+
             case (0xb6) => // OR (IX+dd)
+              addTStates(19)
+              ORIDXdd(IX)
+
             case (0xbc) => // CP IXH
+              addTStates(9)
+              CPIX8(IXH)
+
             case (0xbd) => // CP IXL
+              addTStates(9)
+              CPIX8(IXL)
+
             case (0xbe) => // CP (IX+dd)
+              addTStates(19)
+              CPIDXdd(IX)
+
+            // ******************************************************************************** CB PREFIX
             case (0xcb) => // CB PREFIX
+              val adr:Int = IX.intValue + MMU.get8(PC).intValue
+              PC.increment()
+              val op:Int = MMU.get8(PC).intValue & 7
+              var acu:Int = 0
+              op match {
+                case 0 =>
+                  PC.increment()
+                  acu = B.intValue
+
+                case 1 =>
+                  PC.increment()
+                  acu = C.intValue
+
+                case 2 =>
+                  PC.increment()
+                  acu = D.intValue
+
+                case 3 =>
+                  PC.increment()
+                  acu = E.intValue
+
+                case 4 =>
+                  PC.increment()
+                  acu = H.intValue
+
+                case 5 =>
+                  PC.increment()
+                  acu = L.intValue
+
+                case 6 =>
+                  CHECK_BREAK_BYTE(adr)
+                  PC.increment()
+                  acu = MMU.get8(UInt(adr)).intValue
+
+                case 7 =>
+                  PC.increment()
+                  acu = A.intValue
+
+                case _ =>
+
+              }
             case (0xe1) => // POP IX
             case (0xe3) => // EX (SP),IX
             case (0xe5) => // PUSH IX
@@ -2506,4 +2578,50 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
     MMU.put8(adr, temp)
     AF((AF & ~0xfe) | decZ80Table(temp.intValue & 0xff))
   }
+
+  @inline
+  def ANDIDXdd(r1: Register16): Unit = {
+    val adr: Int = r1.intValue + MMU.get8(PC).intValue
+    PC.increment()
+    CHECK_BREAK_BYTE(adr)
+    AF(andTable(((AF >> 8) & MMU.get8(UInt(adr))) & 0xff))
+  }
+
+  @inline
+  def XORIDXdd(r1: Register16): Unit = {
+    val adr: Int = r1.intValue + MMU.get8(PC).intValue
+    PC.increment()
+    CHECK_BREAK_BYTE(adr)
+    AF(xororTable(((AF >> 8) ^ MMU.get8(UInt(adr))) & 0xff))
+  }
+
+  @inline
+  def ORIDXdd(r1: Register16): Unit = {
+    val adr: Int = r1.intValue + MMU.get8(PC).intValue
+    PC.increment()
+    CHECK_BREAK_BYTE(adr)
+    AF(xororTable(((AF >> 8) | MMU.get8(UInt(adr))) & 0xff))
+  }
+
+  @inline
+  def CPIX8(r1: Register8): Unit = {
+    val temp: Int = r1.intValue
+    AF((AF & ~0x28) | (temp & 0x28))
+    val acu: Int = A.intValue
+    val sum: Int = acu - temp
+    AF((AF & ~0xff) | cpTable(sum & 0xff) | (temp & 0x28) | cbits2Z80Table((acu ^ temp ^ sum) & 0x1ff))
+  }
+
+  @inline
+  def CPIDXdd(r1: Register16): Unit = {
+    val adr: Int = r1.intValue + MMU.get8(PC).intValue
+    PC.increment()
+    CHECK_BREAK_BYTE(adr)
+    val temp: Int = MMU.get8(UInt(adr)).intValue
+    AF((AF & ~0x28) | (temp & 0x28))
+    val acu: Int = A.intValue
+    val sum: Int = acu - temp
+    AF((AF & ~0xff) | cpTable(sum & 0xff) | (temp & 0x28) | cbits2Z80Table((acu ^ temp ^ sum) * 0x1ff))
+  }
+
 }

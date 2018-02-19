@@ -3,6 +3,7 @@ package com.sim.s100
 import com.sim.{Named, SimTimer}
 import com.sim.cpu.Z80
 import com.sim.machine.AbstractMachine
+import com.sim.mux.MuxDevice
 
 class S100Machine extends AbstractMachine{
 
@@ -18,5 +19,7 @@ class S100Machine extends AbstractMachine{
     // NB the system timer will be added by the machine
     val cpu = new Z80(true,this)
     addDevice(cpu)
+    val mux = new MuxDevice(this)
+    addDevice(mux)
   }
 }
