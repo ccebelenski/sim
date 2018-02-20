@@ -207,6 +207,14 @@ class Register8(override val nmenomic: String) extends Register(nmenomic) {
   def ^(value: Int): Int = {
     this.value ^ value
   }
+
+  def >>(value: Int): Int = {
+    (this.get8 >> value) & 0xff
+  }
+
+  def <<(value: Int): Int = {
+    (this.get8 << value) & 0xff
+  }
 }
 
 object Register8 {

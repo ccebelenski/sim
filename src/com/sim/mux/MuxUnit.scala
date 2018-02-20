@@ -3,7 +3,7 @@ package com.sim.mux
 import java.net.{Socket, SocketAddress}
 
 import com.sim.Utils
-import com.sim.device.{BasicDevice, BasicUnit}
+import com.sim.device.{BasicDevice, BasicUnit, ValueUnitOption}
 import com.sim.unsigned.{UByte, UInt}
 
 class MuxUnit(device: BasicDevice, var socket: Socket) extends BasicUnit(device: BasicDevice) with Runnable {
@@ -15,15 +15,30 @@ class MuxUnit(device: BasicDevice, var socket: Socket) extends BasicUnit(device:
   @volatile
   var char: Int = 0
 
-  var timeout: Int = 5000
+  var timeout: Int = 100000
 
 
   override def init(): Unit = {
+    optionsChanged()
     socket.setSoTimeout(timeout)
-    Utils.out(s"\n\n$getName: Telnet connection from: ${socketAddress}\n\n")
+    Utils.out(s"\n\n$getName: Telnet connection from: $socketAddress\n\n")
   }
 
-  override def showCommand(sb: StringBuilder): Unit = ???
+
+  // Called when options changed - this is only really going to be useful on init, since
+  // most options can't be changed after the socket is open.
+  override def optionsChanged() : Unit = {
+    timeout = getOption("TIMEOUT").get.asInstanceOf[ValueUnitOption].value
+    // PORT isn't a unit option
+    // MAXCLIENTS isn't a unit option
+
+  }
+
+  override def showCommand(sb: StringBuilder): Unit = {
+    super.showCommand(sb)
+
+    sb.append(s"Connected to: ${socketAddress}\n")
+  }
 
   override def handles(value: UInt): Boolean = ???
 

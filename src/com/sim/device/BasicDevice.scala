@@ -11,7 +11,7 @@ import scala.collection.mutable.ArrayBuffer
   */
 abstract class BasicDevice(val machine:AbstractMachine) extends Named{
 
-  val description: String = "No Description Available"
+  val description: String
   private val units: ArrayBuffer[BasicUnit] = new ArrayBuffer[BasicUnit]
   var awidth : UInt = UInt(0)
   // Device Identifier - first device is usually "A", second "B", etc.
@@ -83,7 +83,7 @@ abstract class BasicDevice(val machine:AbstractMachine) extends Named{
 
 
   def showCommand(sb:StringBuilder): Unit = {
-    val dn = s"${getName}: "
+    val dn = s"$getName: "
     sb.append(s"$dn$description\n")
     sb.append(s"${dn}Enabled: $isEnabled Units:${units.length}\n")
 //    sb.append(s"${dn}aWidth: ${awidth.toHexString}\n")
@@ -101,6 +101,14 @@ abstract class BasicDevice(val machine:AbstractMachine) extends Named{
     })
 
   }
+
+  def getOption(optionName:String) : Option[UnitOption] = {
+    unitOptions.find(p=> p.optionName == optionName)
+  }
+
+  // Called when the options have changed for a device.  This allows dynamic reloading when appropriate
+  // Default is to do nothing.
+  def optionsChanged(): Unit = {}
 
 }
 

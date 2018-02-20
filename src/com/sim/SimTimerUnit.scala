@@ -328,7 +328,7 @@ class SimTimerUnit(override val device: SimTimer, val isCalibrated: Boolean = fa
   override def completeAction(): Unit = ???
 
   override def showCommand(sb:StringBuilder): Unit = {
-    //super.showCommand(sb)
+    super.showCommand(sb)
     sb.append(s"  Clock device is ${getName} ${if (this == SimTimer.internal_timer) "Internal Calibrated Timer"}\n")
     sb.append(s"${if (SimTimer.sim_asynch_timer) "Asynchronus" else if (rtc_hz != 0) "Calibrated" else "Uncalibrated"} Timer:\n")
     if (rtc_hz != 0) {

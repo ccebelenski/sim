@@ -35,9 +35,19 @@ abstract class BasicUnit(val device: BasicDevice) extends Ordered[BasicUnit]{
   // Does this unit support being attached?
   val supportsAttach: Boolean = false
 
-  val dn = s"${getName}:"
+  val dn = s"$getName:"
 
-  def showCommand(sb:StringBuilder): Unit
+  def showCommand(sb:StringBuilder): Unit = {
+
+    sb.append(s"${dn}  Unit ${getName} Active: ${active}\n")
+
+    if(supportsAttach && attachedPath.isDefined) sb.append(s"$dn Attached: ${attachedPath.get.getFileName.toString}\n")
+
+    sb.append(s"${dn}Unit options:\n")
+    unitOptions.foreach{uo => {
+      uo.showOption(sb)
+    }}
+  }
 
   // device and machine names are always upper case
   def getName: String = device.getName + unitNumber
@@ -54,6 +64,9 @@ abstract class BasicUnit(val device: BasicDevice) extends Ordered[BasicUnit]{
   def completeAction(): Unit
 
 
+  // Called when the options have changed for a unit.  This allows dynamic reloading when appropriate
+  // Default is to do nothing.
+  def optionsChanged(): Unit = {}
 
   def init():Unit
 
@@ -68,5 +81,9 @@ abstract class BasicUnit(val device: BasicDevice) extends Ordered[BasicUnit]{
   override def compare(that: BasicUnit): Int = this.time.compareTo(that.time)
 
   override def compareTo(that: BasicUnit): Int = this.time.compareTo(that.time)
+
+  def getOption(optionName:String) : Option[UnitOption] = {
+    unitOptions.find(p=> p.optionName == optionName)
+  }
 
 }

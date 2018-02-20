@@ -9,7 +9,7 @@ abstract class UnitOption(val optionName:String, val optionDescription:String) {
   }
 }
 
-class BinaryUnitOption(optionName:String, optionDescription:String, var value:Boolean) extends UnitOption(optionName:String,optionDescription:String) {
+case class BinaryUnitOption(override val optionName:String, override val optionDescription:String, var value:Boolean) extends UnitOption(optionName:String,optionDescription:String) {
   def getValue: Boolean = value
 
   override def formatValue: String = s"${if(!value)"NO" else ""}${optionName.toUpperCase}"
@@ -19,7 +19,7 @@ class BinaryUnitOption(optionName:String, optionDescription:String, var value:Bo
 
 }
 
-class ValueUnitOption(optionName:String, optionDescription:String, var value:Int) extends UnitOption(optionName:String,optionDescription:String) {
+case class ValueUnitOption(override val optionName:String, override val optionDescription:String, var value:Int) extends UnitOption(optionName:String,optionDescription:String) {
   def getValue: Int = value
 
   override def copy: ValueUnitOption = {
@@ -28,8 +28,8 @@ class ValueUnitOption(optionName:String, optionDescription:String, var value:Int
 
   override def formatValue: String = s"$value"
 }
-case class UnitOptionValue(var name:String, var value:Int)
-class EnumValueUnitOption(optionName:String, optionDescription:String, val values:List[UnitOptionValue], var choice:String) extends  UnitOption(optionName:String,optionDescription:String) {
+class UnitOptionValue(var name:String, var value:Int)
+case class EnumValueUnitOption(override val optionName:String,override val  optionDescription:String, values:List[UnitOptionValue], var choice:String) extends  UnitOption(optionName:String,optionDescription:String) {
 
   override def copy: EnumValueUnitOption = {
     new EnumValueUnitOption(optionName,optionDescription,values,choice)
@@ -38,10 +38,19 @@ class EnumValueUnitOption(optionName:String, optionDescription:String, val value
   override def formatValue: String = s"[${values.toString}]"
 }
 
-class RangeValueUnitOption(optionName:String, optionDescription:String, val lowValue:Int, val highValue:Int, var currentValue:Int) extends UnitOption(optionName:String,optionDescription:String) {
+case class RangeValueUnitOption(override val optionName:String, override val optionDescription:String, lowValue:Int, highValue:Int, var currentValue:Int) extends UnitOption(optionName:String,optionDescription:String) {
   override def copy: RangeValueUnitOption = {
     new RangeValueUnitOption(optionName,optionDescription,lowValue,highValue,currentValue)
   }
 
   override def formatValue: String = s"$lowValue to $highValue"
+}
+
+case class StringValueUnitOption(override val optionName:String, override val optionDescription:String, var value:String) extends UnitOption(optionName,optionDescription) {
+  override def copy: StringValueUnitOption = {
+    new StringValueUnitOption(optionName,optionDescription,value)
+  }
+
+  override def formatValue: String = s"$value"
+
 }

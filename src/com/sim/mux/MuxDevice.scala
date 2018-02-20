@@ -45,6 +45,7 @@ class MuxDevice(machine: AbstractMachine) extends BasicDevice(machine: AbstractM
     * This thread will run for life of the simulator, and shouldn't need to be reset or recreated.
     */
   override def init(): Unit = {
+
     Utils.outln(s"$getName: Starting MUX.  Listening on port []")
     listenThread = new Thread(listener)
     listenThread.start()
@@ -59,11 +60,13 @@ class MuxDevice(machine: AbstractMachine) extends BasicDevice(machine: AbstractM
   }
 
   override def createUnitOptions: Unit = {
-    unitOptions.append(new ValueUnitOption("PORTNUM", "Set port to listen on.", value = 8888))
-    unitOptions.append(new ValueUnitOption("MAXCLIENTS", "Maximum # of clients that can connect", value = 1))
-    unitOptions.append(new ValueUnitOption("TIMEOUT", "Network timeout value.", value = 8000))
+    unitOptions.append(ValueUnitOption("PORTNUM", "Set port to listen on.", value = 8888))
+    unitOptions.append(ValueUnitOption("MAXCLIENTS", "Maximum # of clients that can connect", value = 1))
+    unitOptions.append(ValueUnitOption("TIMEOUT", "Network timeout value.", value = 100000))
 
   }
+
+
 }
 
 
@@ -74,6 +77,7 @@ class MUXListener(val port: Int, val maxClients: Int, val device: MuxDevice) ext
     try {
       device.executor = Executors.newFixedThreadPool(maxClients)
       device.socket = new ServerSocket(port)
+
       while (true) {
         val s: Socket = device.socket.accept()
         if(device.clientCount < maxClients) {
