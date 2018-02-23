@@ -112,6 +112,11 @@ abstract class BasicMMU(val cpu: BasicCPU) {
   }
 
   @inline
+  def put8(register16:Register16, value: Int) : Unit = {
+    put8(register16.get16,UByte(value.byteValue()))
+  }
+
+  @inline
   def put8(address: UShort, value: Register8): Unit = {
     put8(address.intValue, value.get8)
   }
@@ -169,7 +174,7 @@ abstract class BasicMMU(val cpu: BasicCPU) {
     get8(address.get16)
   }
 
-  def get8(address: UInt): UByte = {
+  def get8(address: Int): UByte = {
     var addr: Int = (address & ADDRMASK).toInt
     val pageaddr = if (cpu.isBanked && (addr < COMMON)) addr | bankSelect << MAXBANKSIZELOG2.toInt else addr
     val m = mtab(pageaddr >> LOG2PAGESIZE.toInt)
@@ -197,20 +202,22 @@ abstract class BasicMMU(val cpu: BasicCPU) {
     }
   }
 
-  //  @inline
-  //  def get8(address:Int): UByte = {
-  //    get8(UInt(address))
-  //  }
 
   // Retrieve little endian
   @inline
-  def get16(address: UInt): UShort = {
+  def get16(address: Int): UShort = {
     UShort((get8(address) | (get8(address + UInt(1)) << 8)).toShort)
   }
 
   @inline
   def get16(register16: Register16): UShort = {
     get16(register16.get16)
+  }
+
+
+  @inline
+  def get16(address:UShort) : UShort = {
+    get16(address)
   }
 
   def selectBank(bank: Int): Unit = this.bankSelect = bank

@@ -17,10 +17,12 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
   var tStates: Long = 0L
 
   override def createUnitOptions: Unit = {
-    unitOptions.append(new BinaryUnitOption("STOPONHALT", "Stop on halt instruction.", value = false))
-    unitOptions.append(new BinaryUnitOption("BANKED", "Enable banked memory.", value = true))
-    unitOptions.append(new BinaryUnitOption("ALTAIRROM", "Enable Altair ROM.", value = false))
-    unitOptions.append(new ValueUnitOption("MEMORY", "Set the RAM size.", value = 0xFFFF))
+    // Set up CPU common options.
+    super.createUnitOptions
+
+    unitOptions.append(BinaryUnitOption("BANKED", "Enable banked memory.", value = true))
+    unitOptions.append(BinaryUnitOption("ALTAIRROM", "Enable Altair ROM.", value = false))
+    unitOptions.append(ValueUnitOption("MEMORY", "Set the RAM size.", value = 0xFFFF))
 
   }
 
@@ -162,10 +164,10 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
       // TODO Instruction execution
 
       INCR(1)
-      val instr = MMU.get8(PC)
+      val instr: Int = MMU.get8(PC)
       PC.increment()
 
-      (instr.intValue: @switch) match {
+      (instr: @switch) match {
 
         case (0x00) => // NOP
           addTStates(4)
@@ -352,8 +354,8 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
 
         case (0x27) => // DAA
           addTStates(4)
-          var acu = A.get8.intValue
-          val temp = acu & 0xf // low digit
+          var acu: Int = A.get8
+          val temp: Int = acu & 0xf // low digit
         val cbits = testFlag(F, FLAG_C) // carry
           if (testFlag(F, FLAG_N)) {
             // last operation was a subtract
@@ -438,7 +440,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
         case (0x32) => // LD (nnnn), A
           addTStates(13)
           memoryBreak = CHECK_BREAK_WORD(PC)
-          MMU.put8(MMU.get16(PC).intValue, A)
+          MMU.put8(MMU.get16(PC), A)
           PC(PC + 2)
 
         case (0x33) => // INC SP
@@ -484,7 +486,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
 
         case (0x3a) => // LD A,(nnnn)
           addTStates(13)
-          val tmp: UShort = MMU.get16(PC)
+          val tmp: Int = MMU.get16(PC)
           CHECK_BREAK_BYTE(tmp)
           A(MMU.get8(tmp))
           PC(PC + 2)
@@ -801,9 +803,9 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
         case (0x86) => // ADD A,(HL)
           addTStates(7)
           CHECK_BREAK_BYTE(HL)
-          val temp = MMU.get8(HL)
-          val acu = A.get8
-          val sum: Int = acu.intValue + temp.intValue
+          val temp: Int = MMU.get8(HL)
+          val acu: Int = A.get8
+          val sum: Int = acu + temp
           val cbits: Int = acu ^ temp ^ sum
           AF(addTable(sum) | cbitsTable(cbits) | SET_PV(cbits))
 
@@ -842,7 +844,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
           CHECK_BREAK_BYTE(HL)
           val temp = MMU.get8(HL)
           val acu = A.get8
-          val sum: Int = acu.intValue + temp.intValue + {
+          val sum: Int = acu + temp + {
             if (testFlag(F, FLAG_C)) 1 else 0
           }
           val cbits: Int = acu ^ temp ^ sum
@@ -882,9 +884,9 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
         case (0x96) => // SUB (HL)
           addTStates(7)
           CHECK_BREAK_BYTE(HL)
-          val temp = MMU.get8(HL)
-          val acu = A.get8
-          val sum: Int = acu.intValue - temp.intValue
+          val temp: Int = MMU.get8(HL)
+          val acu: Int = A.get8
+          val sum: Int = acu - temp
           val cbits: Int = acu ^ temp ^ sum
           AF(subTable(sum & 0xff) | cbitsTable(cbits & 0x1ff) | SET_PV(cbits))
 
@@ -921,7 +923,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
           CHECK_BREAK_BYTE(HL)
           val temp = MMU.get8(HL)
           val acu = A.get8
-          val sum: Int = acu.intValue - temp.intValue - {
+          val sum: Int = acu - temp - {
             if (testFlag(F, FLAG_C)) 1 else 0
           }
           val cbits: Int = acu ^ temp ^ sum
@@ -961,7 +963,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
         case (0xa6) => // AND (HL)
           addTStates(7)
           CHECK_BREAK_BYTE(HL)
-          AF(andTable(A & MMU.get8(HL).intValue))
+          AF(andTable(A & MMU.get8(HL)))
 
         case (0xa7) => // AND A
           addTStates(4)
@@ -994,7 +996,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
         case (0xae) => // XOR (HL)
           addTStates(7)
           CHECK_BREAK_BYTE(HL)
-          AF(xororTable(A ^ MMU.get8(HL).intValue))
+          AF(xororTable(A ^ MMU.get8(HL)))
 
         case (0xaf) => // XOR A
           addTStates(4)
@@ -1027,7 +1029,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
         case (0xb6) => // OR (HL)
           addTStates(7)
           CHECK_BREAK_BYTE(HL)
-          AF(xororTable(A | MMU.get8(HL).intValue))
+          AF(xororTable(A | MMU.get8(HL)))
 
         case (0xb7) => // OR A
           addTStates(4)
@@ -1060,8 +1062,8 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
         case (0xbe) => // CP (HL)
           addTStates(7)
           CHECK_BREAK_BYTE(HL)
-          val temp: Int = MMU.get8(HL).intValue
-          val acu: Int = A.get8.intValue
+          val temp: Int = MMU.get8(HL)
+          val acu: Int = A.get8
           AF(AF & ~0x28 | temp & 0x28)
           val sum: Int = acu - temp
           val cbits: Int = acu ^ temp ^ sum
@@ -1100,9 +1102,9 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
 
         case (0xc6) => // ADD A,nn
           addTStates(7)
-          val temp = MMU.get8(PC).intValue
+          val temp = MMU.get8(PC)
           PC.increment()
-          val acu = A.intValue
+          val acu = A
           val sum: Int = acu + temp
           val cbits: Int = acu ^ temp ^ sum
           AF(addTable(sum) | cbitsTable(cbits) | SET_PV(cbits))
@@ -1133,8 +1135,8 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
         // ******************************************************************************** CB
         case (0xcb) => // CB prefix
           INCR(1)
-          val adr: Int = HL.get16.intValue
-          val op: Int = MMU.get8(PC).intValue
+          val adr: Int = HL.get16
+          val op: Int = MMU.get8(PC)
           var acu: Int = 0
           var cbits: Int = 0
           var temp: Int = 0
@@ -1167,12 +1169,12 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
             case (6) =>
               CHECK_BREAK_BYTE(adr)
               PC.increment()
-              acu = MMU.get8(UInt(adr)).intValue
+              acu = MMU.get8(adr)
               addTStates(15)
               tStateModifier = true
             case (7) =>
               PC.increment()
-              acu = A.intValue
+              acu = A
               addTStates(8)
             case _ =>
 
@@ -1282,8 +1284,8 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
           addTStates(7)
           val temp = MMU.get8(PC)
           PC.increment()
-          val acu = A.intValue
-          val sum: Int = acu + temp.intValue + {
+          val acu = A
+          val sum: Int = acu + temp + {
             if (testFlag(F, FLAG_C)) 1 else 0
           }
           val cbits: Int = acu ^ temp ^ sum
@@ -1313,7 +1315,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
 
         case (0xd3) => // OUT (nn),A
           addTStates(11)
-          MMU.out8(MMU.get8(PC).intValue, A)
+          MMU.out8(MMU.get8(PC), A)
 
         case (0xd4) => // CALL NC, nnnn
           CALLC(!testFlag(F, FLAG_C))
@@ -1325,9 +1327,9 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
 
         case (0xd6) => // SUB nn
           addTStates(7)
-          val temp: Int = MMU.get8(PC).intValue
+          val temp: Int = MMU.get8(PC)
           PC.increment()
-          val acu = A.intValue
+          val acu = A
           val sum: Int = acu - temp
           val cbits: Int = acu ^ temp ^ sum
           AF(subTable(sum & 0xff) | cbitsTable(cbits & 0x1ff) | SET_PV(cbits))
@@ -1362,7 +1364,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
 
         case (0xdb) => // IN A,(nn)
           addTStates(11)
-          A(MMU.in8(MMU.get8(PC).intValue))
+          A(MMU.in8(MMU.get8(PC)))
           PC.increment()
 
         case (0xdc) => // CALL C,nnnn
@@ -1372,7 +1374,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
         // ************************************************************************************** DD
         case (0xdd) => // DD Prefix
           INCR(1)
-          val op: Int = MMU.get8(PC).intValue
+          val op: Int = MMU.get8(PC)
           PC.increment()
           op match {
             case (0x09) => // ADD IX,BC
@@ -1390,7 +1392,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
 
             case (0x22) => // LD (nnnn),IX
               addTStates(20)
-              val temp: Int = MMU.get16(PC).intValue
+              val temp: Int = MMU.get16(PC)
               CHECK_BREAK_WORD(temp)
               MMU.put16(temp, IX)
               PC(PC + 2)
@@ -1420,9 +1422,9 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
 
             case (0x2a) => // LD IX,(nnnn)
               addTStates(15)
-              val tmp: Int = MMU.get16(PC).intValue
+              val tmp: Int = MMU.get16(PC)
               CHECK_BREAK_WORD(tmp)
-              IX(MMU.get16(UInt(tmp)))
+              IX(MMU.get16(tmp))
               PC(PC + 2)
 
             case (0x2b) => // DEC IX
@@ -1432,12 +1434,12 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
             case (0x2c) => // INC IXL
               addTStates(9)
               IXL.increment()
-              AF((AF & ~0xfe) | incZ80Table(IXL.intValue))
+              AF((AF & ~0xfe) | incZ80Table(IXL))
 
             case (0x2d) => // DEC IXL
               addTStates(9)
               IXL.decrement()
-              AF((AF & ~0xfe) | decZ80Table(IXL.intValue & 0xff))
+              AF((AF & ~0xfe) | decZ80Table(IXL & 0xff))
 
             case (0x2e) => // LD IXL,nn
               addTStates(9)
@@ -1454,7 +1456,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
 
             case (0x36) => // LD (IX+dd),nn
               addTStates(19)
-              val adr: Int = IX.intValue + MMU.get8(PC).intValue
+              val adr: Int = IX + MMU.get8(PC)
               PC.increment()
               CHECK_BREAK_BYTE(adr)
               MMU.put8(adr, MMU.get8(PC))
@@ -1624,11 +1626,11 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
 
             case (0x86) => // ADD A,(IX+dd)
               addTStates(19)
-              val adr: Int = IX.intValue + MMU.get8(PC).intValue
+              val adr: Int = IX + MMU.get8(PC)
               PC.increment()
               CHECK_BREAK_BYTE(adr)
-              val temp: Int = MMU.get8(UInt(adr)).intValue
-              val acu: Int = A.intValue
+              val temp: Int = MMU.get8(adr)
+              val acu: Int = A
               val sum: Int = acu + temp
               AF((addTable(sum) | cbitsZ80Table(acu ^ temp ^ sum)).intValue)
 
@@ -1642,19 +1644,19 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
 
             case (0x8e) => // ADC A,(IX+dd)
               addTStates(19)
-              val adr: Int = IX.intValue + MMU.get8(PC).intValue
+              val adr: Int = IX + MMU.get8(PC)
               CHECK_BREAK_BYTE(adr)
-              val temp: Int = MMU.get8(UInt(adr)).intValue
-              val acu: Int = A.intValue
+              val temp: Int = MMU.get8(adr)
+              val acu: Int = A
               val sum: Int = acu + temp + (if (testFlag(F, FLAG_C)) 1 else 0)
               AF((addTable(sum) | cbitsZ80Table(acu ^ temp ^ sum)).intValue)
 
             case (0x96) => // SUB (IX+dd)
               addTStates(19)
-              val adr: Int = IX.intValue + MMU.get8(PC).intValue
+              val adr: Int = IX + MMU.get8(PC)
               CHECK_BREAK_BYTE(adr)
-              val temp: Int = MMU.get8(UInt(adr)).intValue
-              val acu: Int = A.intValue
+              val temp: Int = MMU.get8(adr)
+              val acu: Int = A
               val sum: Int = acu - temp
               AF((addTable(sum & 0xff) | cbitsZ80Table((acu ^ temp ^ sum) & 0x1ff)).intValue)
 
@@ -1676,13 +1678,13 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
 
             case (0x9e) => // SBC A,(IX+dd)
               addTStates(19)
-              val adr: Int = IX.intValue + MMU.get8(PC).intValue
+              val adr: Int = IX + MMU.get8(PC)
               PC.increment()
               CHECK_BREAK_BYTE(adr)
-              val temp: Int = MMU.get8(UInt(adr)).intValue
-              val acu: Int = A.intValue
+              val temp: Int = MMU.get8(adr)
+              val acu: Int = A
               val sum: Int = acu - temp - (if (testFlag(F, FLAG_C)) 1 else 0)
-              AF((addTable(sum & 0xff) | cbits2Z80Table(acu ^ temp ^ sum) & 0x1ff).intValue())
+              AF((addTable(sum & 0xff) | cbits2Z80Table(acu ^ temp ^ sum) & 0x1ff))
 
             case (0xa4) => // AND IXH
               addTStates(9)
@@ -1735,46 +1737,46 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
             // ******************************************************************************** DD CB PREFIX
             case (0xcb) => {
               //  DD CB PREFIX
-              val adr: Int = IX.intValue + MMU.get8(PC).intValue
+              val adr: Int = IX + MMU.get8(PC)
               PC.increment()
               INCR(1)
-              val op: Int = MMU.get8(PC).intValue
+              val op: Int = MMU.get8(PC)
               var acu: Int = 0
               var temp: Int = 0
               var cbits: Int = 0
               (op & 7) match {
                 case 0 =>
                   PC.increment()
-                  acu = B.intValue
+                  acu = B
 
                 case 1 =>
                   PC.increment()
-                  acu = C.intValue
+                  acu = C
 
                 case 2 =>
                   PC.increment()
-                  acu = D.intValue
+                  acu = D
 
                 case 3 =>
                   PC.increment()
-                  acu = E.intValue
+                  acu = E
 
                 case 4 =>
                   PC.increment()
-                  acu = H.intValue
+                  acu = H
 
                 case 5 =>
                   PC.increment()
-                  acu = L.intValue
+                  acu = L
 
                 case 6 =>
                   CHECK_BREAK_BYTE(adr)
                   PC.increment()
-                  acu = MMU.get8(UInt(adr)).intValue
+                  acu = MMU.get8(adr)
 
                 case 7 =>
                   PC.increment()
-                  acu = A.intValue
+                  acu = A
 
                 case _ =>
 
@@ -1905,13 +1907,13 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
             case (0xe3) => // EX (SP),IX
               addTStates(23)
               CHECK_BREAK_WORD(SP)
-              val tmp: Int = IX.intValue
+              val tmp: Int = IX
               POP(IX)
               PUSH(tmp)
 
             case (0xe5) => // PUSH IX
               addTStates(15)
-              CHECK_BREAK_WORD(SP.intValue - 2)
+              CHECK_BREAK_WORD(SP - 2)
               PUSH(IX)
 
             case (0xe9) => // JP (IX)
@@ -1929,9 +1931,9 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
 
         case (0xde) => // SBC A,nn  #4580
           addTStates(7)
-          val temp = MMU.get8(PC).intValue
+          val temp = MMU.get8(PC)
           PC.increment()
-          val acu = A.intValue
+          val acu = A
           val sum: Int = acu - temp - {
             if (testFlag(F, FLAG_C)) 1 else 0
           }
@@ -1940,7 +1942,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
 
         case (0xdf) => // RST 18H
           addTStates(18)
-          CHECK_BREAK_WORD(SP.intValue - 2)
+          CHECK_BREAK_WORD(SP - 2)
           PUSH(PC)
           PC(0x18)
 
@@ -1963,7 +1965,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
         case (0xe3) => //  EX (SP),HL
           addTStates(19)
           CHECK_BREAK_WORD(SP)
-          val temp: Int = HL.intValue
+          val temp: Int = HL
           POP(HL)
           PUSH(temp)
 
@@ -1977,7 +1979,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
 
         case (0xe6) => // AND nn
           addTStates(7)
-          AF(andTable(((AF >> 8) & MMU.get8(PC).intValue) & 0xff))
+          AF(andTable(((AF >> 8) & MMU.get8(PC)) & 0xff))
           PC.increment()
 
         case (0xe7) => // RST 20H
@@ -2004,7 +2006,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
 
         case (0xeb) => // EX DE,HL
           addTStates(4)
-          val temp: Int = HL.intValue
+          val temp: Int = HL
           HL(DE)
           DE(temp)
 
@@ -2014,18 +2016,18 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
         // *************************************************************************************** ED
         case (0xed) => // ED PREFIX
           INCR(1)
-          val op = MMU.get8(PC).intValue
+          val op: Int = MMU.get8(PC)
           PC.increment()
           op match {
             case (0x40) => // IN B,(C)
               addTStates(12)
-              val temp: Int = MMU.in8(C.intValue).intValue
+              val temp: Int = MMU.in8(C)
               B(temp)
               AF((AF & 0xfe) | rotateShiftTable(temp & 0xff))
 
             case (0x41) => // OUT (C),B
               addTStates(12)
-              MMU.out8(C.intValue, B)
+              MMU.out8(C, B)
 
             case (0x42) => // SBC HL, BC
               addTStates(15)
@@ -2033,7 +2035,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
 
             case (0x43) => // LD (nnnn),BC
               addTStates(20)
-              val temp: Int = MMU.get16(PC).intValue
+              val temp: Int = MMU.get16(PC)
               CHECK_BREAK_WORD(temp)
               MMU.put16(temp, BC)
               PC(PC + 2)
@@ -2089,7 +2091,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
 
             case (0x48) => // IN C,(C)
               addTStates(12)
-              val temp: Int = MMU.in8(C).intValue
+              val temp: Int = MMU.in8(C)
               C(temp)
               AF((AF & ~0xfe) | rotateShiftTable(temp & 0xff))
 
@@ -2099,53 +2101,302 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
 
             case (0x4a) => // ADC HL,BC
               addTStates(15)
-              ADC(HL,BC)
+              ADC(HL, BC)
 
             case (0x4b) => // LD BC,(nnnn)
+              addTStates(20)
+              val temp: Int = MMU.get16(PC)
+              CHECK_BREAK_WORD(temp)
+              BC(MMU.get16(temp))
+              PC(PC + 2)
+
             case (0x4d) => // RETI
+              addTStates(14)
+              IFF(IFF | IFF >> 1)
+              CHECK_BREAK_WORD(SP)
+              POP(PC)
+
             case (0x4f) => // LD R,A
+              addTStates(9)
+              IR((IR & ~0xff) | ((AF >> 8) & 0xff))
+
             case (0x50) => // IN D,(C)
+              addTStates(12)
+              val temp: Int = MMU.in8(C)
+              D(temp)
+              AF((AF & 0xfe) | rotateShiftTable(temp & 0xff))
+
             case (0x51) => // OUT (C),D
+              addTStates(12)
+              MMU.out8(C, D)
+
             case (0x52) => // SBC HL,DE
+              addTStates(15)
+              SBC(HL, DE)
+
             case (0x53) => // LD (nnnn),DE
+              addTStates(20)
+              val temp: Int = MMU.get16(PC)
+              CHECK_BREAK_WORD(temp)
+              MMU.put16(temp, DE)
+              PC(PC + 2)
+
             case (0x56) => // IM 1
+              addTStates(8)
+
             case (0x57) => // LD A,I
+              addTStates(9)
+              AF((AF & 0x29) | (IR & ~0xff) | ((IR >> 8) & 0x80) | ({
+                if ((IR & ~0xff) == 0) 1 else 0
+              } << 6) | ((IFF & 2) << 1))
+
             case (0x58) => // IN E,(C)
+              addTStates(12)
+              val temp: Int = MMU.in8((C))
+              E(temp)
+              AF((AF & 0xfe) | rotateShiftTable(temp & 0xff))
+
             case (0x59) => // OUT (C),E
+              addTStates(12)
+              MMU.out8(C, E)
+
             case (0x5a) => // ADC HL,DE
               addTStates(15)
-              ADC(HL,DE)
+              ADC(HL, DE)
 
             case (0x5b) => // LD DE,(nnnn)
+              addTStates(20)
+              val temp: Int = MMU.get16(PC)
+              CHECK_BREAK_WORD(temp)
+              DE(MMU.get16(temp))
+              PC(PC + 2)
+
             case (0x5e) => // IM 2
+              addTStates(8)
+
             case (0x5f) => // LD A,R
+              addTStates(9)
+              AF((AF & 0x29) | ((IR & 0xff) << 8) | (IR & 0x80) |
+                ({
+                  if ((IR & 0xff) == 0) 1 else 0
+                } << 6) | ((IFF & 2) << 1))
+
             case (0x60) => // IN H,(C)
+              addTStates(12)
+              val temp: Int = MMU.in8(C)
+              H(temp)
+              AF((AF & 0xfe) | rotateShiftTable(temp & 0xff))
+
             case (0x61) => // OUT (C),H
+              addTStates(12)
+              MMU.out8(C, H)
+
             case (0x62) => // SBC HL,HL
+              addTStates(15)
+              val sum: Int = HL - HL - {
+                if (testFlag(F, FLAG_C)) 1 else 0
+              }
+              AF((AF & 0xff) | ({
+                if ((sum & 0xffff) == 0) 1 else 0
+              } << 6) | cbits2Z80DupTable((sum >> 8) & 0x1ff))
+              HL(sum)
+
             case (0x63) => // LD (nnnn),HL
+              addTStates(20)
+              val temp: Int = MMU.get16(PC)
+              CHECK_BREAK_WORD(temp)
+              MMU.put16(temp, HL)
+              PC(PC + 2)
+
             case (0x67) => // RRD
+              addTStates(18)
+              val temp: Int = MMU.get8(HL)
+              val acu: Int = A
+              MMU.put8(HL, HIGH_DIGIT(temp) | (LOW_DIGIT(acu) << 4))
+              AF(rrdrldTable((acu & 0xf0) | LOW_DIGIT(temp)) | (AF & 1))
+
             case (0x68) => // IN L,(C)
+              addTStates(12)
+              val temp: Int = MMU.in8(C)
+              L(temp)
+              AF((AF & 0xfe) | rotateShiftTable(temp & 0xff))
+
             case (0x69) => // OUT (C),L
+              addTStates(12)
+              MMU.out8(C, L)
+
             case (0x6a) => // ADC HL,HL
+              addTStates(15)
+              val sum: Int = HL + HL - {
+                if (testFlag(F, FLAG_C)) 1 else 0
+              }
+              AF((AF & ~0xff) | ({
+                if ((sum & 0xffff) == 0) 1 else 0
+              } << 6) | cbits2Z80DupTable(sum >> 8))
+              HL(sum)
+
             case (0x6b) => // LD HL,(nnnn)
+              addTStates(20)
+              val temp: Int = MMU.get16(PC)
+              CHECK_BREAK_WORD(temp)
+              HL(MMU.get16(temp))
+              PC(PC + 2)
+
             case (0x6f) => // RLD
+              addTStates(18)
+              val temp: Int = MMU.get8(HL)
+              val acu: Int = A
+              MMU.put8(HL, (LOW_DIGIT(temp) << 4) | LOW_DIGIT(acu))
+              AF(rrdrldTable((acu & 0xf0) | HIGH_DIGIT(temp)) | (AF & 1))
+
             case (0x70) => // IN (C)
+              addTStates(12)
+              val temp: Int = MMU.in8(C)
+              AF((AF & 0xfe) | rotateShiftTable(temp & 0xff))
+
             case (0x71) => // OUT (C),0
+              addTStates(12)
+              MMU.out8(C, UByte(0))
+
             case (0x72) => // SBC HL,SP
+              addTStates(15)
+              SBC(HL, SP)
+
             case (0x73) => // LD (nnnn),SP
+              addTStates(20)
+              val temp: Int = MMU.get16(PC)
+              CHECK_BREAK_WORD(temp)
+              MMU.put16(temp, SP)
+              PC(PC + 2)
+
             case (0x78) => // IN A,(C)
+              addTStates(12)
+              val temp: Int = MMU.in8(C)
+              A(temp)
+              AF((AF & 0xfe) | rotateShiftTable(temp & 0xff))
+
             case (0x79) => // OUT (C),A
+              addTStates(12)
+              MMU.out8(C, A)
+
             case (0x7a) => // ADC HL,SP
               addTStates(15)
-              ADC(HL,SP)
+              ADC(HL, SP)
 
             case (0x7b) => // LD SP,(nnnn)
+              addTStates(20)
+              val temp: Int = MMU.get16(PC)
+              CHECK_BREAK_WORD(temp)
+              SP(MMU.get16(temp))
+              PC(PC + 2)
+
             case (0xa0) => // LDI
+              addTStates(16)
+              // CHECK_BREAK_TWO_BYTES - HL & DE
+              var acu: Int = MMU.get8(HL)
+              HL.increment()
+              MMU.put8(DE, acu)
+              DE.increment()
+              acu = acu + A
+              AF((AF & ~0x3e) | (acu & 8) | ((acu & 2) << 4) | ({
+                BC.decrement()
+                if ((BC & 0xffff) != 0) 1 else 0
+              } << 2))
+
             case (0xa1) => // CPI
+              addTStates(16)
+              CHECK_BREAK_BYTE(HL)
+              val acu: Int = A
+              val temp: Int = HL
+              HL.increment()
+              val sum: Int = acu - temp
+              val cbits: Int = acu ^ temp ^ sum
+              AF((AF & ~0xfe) | (sum & 0x80) | {
+                if (((sum & 0xff) << 6) == 0) 1 else 0
+              } |
+                (((sum - ((cbits & 16) >> 4)) & 2) << 4) | (cbits & 16) |
+                ((sum - ((cbits >> 4) & 1)) & 8) | {
+                BC.decrement()
+                if ((BC & 0xffff) != 0) 1 else 0
+              } << 2 | 2)
+              if ((sum & 15) == 8 && (cbits & 16) != 0) AF(AF & ~8)
+
+
+            /*  SF, ZF, YF, XF flags are affected by decreasing register B, as in DEC B.
+                NF flag A is copy of bit 7 of the value read from or written to an I/O port.
+                INI/INIR/IND/INDR use the C flag in stead of the L register. There is a
+                catch though, because not the value of C is used, but C + 1 if it's INI/INIR or
+                C - 1 if it's IND/INDR. So, first of all INI/INIR:
+                    HF and CF Both set if ((HL) + ((C + 1) & 255) > 255)
+                    PF The parity of (((HL) + ((C + 1) & 255)) & 7) xor B)                      */
             case (0xa2) => // INI
+              addTStates(16)
+              CHECK_BREAK_BYTE(HL)
+              val acu: Int = MMU.in8(C)
+              MMU.put8(HL, acu)
+              HL.increment()
+              val temp: Int = B
+              BC(BC - 0x100)
+              INOUTFLAGS_NONZERO((C + 1) & 0xff, acu, temp)
+
+            /*  SF, ZF, YF, XF flags are affected by decreasing register B, as in DEC B.
+  NF flag A is copy of bit 7 of the value read from or written to an I/O port.
+  And now the for OUTI/OTIR/OUTD/OTDR instructions. Take state of the L
+  after the increment or decrement of HL; add the value written to the I/O port
+  to; call that k for now. If k > 255, then the CF and HF flags are set. The PF
+  flags is set like the parity of k bitwise and'ed with 7, bitwise xor'ed with B.
+  HF and CF Both set if ((HL) + L > 255)
+  PF The parity of ((((HL) + L) & 7) xor B)                                       */
             case (0xa3) => // OUTI
+              addTStates(16)
+              CHECK_BREAK_BYTE(HL)
+              val acu: Int = MMU.get8(HL)
+              MMU.out8(C, UByte(acu.byteValue()))
+              HL.increment()
+              val temp: Int = B
+              BC(BC - 0x100)
+              INOUTFLAGS_NONZERO(L, acu, temp)
+
             case (0xa8) => // LDD
+              addTStates(16)
+              // CHECK_BREAK_TWO_BYTES HL,DE
+              var acu: Int = MMU.get8(HL)
+              HL.decrement()
+              MMU.put8(DE, acu)
+              DE.decrement()
+              acu = acu + A
+              AF((AF & ~0x3e) | (acu & 8) | ((acu & 2) << 4) | {
+                BC.decrement()
+                if ((BC & 0xffff) != 0) 1 else 0
+              } << 2)
+
             case (0xa9) => // CPD
+              addTStates(16)
+              CHECK_BREAK_BYTE(HL)
+              val acu: Int = A
+              val temp: Int = MMU.get8(HL)
+              HL.decrement()
+              val sum: Int = acu - temp
+              val cbits: Int = acu ^ temp ^ sum
+              AF(
+                (AF & ~0xfe) | (sum & 0x80) | ({
+                  if ((sum & 0xff) != 0) 1 else 0
+                } << 6) |
+                  (((sum - ((cbits & 16) >> 4)) & 2) << 4) | (cbits & 16) | // TODO Check "!" logic
+                  ((sum - ((cbits >> 4) & 1)) & 8) | {
+                  BC.decrement()
+                  if ((BC & 0xffff) != 0) 1 else 0
+                } << 2 | 2
+              )
+              if ((sum & 15) == 8 && (cbits & 16) != 0) AF(AF & ~8)
+
+            /*  SF, ZF, YF, XF flags are affected by decreasing register B, as in DEC B.
+  NF flag A is copy of bit 7 of the value read from or written to an I/O port.
+  INI/INIR/IND/INDR use the C flag in stead of the L register. There is a
+  catch though, because not the value of C is used, but C + 1 if it's INI/INIR or
+  C - 1 if it's IND/INDR. And last IND/INDR:
+      HF and CF Both set if ((HL) + ((C - 1) & 255) > 255)
+      PF The parity of (((HL) + ((C - 1) & 255)) & 7) xor B)                      */
             case (0xaa) => // IND
             case (0xab) => // OUTD
             case (0xb0) => // LDIR
@@ -2180,7 +2431,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
         // ************************************************************************************ FD
         case (0xfd) => // FD Prefix
           INCR(1)
-          val op: Int = MMU.get8(PC).intValue
+          val op: Int = MMU.get8(PC)
           PC.increment()
           op match {
             case (0x09) => // ADD IY,BC
@@ -2198,7 +2449,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
 
             case (0x22) => // LD (nnnn),IY
               addTStates(20)
-              val temp: Int = MMU.get16(PC).intValue
+              val temp: Int = MMU.get16(PC)
               CHECK_BREAK_WORD(temp)
               MMU.put16(temp, IY)
               PC(PC + 2)
@@ -2246,7 +2497,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
             case (0x36) => // LD (IY+dd),nn
             case (0x39) => // ADD IY,SP
               addTStates(15)
-              val sum: Int = IY.intValue + SP.intValue
+              val sum: Int = IY + SP
               AF((AF & ~0x3b) | ((sum >> 8) & 0x28) | cbitsTable((IY ^ SP ^ sum) >> 8))
               IY(sum)
 
@@ -2427,9 +2678,9 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
             case (0xbd) => // CP IYL
             case (0xbe) => // CP (IY+dd)
             case (0xcb) => // ******************************************************** FD CB Prefix
-              val adr: Int = IY + MMU.get8(PC).intValue
+              val adr: Int = IY + MMU.get8(PC)
               PC.increment()
-              val op: Int = MMU.get8(PC).intValue
+              val op: Int = MMU.get8(PC)
               (op & 7) match {
 
                 case _ =>
@@ -2514,10 +2765,20 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
   private def CHECK_BREAK_WORD(reg: Register16): Boolean = false
 
   @inline
-  def CHECK_BREAK_BYTE(v: Int): Boolean = false
+  private def CHECK_BREAK_BYTE(v: Int): Boolean = false
 
   @inline
-  def CHECK_BREAK_WORD(addr: Int): Boolean = false
+  private def CHECK_BREAK_WORD(addr: Int): Boolean = false
+
+  @inline
+  private def HIGH_DIGIT(x: Int): Int = {
+    (x >> 4) & 0xf
+  }
+
+  @inline
+  private def LOW_DIGIT(x: Int): Int = {
+    x & 0xf
+  }
 
   private val incTable: Array[UByte] = {
     for (temp <- 0 to 255) yield {
@@ -2721,7 +2982,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
 
   @inline
   private def PUSH(x: Register16): Unit = {
-    PUSH(x.get16.intValue)
+    PUSH(x.get16)
   }
 
   @inline
@@ -2758,15 +3019,15 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
   //**** Utility helpers *****
   @inline
   private def ADDIDX(r1: Register8, r2: Register8): Unit = {
-    val tmp: Int = r2.intValue
-    val acu: Int = r1.intValue
+    val tmp: Int = r2
+    val acu: Int = r1
     val sum: Int = acu + tmp
     AF((addTable(sum) | cbitsZ80Table(acu ^ tmp ^ sum)).intValue)
   }
 
   @inline
   private def ADD(r1: Register16, r2: Register16): Unit = {
-    val sum: Int = r1.intValue + r2.intValue
+    val sum: Int = r1 + r2
     if (r1.nmenomic == r2.nmenomic) AF((AF & ~0x3b) | cbitsDup16Table(sum >> 8))
     else AF((AF & ~0x3b) | ((sum >> 8) & 0x28) | cbitsTable((r1 ^ r2 ^ sum) >> 8))
     r1(sum)
@@ -2774,9 +3035,9 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
 
   @inline
   private def ADD(r1: Register8, r2: Register8): Unit = {
-    val temp = r2.get8
-    val acu = r1.get8
-    val sum: Int = acu.intValue + temp.intValue
+    val temp: Int = r2.get8
+    val acu: Int = r1.get8
+    val sum: Int = acu + temp
     val cbits: Int = acu ^ temp ^ sum
     AF(addTable(sum) | cbitsTable(cbits) | SET_PV(cbits))
   }
@@ -2785,7 +3046,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
   private def ADC(r1: Register8, r2: Register8): Unit = {
     val temp = r2.get8
     val acu = r1.get8
-    val sum: Int = acu.intValue + temp.intValue + {
+    val sum: Int = acu + temp + {
       if (testFlag(F, FLAG_C)) 1 else 0
     }
     val cbits: Int = acu ^ temp ^ sum
@@ -2805,25 +3066,25 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
 
   @inline
   private def ADCIDX(r1: Register8, r2: Register8): Unit = {
-    val temp: Int = r2.intValue
-    val acu: Int = r1.intValue
+    val temp: Int = r2
+    val acu: Int = r1
     val sum: Int = acu + temp + (if (testFlag(F, FLAG_C)) 1 else 0)
     AF((addTable(sum) | cbitsZ80Table(acu ^ temp ^ sum)).intValue)
   }
 
   @inline
   private def SUB(r1: Register8): Unit = {
-    val temp = r1.get8
-    val acu = A.get8
-    val sum: Int = acu.intValue - temp.intValue
+    val temp: Int = r1.get8
+    val acu: Int = A.get8
+    val sum: Int = acu - temp
     val cbits: Int = acu ^ temp ^ sum
     AF(subTable(sum & 0xff) | cbitsTable(cbits & 0x1ff) | SET_PV(cbits))
   }
 
   @inline
   private def SUBIDX(r1: Register8): Unit = {
-    val temp: Int = r1.intValue
-    val acu: Int = A.intValue
+    val temp: Int = r1
+    val acu: Int = A
     val sum: Int = acu - temp
     AF((addTable(sum & 0xff) | cbitsZ80Table((acu ^ temp ^ sum) & 0x1ff)).intValue)
   }
@@ -2832,7 +3093,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
   private def SBC(r1: Register8, r2: Register8): Unit = {
     val temp = r2.get8
     val acu = r1.get8
-    val sum: Int = acu.intValue - temp.intValue - {
+    val sum: Int = acu - temp - {
       if (testFlag(F, FLAG_C)) 1 else 0
     }
     val cbits: Int = acu ^ temp ^ sum
@@ -2841,7 +3102,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
 
   @inline
   private def SBC(r1: Register16, r2: Register16): Unit = {
-    val sum: Int = r1.intValue - r2.intValue - (if (testFlag(F, FLAG_C)) 1 else 0)
+    val sum: Int = r1 - r2 - (if (testFlag(F, FLAG_C)) 1 else 0)
     AF((AF & 0xff) | ((sum >> 8) & 0xa8) | ({
       if ((sum & 0xffff) == 0) 1 else 0
     } << 6) |
@@ -2852,16 +3113,16 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
 
   @inline
   private def SBCIDX(r1: Register8, r2: Register8): Unit = {
-    val temp: Int = r2.intValue
-    val acu: Int = r1.intValue
+    val temp: Int = r2
+    val acu: Int = r1
     val sum: Int = acu - temp - (if (testFlag(F, FLAG_C)) 1 else 0)
-    AF((addTable(sum & 0xff) | cbitsZ80Table((acu ^ temp ^ sum) & 0x1ff)).intValue)
+    AF(addTable(sum & 0xff) | cbitsZ80Table((acu ^ temp ^ sum) & 0x1ff).intValue)
   }
 
   @inline
   private def ICP(r1: Register8): Unit = {
-    val temp: Int = r1.get8.intValue
-    val acu: Int = A.get8.intValue
+    val temp: Int = r1.get8
+    val acu: Int = A.get8
     AF(AF & ~0x28 | temp & 0x28)
     val sum: Int = acu - temp
     val cbits: Int = acu ^ temp ^ sum
@@ -2870,15 +3131,15 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
 
   @inline
   private def LDIDXdd(r1: Register8, ridx: Register16): Unit = {
-    val adr: Int = ridx.intValue + MMU.get8(PC).intValue
+    val adr: Int = ridx + MMU.get8(PC)
     PC.increment()
     CHECK_BREAK_BYTE(adr)
-    r1(MMU.get8(UInt(adr)))
+    r1(MMU.get8(adr))
   }
 
   @inline
   private def LDIDXdd(ridx: Register16, r1: Register8): Unit = {
-    val adr = ridx.intValue + MMU.get8(PC).intValue
+    val adr = ridx + MMU.get8(PC)
     PC.increment()
     CHECK_BREAK_BYTE(adr)
     MMU.put8(adr, r1)
@@ -2898,65 +3159,65 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
 
   @inline
   private def INCIDXdd(r1: Register16): Unit = {
-    val adr: Int = r1.intValue + MMU.get8(PC).intValue
+    val adr: Int = r1 + MMU.get8(PC)
     PC.increment()
     CHECK_BREAK_BYTE(adr)
-    val temp: UByte = UByte((MMU.get8(UInt(adr)) + UByte(1)).toByte)
+    val temp: UByte = UByte((MMU.get8(adr) + UByte(1)).toByte)
     MMU.put8(adr, temp)
-    AF((AF & ~0xfe) | incZ80Table(temp.intValue))
+    AF((AF & ~0xfe) | incZ80Table(temp))
   }
 
   @inline
   private def DECIDXdd(r1: Register16): Unit = {
-    val adr: Int = r1.intValue + MMU.get8(PC).intValue
+    val adr: Int = r1 + MMU.get8(PC)
     PC.increment()
     CHECK_BREAK_BYTE(adr)
-    val temp: UByte = UByte((MMU.get8(UInt(adr)) - UByte(1)).toByte)
+    val temp: UByte = UByte((MMU.get8(adr) - UByte(1)).toByte)
     MMU.put8(adr, temp)
-    AF((AF & ~0xfe) | decZ80Table(temp.intValue & 0xff))
+    AF((AF & ~0xfe) | decZ80Table(temp & 0xff))
   }
 
   @inline
   private def ANDIDXdd(r1: Register16): Unit = {
-    val adr: Int = r1.intValue + MMU.get8(PC).intValue
+    val adr: Int = r1 + MMU.get8(PC)
     PC.increment()
     CHECK_BREAK_BYTE(adr)
-    AF(andTable(((AF >> 8) & MMU.get8(UInt(adr))) & 0xff))
+    AF(andTable(((AF >> 8) & MMU.get8(adr)) & 0xff))
   }
 
   @inline
   private def XORIDXdd(r1: Register16): Unit = {
-    val adr: Int = r1.intValue + MMU.get8(PC).intValue
+    val adr: Int = r1 + MMU.get8(PC)
     PC.increment()
     CHECK_BREAK_BYTE(adr)
-    AF(xororTable(((AF >> 8) ^ MMU.get8(UInt(adr))) & 0xff))
+    AF(xororTable(((AF >> 8) ^ MMU.get8(adr)) & 0xff))
   }
 
   @inline
   private def ORIDXdd(r1: Register16): Unit = {
-    val adr: Int = r1.intValue + MMU.get8(PC).intValue
+    val adr: Int = r1 + MMU.get8(PC)
     PC.increment()
     CHECK_BREAK_BYTE(adr)
-    AF(xororTable(((AF >> 8) | MMU.get8(UInt(adr))) & 0xff))
+    AF(xororTable(((AF >> 8) | MMU.get8(adr)) & 0xff))
   }
 
   @inline
   private def CPIX8(r1: Register8): Unit = {
-    val temp: Int = r1.intValue
+    val temp: Int = r1
     AF((AF & ~0x28) | (temp & 0x28))
-    val acu: Int = A.intValue
+    val acu: Int = A
     val sum: Int = acu - temp
     AF((AF & ~0xff) | cpTable(sum & 0xff) | (temp & 0x28) | cbits2Z80Table((acu ^ temp ^ sum) & 0x1ff))
   }
 
   @inline
   private def CPIDXdd(r1: Register16): Unit = {
-    val adr: Int = r1.intValue + MMU.get8(PC).intValue
+    val adr: Int = r1 + MMU.get8(PC)
     PC.increment()
     CHECK_BREAK_BYTE(adr)
-    val temp: Int = MMU.get8(UInt(adr)).intValue
+    val temp: Int = MMU.get8(adr)
     AF((AF & ~0x28) | (temp & 0x28))
-    val acu: Int = A.intValue
+    val acu: Int = A
     val sum: Int = acu - temp
     AF((AF & ~0xff) | cpTable(sum & 0xff) | (temp & 0x28) | cbits2Z80Table((acu ^ temp ^ sum) * 0x1ff))
   }
@@ -2964,7 +3225,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
   @inline
   private def NEG: Unit = {
     addTStates(8)
-    val temp: Int = A.intValue
+    val temp: Int = A
     AF((~(AF & 0xff00) + 1) & 0xff00)
     AF(AF | ((AF >> 8) & 0xa8) | ({
       if ((AF & 0xff00) == 0) 1 else 0
@@ -2978,6 +3239,42 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
     IFF(IFF | (IFF >> 1))
     CHECK_BREAK_WORD(SP)
     POP(PC)
+  }
 
+  /*
+  Macros for the IN/OUT instructions INI/INIR/IND/INDR/OUTI/OTIR/OUTD/OTDR
+    Pre condition
+        temp == value of register B at entry of the instruction
+        acu == value of transferred byte (IN or OUT)
+    Post condition
+        F is set correctly
+    Use INOUTFLAGS_ZERO(x) for INIR/INDR/OTIR/OTDR where
+        x == (C + 1) & 0xff for INIR
+        x == L              for OTIR and OTDR
+        x == (C - 1) & 0xff for INDR
+    Use INOUTFLAGS_NONZERO(x) for INI/IND/OUTI/OUTD where
+        x == (C + 1) & 0xff for INI
+        x == L              for OUTI and OUTD
+        x == (C - 1) & 0xff for IND
+*/
+  @inline
+  private def INOUTFLAGS_NONZERO(x: Int, acu: Int, temp: Int): Unit = {
+    INOUTFLAGS((C & 0xa8) | ({
+      if (C.intValue == 0) 1 else 0
+    } << 6), x, acu, temp)
+  }
+
+  @inline
+  private def INOUTFLAGS_ZERO(x: Int, acu: Int, temp: Int): Unit = {
+    INOUTFLAGS(FLAG_Z, x, acu, temp)
+  }
+
+  @inline
+  private def INOUTFLAGS(syzx: Int, x: Int, acu: Int, temp: Int): Unit = {
+    AF((AF & 0xff00) | syzx |
+      ((acu & 0x80) >> 6) | {
+      if ((acu + x) > 0xff) (FLAG_C | FLAG_H) else 0
+    } |
+      parityTable(((acu + x) & 7) ^ temp))
   }
 }

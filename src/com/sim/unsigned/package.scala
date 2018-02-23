@@ -33,6 +33,10 @@ package object unsigned {
 
   implicit def richerUInt(x: UInt): RicherUInt = new RicherUInt(x.toInt)
 
+  implicit def ushort2Int(x: UShort) : Int = x.intValue
+
+  implicit def ubyte2Int(x: UByte): Int = x.intValue
+
   class FloatOps(x: Float) {
     def toUByte = UByte(x.toByte)
 

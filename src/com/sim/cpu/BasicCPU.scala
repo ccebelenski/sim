@@ -3,7 +3,7 @@ package com.sim.cpu
 import java.util.function.Consumer
 
 import com.sim.{SimTimer, SimTimerUnit, Utils}
-import com.sim.device.BasicDevice
+import com.sim.device.{BasicDevice, BinaryUnitOption}
 import com.sim.machine.AbstractMachine
 import com.sim.unsigned.{UByte, UInt, UShort}
 
@@ -28,6 +28,12 @@ abstract class BasicCPU(val isBanked: Boolean, override val machine: AbstractMac
   def runcpu(): Unit // Main CPU execution loop
 
   def onHalt(): Unit // called when CPU is about to be halted and returning to cmd line
+
+  // Unit options common to all CPU's.
+  override def createUnitOptions: Unit = {
+    unitOptions.append(BinaryUnitOption("STOPONHALT", "Stop on halt instruction.", value = false))
+
+  }
 
   @inline
   def setFlag(reg:Register8, flag:Int, clear:Boolean) : Unit = {
@@ -77,13 +83,13 @@ abstract class BasicCPU(val isBanked: Boolean, override val machine: AbstractMac
 
   /* UI Routines */
   def examine(address: Int): UByte = {
-    val byte = MMU.get8(UInt(address))
+    val byte = MMU.get8(address)
     Utils.outln(f"SIM: 0x$address%04X:0x${byte.byteValue}%02X")
     byte
   }
 
   def examineWord(address: Int): UShort = {
-    val word = MMU.get16(UInt(address))
+    val word = MMU.get16(address)
     Utils.outln(f"SIM: 0x$address%04X:0x${word.shortValue}%04X")
     word
   }
