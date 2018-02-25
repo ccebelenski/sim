@@ -36,19 +36,19 @@ abstract class BasicCPU(val isBanked: Boolean, override val machine: AbstractMac
   }
 
   @inline
-  def setFlag(reg:Register8, flag:Int, clear:Boolean) : Unit = {
+  final def setFlag(reg:Register8, flag:Int, clear:Boolean) : Unit = {
     if(clear) reg(reg & ~flag) else reg(reg | flag)
   }
   @inline
-  def setFlag(reg:Register16, flag:Int, clear:Boolean) : Unit = {
+  final def setFlag(reg:Register16, flag:Int, clear:Boolean) : Unit = {
     if(clear) reg(reg & ~flag) else reg(reg | flag)
   }
   @inline
-  def testFlag(reg:Register8, flag:Int) : Boolean = {
+  final def testFlag(reg:Register8, flag:Int) : Boolean = {
     if((reg & flag) != 0) true else false
   }
   @inline
-  def testFlag(reg:Register16, flag:Int): Boolean = {
+  final def testFlag(reg:Register16, flag:Int): Boolean = {
     if((reg & flag) != 0) true else false
   }
 
@@ -181,8 +181,10 @@ class Register8(override val nmenomic: String) extends Register(nmenomic) {
   //@inline
   // def set8(value: Byte): Unit = set8(UByte(value))
 
+  @inline
   def increment(): Unit = value = new UByte((value.byteValue + 1).toByte)
 
+  @inline
   def decrement(): Unit = value = new UByte((value.byteValue - 1).toByte)
 
   override val aWidth = 8
@@ -263,6 +265,7 @@ class CompositeRegister16(override val nmenomic: String, val high: Register8, va
     low.set8(value)
   }
 
+
   override val aWidth = 16
 
   override def toString: String = f"$nmenomic:0x${get16.intValue}%04X"
@@ -332,6 +335,8 @@ class Register16(override val nmenomic: String) extends Register(nmenomic) {
   def apply(value: Register16): Unit = set16(value.get16)
 
   def apply(value: Int): Unit = set16(UShort((value & 0xffff).shortValue()))
+
+  //def apply(value: UInt): Unit = set16(value.shortValue)
 }
 
 object Register16 {

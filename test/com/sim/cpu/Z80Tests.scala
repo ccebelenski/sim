@@ -21,7 +21,7 @@ class Z80Tests {
       Z80Tests.z80 = Z80Tests.machine.findDevice("Z80A").get.asInstanceOf[Z80]
       Z80Tests.mmu = Z80Tests.z80.MMU
       Z80Tests.z80.setMemorySize(UInt(0xFFFF))
-      Z80Tests.mmu.mapRAM(UInt(0x0000), UInt(0xc000))
+      Z80Tests.mmu.mapRAM(UInt(0x0000), UInt(0x500))
       Z80Tests.PC = Z80Tests.z80.registers("PC").asInstanceOf[Register16]
 
     }
@@ -179,7 +179,7 @@ class Z80Tests {
     assertTrue(z80.HL.get16 == 0x0000)
     assertTrue((z80.F.get8 & 128) != 0) // Check S flag preserved
     assertTrue((z80.F.get8 & 2) == 0) // Check N cleared (add)
-    assertTrue((z80.F.get8 & 1) != 0) // Carry flag set
+    assertTrue((z80.F.get8 & 1) == 0) // Carry flag cleared
 
   }
 
@@ -219,31 +219,66 @@ class Z80Tests {
     z80.runcpu()
     assertTrue(z80.B.get8 == 0x03)
     assertTrue(z80.PC.get16 == 0x0002)
-    assertTrue(z80.C.get8 == 0x00)
     z80.PC(0x0000)
     z80.B(0x01)
     z80.runcpu()
     assertTrue(z80.B.get8 == 0x00)
     assertTrue(z80.PC.get16 == 0x0004)
-    assertTrue(z80.C.get8 == 0x01)
   }
 
   @Test
-  def test0xd6() : Unit = {
+  // LD A,(nnnn)
+  def test0x3a(): Unit = {
+    z80.deposit(0x0000, 0x3a) // LD A,(nnnn)
+    z80.deposit(0x0001, 0xA0) // 0x00A0
+    z80.deposit(0x0002, 0x00)
+    z80.deposit(0x0003, 0x76) // HALT
+    z80.deposit(0x00A0, 0x01)
+    z80.PC(0x0000)
+    z80.A(0x00)
+    z80.runcpu()
+    assertTrue(z80.A.get8 == 0x01)
+    assertTrue(z80.PC.get16 == 0x0003)
+  }
+
+  @Test
+  def test0xd6(): Unit = {
     z80.deposit(0x0000, 0xd6)
-    z80.deposit(0x0001, 0x02)
+    z80.deposit(0x0001, 0x01)
     z80.deposit(0x0002, 0x76)
     z80.PC(0x0000)
     z80.A(0x05)
     z80.runcpu()
     assertTrue(z80.PC.get16 == 0x0002)
-    assertTrue(z80.A.get8 == 0x03)
-    assertTrue(!z80.testFlag(z80.F,z80.FLAG_Z))
-    assertTrue(!z80.testFlag(z80.F,z80.FLAG_P))
-    assertTrue(z80.testFlag(z80.F,z80.FLAG_N))
+    assertTrue(z80.A.get8 == 0x04)
+    assertTrue(!z80.testFlag(z80.F, z80.FLAG_Z))
+    assertTrue(!z80.testFlag(z80.F, z80.FLAG_P))
+    assertTrue(z80.testFlag(z80.F, z80.FLAG_N))
+    assertFalse(z80.testFlag(z80.F, z80.FLAG_C))
+
+    z80.PC(0x0000)
+    z80.A(0x01)
+    z80.runcpu()
+    assertTrue(z80.PC.get16 == 0x0002)
+    assertTrue(z80.A.get8 == 0x00)
+    assertTrue(z80.testFlag(z80.F, z80.FLAG_Z))
+    assertFalse(z80.testFlag(z80.F, z80.FLAG_P))
+    assertTrue(z80.testFlag(z80.F, z80.FLAG_N))
+    assertFalse(z80.testFlag(z80.F, z80.FLAG_C))
+
+    z80.PC(0x0000)
+    z80.A(0x00)
+    z80.runcpu()
+    assertTrue(z80.PC.get16 == 0x0002)
+    assertTrue(z80.A.get8 == 0xFF)
+    //assertFalse(z80.testFlag(z80.F, z80.FLAG_Z)) // Not sure about this one.
+    assertFalse(z80.testFlag(z80.F, z80.FLAG_P))
+    assertTrue(z80.testFlag(z80.F, z80.FLAG_N))
+    assertTrue(z80.testFlag(z80.F, z80.FLAG_C))
 
 
   }
+
   @Test
   // HALT
   def test0x76(): Unit = {
@@ -255,18 +290,183 @@ class Z80Tests {
 
 
   @Test
-  def test0xdd0x34() : Unit = {
+  def test0xdd0x34(): Unit = {
     // INC (IX+dd)
     z80.deposit(0x0000, 0xdd)
     z80.deposit(0x0001, 0x34)
     z80.deposit(0x0002, 0x01)
     z80.deposit(0x0003, 0x76)
     z80.PC(0x0000)
-    z80.IX(0x4000)
-    z80.deposit(0x4001, 0x01)
+    z80.IX(0x0100)
+    z80.deposit(0x0101, 0x01)
     z80.runcpu()
-    assertTrue(z80.IX.get16 == 0x4000)
-    assertTrue(z80.examine(0x4001).intValue == 0x02)
+    assertTrue(z80.IX.get16 == 0x100)
+    assertTrue(z80.examine(0x101).intValue == 0x02)
+  }
+
+  @Test
+  // ADD A,A
+  def test0x87(): Unit = {
+    z80.deposit(0x0000, 0x87) // ADD A,A
+    z80.deposit(0x0001, 0x76) // HALT
+
+    z80.PC(0x0000)
+    z80.A(0x01)
+    z80.runcpu()
+    assertTrue(z80.PC.get16 == 0x0001)
+    assertTrue(z80.A.get8 == 0x02)
+    assertFalse(z80.testFlag(z80.F,z80.FLAG_C))
+    assertFalse(z80.testFlag(z80.F,z80.FLAG_Z))
+
+
+    z80.PC(0x0000)
+    z80.A(0x00)
+    z80.runcpu()
+    assertTrue(z80.PC.get16 == 0x0001)
+    assertTrue(z80.A.get8 == 0x00)
+    assertFalse(z80.testFlag(z80.F,z80.FLAG_C))
+    assertTrue(z80.testFlag(z80.F,z80.FLAG_Z))
+
+    z80.PC(0x0000)
+    z80.A(0xA3)
+    z80.runcpu()
+    assertTrue(z80.PC.get16 == 0x0001)
+    assertTrue(z80.A.get8 == 0x46)
+    assertTrue(z80.testFlag(z80.F,z80.FLAG_C))
+    assertFalse(z80.testFlag(z80.F,z80.FLAG_Z))
+  }
+
+  @Test
+  // LD A,D
+  def test0x7a():Unit = {
+    z80.deposit(0x0000, 0x7A) // LD A,D
+    z80.deposit(0x0001, 0x76) // HALT
+
+    z80.PC(0x0000)
+    z80.D(0x00)
+    z80.A(0xDE) // Set to something
+    z80.F(0x00) // Clear all flags - they should remain clear.
+    z80.runcpu()
+
+    assertTrue(z80.PC.get16 == 0x0001)
+    assertFalse(z80.testFlag(z80.F,z80.FLAG_Z))
+    assertFalse(z80.testFlag(z80.F, z80.FLAG_C))
+    assertTrue(z80.A.get8 == 0x00)
+
+    z80.PC(0x0000)
+    z80.D(0xAA)
+    z80.A(0xDE) // Set to something
+    z80.F(0x00) // Clear all flags - they should remain clear.
+    z80.runcpu()
+
+    assertTrue(z80.PC.get16 == 0x0001)
+    assertFalse(z80.testFlag(z80.F,z80.FLAG_Z))
+    assertFalse(z80.testFlag(z80.F, z80.FLAG_C))
+    assertTrue(z80.A.get8 == 0xAA)
+  }
+
+  @Test
+  // LD A,E
+  def test0x7b():Unit = {
+    z80.deposit(0x0000, 0x7B) // LD A,E
+    z80.deposit(0x0001, 0x76) // HALT
+
+    z80.PC(0x0000)
+    z80.E(0x00)
+    z80.A(0xDE) // Set to something
+    z80.F(0x00) // Clear all flags - they should remain clear.
+    z80.runcpu()
+
+    assertTrue(z80.PC.get16 == 0x0001)
+    assertFalse(z80.testFlag(z80.F,z80.FLAG_Z))
+    assertFalse(z80.testFlag(z80.F, z80.FLAG_C))
+    assertTrue(z80.A.get8 == 0x00)
+
+    z80.PC(0x0000)
+    z80.E(0xAA)
+    z80.A(0xDE) // Set to something
+    z80.F(0x00) // Clear all flags - they should remain clear.
+    z80.runcpu()
+
+    assertTrue(z80.PC.get16 == 0x0001)
+    assertFalse(z80.testFlag(z80.F,z80.FLAG_Z))
+    assertFalse(z80.testFlag(z80.F, z80.FLAG_C))
+    assertTrue(z80.A.get8 == 0xAA)
+  }
+
+  @Test
+  // CP nn
+  def test0xfe():Unit = {
+    z80.deposit(0x0000, 0xFE) // CP NN
+    z80.deposit(0x0001, 0x0A) // 10
+    z80.deposit(0x0002, 0x76) // HLT
+
+    z80.PC(0x0000)
+    z80.A(0x00)
+    z80.runcpu()
+    assertTrue(z80.PC.get16 == 0x0002)
+    assertTrue(z80.A.get8 == 0x00)
+    assertTrue(z80.testFlag(z80.F,z80.FLAG_Z))
+    assertTrue(z80.testFlag(z80.F,z80.FLAG_C))
+
+    z80.PC(0x0000)
+    z80.A(0x20)
+    z80.runcpu()
+    assertTrue(z80.PC.get16 == 0x0002)
+    assertTrue(z80.A.get8 == 0x20)
+    assertFalse(z80.testFlag(z80.F,z80.FLAG_Z))
+    assertFalse(z80.testFlag(z80.F,z80.FLAG_C))
+
+
+  }
+
+  @Test
+  def testHexToNum(): Unit = {
+    // Takes DE as ASCII HEX (uppercase only), convert to binary in A
+    z80.deposit(0x0000, 0x7a) // LD A,D
+    z80.deposit(0x0001, 0x00) // NOP
+    z80.deposit(0x0002, 0xCD) // CALL nnnn
+    z80.deposit(0x0003, 0x00)
+    z80.deposit(0x0004, 0x01) // CALL 0100
+    z80.deposit(0x0005, 0x87) // ADD A,A
+    z80.deposit(0x0006, 0x87) // ADD A,A
+    z80.deposit(0x0007, 0x87) // ADD A,A
+    z80.deposit(0x0008, 0x87) // ADD A,A
+    z80.deposit(0x0009, 0x57) // LD D,A
+    z80.deposit(0x000A, 0x7B) // LD A,E
+    z80.deposit(0x000B, 0x00) // NOP
+    z80.deposit(0x000C, 0xCD) // CALL nnnn
+    z80.deposit(0x000D, 0x00)
+    z80.deposit(0x000E, 0x01) // CALL 0100
+    z80.deposit(0x000F, 0xB2) // OR D
+    z80.deposit(0x0010, 0x76) // HALT
+
+    z80.deposit(0x0100, 0x00) // NOP
+    z80.deposit(0x0101, 0xD6) // SUB nn
+    z80.deposit(0x0102, 0x30) // '0'
+    z80.deposit(0x0103, 0xFE) // CP 10
+    z80.deposit(0x0104, 10)
+    z80.deposit(0x0105, 0xD8) // RET C
+    z80.deposit(0x0106, 0x00) // NOP
+    z80.deposit(0x0107, 0xD6) // SUB nn
+    z80.deposit(0x0108, 0x07) // 'A' - '0' - 10
+    z80.deposit(0x0109, 0xC9) // RET
+
+    z80.PC(0x0000)
+    z80.SP(0x0200) // Set up a stack
+    z80.DE(0x3031) // 01
+    z80.runcpu()
+    assertTrue(z80.PC.get16 == 0x0010)
+    assertTrue(z80.A.get8 == 0x01)
+
+    z80.PC(0x0000)
+    z80.SP(0x0200) // Set up a stack
+    z80.DE(0x3135) // 15
+    z80.runcpu()
+    assertTrue(z80.PC.get16 == 0x0010)
+    assertTrue(z80.A.get8 == 0x15)
+
+
   }
 }
 

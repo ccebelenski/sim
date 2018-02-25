@@ -153,6 +153,14 @@ abstract class BasicMMU(val cpu: BasicCPU) {
 
   }
 
+  def out8(r1:Register8, value: UByte) : Unit = {
+    out8(r1.intValue,value)
+  }
+
+  def out8(r1:Register8, value:Int) : Unit = {
+    out8(r1.intValue, UByte(value.byteValue()))
+  }
+
   def in8(address: Int): UByte = {
     iotab(address & 0xff) match {
       case None => {
@@ -217,7 +225,7 @@ abstract class BasicMMU(val cpu: BasicCPU) {
 
   @inline
   def get16(address:UShort) : UShort = {
-    get16(address)
+    get16(address.intValue)
   }
 
   def selectBank(bank: Int): Unit = this.bankSelect = bank

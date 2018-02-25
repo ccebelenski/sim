@@ -7,10 +7,10 @@ class MemoryAddressSpace(lowAddress: UInt, highAddress: UInt) extends AddressSpa
 
   override val isReadOnly: Boolean = false
 
-  private val M: Array[UByte] = new Array[UByte]((highAddress - lowAddress).toInt)
+  private val M: Array[UByte] = new Array[UByte]((highAddress - lowAddress + 1))
   private val tt = Console.textTerminal
 
-  for(x <- 0 to ((highAddress - lowAddress)-1).toInt) M(x) = UByte(0)
+  for(x <- 0 to ((highAddress - lowAddress)).toInt) M(x) = UByte(0)
 
   override def put8(address: UInt, value: UByte): Unit = {
     if (address < lowAddress || address > highAddress) {
@@ -32,7 +32,7 @@ class MemoryAddressSpace(lowAddress: UInt, highAddress: UInt) extends AddressSpa
 
   @inline
   private def scaleAddress(address:UInt) : Int = {
-    M.length - (highAddress - address)
+    M.length - (highAddress - address) - 1
   }
 
 }
