@@ -10,7 +10,7 @@ import scala.collection.mutable.ArrayBuffer
 /**
   * Created by christophercebelenski on 7/18/16.
   */
-abstract class BasicUnit(val device: BasicDevice) extends Ordered[BasicUnit]{
+abstract class BasicUnit(val device: BasicDevice) extends Ordered[BasicUnit] with SupportsOptions {
 
   var time: Long = 0L
   var usecs_remaining : Long = 0L
@@ -23,9 +23,6 @@ abstract class BasicUnit(val device: BasicDevice) extends Ordered[BasicUnit]{
 
   // Is this unit a timer unit?
   var isTimerUnit:Boolean = false
-
-  // Options for the unit, copied initially from the device defaults
-  val unitOptions: ArrayBuffer[UnitOption] = new ArrayBuffer[UnitOption]
 
   private var enabled:Boolean = false
   var active: Boolean = false // Is the unit currently active? (processing event)
@@ -81,9 +78,5 @@ abstract class BasicUnit(val device: BasicDevice) extends Ordered[BasicUnit]{
   override def compare(that: BasicUnit): Int = this.time.compareTo(that.time)
 
   override def compareTo(that: BasicUnit): Int = this.time.compareTo(that.time)
-
-  def getOption(optionName:String) : Option[UnitOption] = {
-    unitOptions.find(p=> p.optionName == optionName)
-  }
 
 }

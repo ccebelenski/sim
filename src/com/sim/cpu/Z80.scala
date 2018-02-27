@@ -22,6 +22,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
 
     unitOptions.append(BinaryUnitOption("BANKED", "Enable banked memory.", value = true))
     unitOptions.append(BinaryUnitOption("ALTAIRROM", "Enable Altair ROM.", value = false))
+    unitOptions.append(BinaryUnitOption("STOPONHALT", "Break on HALT instruction.", value = false))
     unitOptions.append(ValueUnitOption("MEMORY", "Set the RAM size.", value = 0xFFFF))
 
   }
@@ -3870,30 +3871,5 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
       if ((acu + x) > 0xff) (FLAG_C | FLAG_H) else 0
     } |
       parityTable(((acu + x) & 7) ^ temp))
-  }
-
-
-  var i = 0
-  while ( {
-    i < 256
-  }) {
-    var bp = true
-    var j = 0
-    while ( {
-      j < 8
-    }) {
-      if ((i & (1 << j)) != 0) bp = !bp
-
-      {
-        j += 1;
-        j - 1
-      }
-    }
-    parity(i) = bp
-
-    {
-      i += 1;
-      i - 1
-    }
   }
 }

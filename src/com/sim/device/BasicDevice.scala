@@ -9,7 +9,7 @@ import scala.collection.mutable.ArrayBuffer
 /**
   * Created by christophercebelenski on 7/1/16.
   */
-abstract class BasicDevice(val machine:AbstractMachine) extends Named{
+abstract class BasicDevice(val machine:AbstractMachine) extends Named with SupportsOptions {
 
   val description: String
   private val units: ArrayBuffer[BasicUnit] = new ArrayBuffer[BasicUnit]
@@ -17,11 +17,6 @@ abstract class BasicDevice(val machine:AbstractMachine) extends Named{
   // Device Identifier - first device is usually "A", second "B", etc.
   var deviceIdentifier:String = "A"
   private var enabled : Boolean = false
-
-  // unit options - these are copied to each unit created.
-  val unitOptions: ArrayBuffer[UnitOption] = new ArrayBuffer[UnitOption]
-  //createUnitOptions
-
 
 
   // device and machine names are always upper case
@@ -102,9 +97,7 @@ abstract class BasicDevice(val machine:AbstractMachine) extends Named{
 
   }
 
-  def getOption(optionName:String) : Option[UnitOption] = {
-    unitOptions.find(p=> p.optionName == optionName)
-  }
+
 
   // Called when the options have changed for a device.  This allows dynamic reloading when appropriate
   // Default is to do nothing.
