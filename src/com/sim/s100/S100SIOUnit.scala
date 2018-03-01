@@ -43,4 +43,6 @@ class S100SIOUnit(device: BasicDevice, mmu: BasicMMU, ports: List[UInt], size: U
   override def showCommand(sb:StringBuilder): Unit = {
     super.showCommand(sb)
   }
+
+  override def optionChanged(sb: StringBuilder): Unit = ???
 }

@@ -12,4 +12,6 @@ class TestDevice(machine:AbstractMachine) extends BasicDevice(machine:AbstractMa
   override def createUnitOptions: Unit = {} // nothing for now
 
   override def showCommand(sb: StringBuilder): Unit = ???
+
+  override def optionChanged(sb: StringBuilder): Unit = ???
 }

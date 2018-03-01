@@ -1,8 +1,8 @@
 package com.sim.mux
 
 import java.io.IOException
-import java.net.{ServerSocket, Socket}
-import java.util.concurrent.{ExecutorService, Executors}
+import java.net.{ServerSocket, Socket, SocketTimeoutException}
+import java.util.concurrent.{ExecutorService, Executors, TimeUnit}
 
 import com.sim.Utils
 import com.sim.device.{BasicDevice, ValueUnitOption}
@@ -34,19 +34,36 @@ class MuxDevice(machine: AbstractMachine) extends BasicDevice(machine: AbstractM
   @volatile
   var executor: ExecutorService = _
 
-  var clientCount:Int = 0
+  @volatile
+  var clientCount: Int = 0
 
-  var portnum:Int = 8888
-  var maxClients:Int = 1
+  def portnum: Int = {
+    val o = getValueOption("PORTNUM")
+    if (o.isDefined) o.get
+    else 8888
+  }
 
-  var listener: MUXListener = new MUXListener(portnum, maxClients,this)
+  def maxClients: Int = {
+    val o = getValueOption("MAXCLIENTS")
+    if (o.isDefined) o.get else 1
+  }
+
+  def getTimeout: Int = {
+    val o = getValueOption("TIMEOUT")
+    if (o.isDefined) o.get else 5000
+
+  }
+
+  var listener: MUXListener = _
+
   /**
     * When init() completes, it will leave behind a thread for accepting connections on the port.
     * This thread will run for life of the simulator, and shouldn't need to be reset or recreated.
     */
   override def init(): Unit = {
 
-    Utils.outln(s"$getName: Starting MUX.  Listening on port []")
+    listener = new MUXListener(portnum, maxClients, this)
+    Utils.outln(s"$getName: Starting MUX.  Listening on port $portnum")
     listenThread = new Thread(listener)
     listenThread.start()
     // TODO Probably never ends, so no join.
@@ -60,41 +77,62 @@ class MuxDevice(machine: AbstractMachine) extends BasicDevice(machine: AbstractM
   }
 
   override def createUnitOptions: Unit = {
-    unitOptions.append(ValueUnitOption("PORTNUM", "Set port to listen on.", value = 8888))
+    unitOptions.append(ValueUnitOption("PORTNUM", "Set port to listen on.", value = 8400))
     unitOptions.append(ValueUnitOption("MAXCLIENTS", "Maximum # of clients that can connect", value = 1))
-    unitOptions.append(ValueUnitOption("TIMEOUT", "Network timeout value.", value = 100000))
+    unitOptions.append(ValueUnitOption("TIMEOUT", "Network timeout value.", value = 5000))
 
   }
 
+  override def optionChanged(sb: StringBuilder): Unit = {
+    sb.append(s"\n$getName: Options have changed, device will reload.")
 
+    listenThread.interrupt()
+    listenThread.join(10000)
+    init() // re-init
+  }
 }
 
 
 class MUXListener(val port: Int, val maxClients: Int, val device: MuxDevice) extends Runnable {
+
+  var isShutdown = false
 
   def run(): Unit = {
 
     try {
       device.executor = Executors.newFixedThreadPool(maxClients)
       device.socket = new ServerSocket(port)
+      device.socket.setSoTimeout(device.getTimeout)
 
-      while (true) {
-        val s: Socket = device.socket.accept()
-        if(device.clientCount < maxClients) {
-          device.clientCount+=1
-          val muxUnit = new MuxUnit(device, s)
-          device.addUnit(muxUnit)
-          device.executor.execute(muxUnit)
-        } else {
-          Utils.outln(s"\n\n${device.getName}: Max clients exceeded.")
-          s.close()
+      while (!device.listenThread.isInterrupted) {
+        var s: Socket = null
+        try {
+          s = device.socket.accept()
+
+          if (device.clientCount < maxClients) {
+            device.clientCount += 1
+            val muxUnit = new MuxUnit(device, s)
+            device.addUnit(muxUnit)
+            device.executor.execute(muxUnit)
+          } else {
+            Utils.outln(s"\n\n${device.getName}: Max clients exceeded.")
+            s.close()
+          }
+        } catch {
+          case st: SocketTimeoutException => {}
         }
       }
-
     } catch {
-      case t:Throwable =>Utils.outln(s"${device.getName}: Shutting down MUX server... ")
+      case i: InterruptedException => {
+
+      }
+      case t: Throwable => {}
     } finally {
+//      Utils.outln(s"\n\n${device.getName}: Shutting down MUX server... ")
+      device.socket.close()
       device.executor.shutdown()
+
+      device.executor.awaitTermination(5000, TimeUnit.MILLISECONDS)
     }
   }
 }

@@ -10,7 +10,9 @@ abstract class UnitOption(val optionName: String, val optionDescription: String)
     sb.append(s"  Option: ${optionName.toUpperCase} \t\t$optionDescription\t$formatValue\n")
   }
 
-  def setFromString(s: String): Boolean
+  def setFromString(s: String, sb: StringBuilder): Boolean
+
+  def optionHelp: String
 }
 
 case class BinaryUnitOption(override val optionName: String, override val optionDescription: String, var value: Boolean) extends UnitOption(optionName: String, optionDescription: String) {
@@ -22,10 +24,18 @@ case class BinaryUnitOption(override val optionName: String, override val option
     new BinaryUnitOption(optionName, optionDescription, value)
   }
 
-  override def setFromString(s: String): Boolean = {
-    value = s.toBoolean
-    true
+  override def setFromString(s: String, sb: StringBuilder): Boolean = {
+    try {
+      value = s.toBoolean
+      true
+    } catch {
+      case t: Throwable =>
+        sb.append(optionHelp)
+        false
+    }
   }
+
+  override def optionHelp: String = s"${optionName.toUpperCase} is binary.  Valid values are TRUE and FALSE."
 }
 
 case class ValueUnitOption(override val optionName: String, override val optionDescription: String, var value: Int) extends UnitOption(optionName: String, optionDescription: String) {
@@ -35,10 +45,18 @@ case class ValueUnitOption(override val optionName: String, override val optionD
     new ValueUnitOption(optionName, optionDescription, value)
   }
 
-  override def setFromString(s: String): Boolean = {
-    value = s.toInt
-    true
+  override def setFromString(s: String, sb: StringBuilder): Boolean = {
+    try {
+      value = s.toInt
+      true
+    } catch {
+      case t: Throwable =>
+        sb.append(optionHelp)
+        false
+    }
   }
+
+  override def optionHelp: String = s"${optionName.toUpperCase} is value.  Valid values are integer numbers."
 
   override def formatValue: String = s"$value"
 }
@@ -51,7 +69,15 @@ case class EnumValueUnitOption(override val optionName: String, override val opt
     new EnumValueUnitOption(optionName, optionDescription, values, choice)
   }
 
-  override def setFromString(s: String): Boolean = ???
+  override def optionHelp: String = {
+    val sb = new StringBuilder
+    sb.append(s"${optionName.toUpperCase} is value.  Valid values are:\n")
+    values.foreach(x => sb.append(s"${x.name}\n"))
+
+    sb.toString()
+  }
+
+  override def setFromString(s: String, sb: StringBuilder): Boolean = ???
 
   override def formatValue: String = s"[${values.toString}]"
 }
@@ -61,7 +87,9 @@ case class RangeValueUnitOption(override val optionName: String, override val op
     new RangeValueUnitOption(optionName, optionDescription, lowValue, highValue, currentValue)
   }
 
-  override def setFromString(s: String): Boolean = ???
+  override def setFromString(s: String, sb: StringBuilder): Boolean = ???
+
+  override def optionHelp: String = s"${optionName.toUpperCase} is value.  Valid values are integer numbers in range $lowValue to $highValue"
 
   override def formatValue: String = s"$lowValue to $highValue"
 }
@@ -71,10 +99,18 @@ case class StringValueUnitOption(override val optionName: String, override val o
     new StringValueUnitOption(optionName, optionDescription, value)
   }
 
-  override def setFromString(s: String): Boolean = {
-    value = s
-    true
+  override def setFromString(s: String, sb: StringBuilder): Boolean = {
+    try {
+      value = s
+      true
+    } catch {
+      case t: Throwable =>
+        sb.append(optionHelp)
+        false
+    }
   }
+
+  override def optionHelp: String = s"${optionName.toUpperCase} is value.  Valid values are a string."
 
   override def formatValue: String = s"$value"
 

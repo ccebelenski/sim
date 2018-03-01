@@ -15,23 +15,27 @@ class MuxUnit(device: BasicDevice, var socket: Socket) extends BasicUnit(device:
   @volatile
   var char: Int = 0
 
-  var timeout: Int = 100000
+    def getTimeout: Int = {
+    val o = getValueOption("TIMEOUT")
+    if (o.isDefined) o.get else 5000
+
+  }
+
 
 
   override def init(): Unit = {
-    optionsChanged()
-    socket.setSoTimeout(timeout)
+    socket.setSoTimeout(getTimeout)
     Utils.out(s"\n\n$getName: Telnet connection from: $socketAddress\n\n")
   }
 
 
   // Called when options changed - this is only really going to be useful on init, since
   // most options can't be changed after the socket is open.
-  override def optionsChanged() : Unit = {
-    timeout = getOption("TIMEOUT").get.asInstanceOf[ValueUnitOption].value
+  override def optionChanged(sb:StringBuilder) : Unit = {
+
     // PORT isn't a unit option
     // MAXCLIENTS isn't a unit option
-
+    // Timeout can change, but not for the unit in progress.
   }
 
   override def showCommand(sb: StringBuilder): Unit = {
@@ -63,6 +67,7 @@ class MuxUnit(device: BasicDevice, var socket: Socket) extends BasicUnit(device:
 
       } catch {
         case t: Throwable => {}
+        case i:InterruptedException => {}
       }
       finally {
         if(socket.isClosed || char == -1) {

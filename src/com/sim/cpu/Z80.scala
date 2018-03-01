@@ -14,6 +14,8 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
 
   override def init(): Unit = {} // TODO
 
+  override def optionChanged(sb: StringBuilder): Unit = ???
+
   var tStates: Long = 0L
 
   override def createUnitOptions: Unit = {

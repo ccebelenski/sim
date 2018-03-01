@@ -25,4 +25,6 @@ class S100SIODevice(machine:AbstractMachine) extends BasicDevice(machine:Abstrac
     unitOptions.append(new ValueUnitOption("IOPORT","Set I/O port to IOPORT", value = 0))
 
   }
+
+  override def optionChanged(sb: StringBuilder): Unit = ???
 }

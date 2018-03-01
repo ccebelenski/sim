@@ -9,6 +9,8 @@ class SimTimer(override val machine: AbstractMachine) extends BasicDevice(machin
   override val description: String = "Timer Device"
   override val name = "TIMER"
 
+  override def optionChanged(sb: StringBuilder): Unit = ???
+
   /* sim_show_timers - show running timer information */
   override def showCommand(sb: StringBuilder): Unit = {
     super.showCommand(sb)

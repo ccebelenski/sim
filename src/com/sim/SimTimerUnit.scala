@@ -76,6 +76,8 @@ class SimTimerUnit(override val device: SimTimer, val isCalibrated: Boolean = fa
   var sim_idle_cyc_ms = 0L
   /* Cycles per millisecond while not idling */
 
+  override def optionChanged(sb: StringBuilder): Unit = ???
+
   override def init(): Unit = {
     val time: Long = if (rtc_currd == 0) 1L else rtc_currd
     //841
