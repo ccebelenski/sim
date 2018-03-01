@@ -60,7 +60,7 @@ class MuxUnit(device: BasicDevice, var socket: Socket) extends BasicUnit(device:
   }
 
   override def run(): Unit = {
-    while (!socket.isClosed && char != -1) {
+    while (!socket.isClosed && char != -1 || !Thread.interrupted()) {
       try {
 
         char = inputStream.read()
@@ -70,7 +70,7 @@ class MuxUnit(device: BasicDevice, var socket: Socket) extends BasicUnit(device:
         case i:InterruptedException => {}
       }
       finally {
-        if(socket.isClosed || char == -1) {
+        if(socket.isClosed || char == -1 || Thread.interrupted()) {
           socket.close()
           Utils.out(s"\n\n$getName: Telnet session terminated.\n\n")
           device.removeUnit(this)

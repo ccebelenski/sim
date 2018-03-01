@@ -7,6 +7,7 @@ import java.util.concurrent.{ExecutorService, Executors, TimeUnit}
 import com.sim.Utils
 import com.sim.device.{BasicDevice, ValueUnitOption}
 import com.sim.machine.AbstractMachine
+import scala.collection.JavaConverters._
 
 /**
   * Psuedo device - System MUX - multiterminal telnet server.  Units are created dynamically as connections are made.
@@ -128,11 +129,20 @@ class MUXListener(val port: Int, val maxClients: Int, val device: MuxDevice) ext
       }
       case t: Throwable => {}
     } finally {
-//      Utils.outln(s"\n\n${device.getName}: Shutting down MUX server... ")
+      //      Utils.outln(s"\n\n${device.getName}: Shutting down MUX server... ")
       device.socket.close()
       device.executor.shutdown()
+      try {
+        if (!device.executor.awaitTermination(5000, TimeUnit.MILLISECONDS)) {
+          device.executor.shutdownNow()
 
-      device.executor.awaitTermination(5000, TimeUnit.MILLISECONDS)
+
+        }
+      } catch {
+        case x: InterruptedException => {
+          device.executor.shutdownNow()
+        }
+      }
     }
   }
 }
