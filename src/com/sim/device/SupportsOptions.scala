@@ -11,13 +11,18 @@ trait SupportsOptions {
     unitOptions.find(p => p.optionName == optionName)
   }
 
-  def getValueOption(optionName:String) : Option[Int] = {
+  def getValueOption(optionName: String): Option[Int] = {
     val o = unitOptions.find(p => p.optionName == optionName)
-      if(o.isDefined)
-    {
+    if (o.isDefined) {
       Some(o.get.asInstanceOf[ValueUnitOption].value)
     } else None
 
+  }
+
+  def getBinaryOption(optionName: String): Boolean = {
+    val o = unitOptions.find(p => p.optionName == optionName)
+    if (o.isDefined) o.get.asInstanceOf[BinaryUnitOption].value
+    else false
   }
 
   def setOption(optionName: String, optionValue: String, sb: StringBuilder): Boolean = {

@@ -18,6 +18,12 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
 
   var tStates: Long = 0L
 
+  // Default timer interrupt handler routine
+  val timerInterruptHandler: Int = 0xFC00
+
+  // Default keyboard interrupt handler routine
+  val keyboardInterruptHandler: Int = 0x0038
+
   override def createUnitOptions: Unit = {
     // Set up CPU common options.
     super.createUnitOptions
@@ -111,6 +117,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
     s"$PC  $SP  $AF  $BC  $DE  $HL  $IX  $IY  $R  $I\n                     $AFP $BCP $DEP $HLP\n$IFF"
   }
 
+  // Z80 Flags
   val FLAG_C = 1
   val FLAG_N = 2
   val FLAG_P = 4
@@ -145,25 +152,62 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
       var tStateModifier: Boolean = false
       var execute: Boolean = true
       var memoryBreak: Boolean = false
+      clockHasChanged = true
+      tStates = 0L
 
       while (execute) {
         if (SimTimer.sim_interval <= 0) { // Check clock queue
-          // TODO sim_process_event()
+          // sim_process_event()
+          machine.eventQueue.processEvent()
+
           if (clockHasChanged) {
             clockHasChanged = false
             tStates = 0L
             startTime = System.currentTimeMillis()
             tStatesInSlice = sliceLength * clockFrequency
+          }
+        }
 
+          // Quick check for special processing
+          if (clockFrequency != 0 || timerInterrupt || keyboardInterrupt) {
+            if (clockFrequency != 0 && (tStates >= tStatesInSlice)) {
+              startTime += sliceLength
+              tStates -= tStatesInSlice
+              now = System.currentTimeMillis()
+              if (startTime > now) Thread.sleep(0, (1000 * (startTime - now)).intValue())
+            }
+
+          if (timerInterrupt && (IFF & 1) != 0) {
+            timerInterrupt = false
+            IFF(0) // Disable Interrupts
+            val currentOp = MMU.get8(PC)
+            if ((currentOp == 0x76) && !stopOnHALT) {
+              PUSH(PC + 1)
+            } else {
+              PUSH(PC)
+            }
+            PC(timerInterruptHandler)
+          }
+          if (keyboardInterrupt && (IFF & 1) != 0) {
+            keyboardInterrupt = false
+            IFF(0) // Disable Interrupts
+            val currentOp = MMU.get8(PC)
+            if ((currentOp == 0x76) && !stopOnHALT) {
+              PUSH(PC + 1)
+            } else {
+              PUSH(PC)
+            }
+            PC(keyboardInterruptHandler)
 
           }
-          // TODO Interrupt stuff
 
-
-          // Interrupted the sim
-          if (com.sim.Console.userInterrupt) execute = false
 
         }
+
+        // Interrupted the sim
+        if (com.sim.Console.userInterrupt) execute = false
+
+
 
         // TODO Instruction execution
 
@@ -732,8 +776,13 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
           case (0x76) => // HALT
             addTStates(4)
             PC(PC - 1)
-            // TODO Check stop on halt, otherwise sim_sleep
-            execute = false
+            // Check stop on halt, otherwise sim_sleep
+            if(stopOnHALT) execute = false
+            else {
+              SimTimer.sim_interval = 0
+              // Only sleep if there are no interrupts pending
+              if(!keyboardInterrupt && !timerInterrupt) Thread.sleep(0,100) // 100 uSecs
+            }
 
 
           case (0x77) => // LD (HL),A
@@ -3209,7 +3258,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
 
                   case (0xc0) => // SET
                     addTStates(23)
-                    tmp = acu | ( 1<< ((op >> 3) & 7))
+                    tmp = acu | (1 << ((op >> 3) & 7))
 
                   case _ =>
                 }
@@ -3227,7 +3276,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
                   case 5 =>
                     L(tmp)
                   case 6 =>
-                    MMU.put8(adr,UByte(tmp.byteValue()))
+                    MMU.put8(adr, UByte(tmp.byteValue()))
 
                   case 7 =>
                     A(tmp)
@@ -3242,13 +3291,13 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
               case (0xe3) => // EX (SP),IY
                 addTStates(23)
                 CHECK_BREAK_WORD(SP)
-                val tmp:Int = IY
+                val tmp: Int = IY
                 POP(IY)
                 PUSH(tmp)
 
               case (0xe5) => // PUSH IY
                 addTStates(15)
-                CHECK_BREAK_WORD(SP -2)
+                CHECK_BREAK_WORD(SP - 2)
                 PUSH(IY)
 
               case (0xe9) => // JP (IY)
@@ -3298,7 +3347,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
   }
 
   override def onHalt(): Unit = {
-    Utils.outln(s"$name: Halted.")
+    Utils.outln(s"$getName: Halted.")
     Utils.outln(showRegisters())
     Utils.outln(showFlags())
   }

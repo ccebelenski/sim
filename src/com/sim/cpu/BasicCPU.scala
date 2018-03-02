@@ -16,13 +16,25 @@ abstract class BasicCPU(val isBanked: Boolean, override val machine: AbstractMac
   val KB = UInt(1024)
 
   // Clock frequency, in Khz.  0 = as fast as possible
-  protected var clockFrequency: UInt = UInt(0)
-  protected var clockHasChanged = true
+  protected var clockFrequency: Int = 0
+  protected var clockHasChanged:Boolean = true
 
-  def setClockFrquency(freq: UInt): Unit = {
+  // Timer Interrupt
+  var timerInterrupt:Boolean = false
+
+  // Keyboard Interrupt - when used.
+  var keyboardInterrupt:Boolean = false
+
+  // Stop on a HALT
+  def stopOnHALT : Boolean = {
+    getBinaryOption("STOPONHALT")
+  }
+
+
+  def setClockFrquency(freq: Int): Unit = {
     clockFrequency = freq
     clockHasChanged = true
-    Utils.outln(s"CPU: Clock frequency changed to: ${clockFrequency}Khz")
+    Utils.outln(s"$getName: Clock frequency changed to: ${clockFrequency}Khz")
   }
 
   def runcpu(): Unit // Main CPU execution loop
@@ -54,10 +66,6 @@ abstract class BasicCPU(val isBanked: Boolean, override val machine: AbstractMac
 
   val registers: Map[String, Register]
 
-
-  class X extends Consumer[String] {
-    override def accept(t: String): Unit = ???
-  }
 
   val MMU: BasicMMU
 
