@@ -4,7 +4,7 @@ import java.net.{ServerSocket, Socket, SocketTimeoutException}
 import java.util.concurrent.{ExecutorService, Executors, TimeUnit}
 
 import com.sim.Utils
-import com.sim.device.{BasicDevice, ValueUnitOption}
+import com.sim.device.{BasicDevice, BasicUnit, MuxAware, ValueUnitOption}
 import com.sim.machine.AbstractMachine
 
 /**
@@ -35,6 +35,7 @@ class MuxDevice(machine: AbstractMachine) extends BasicDevice(machine: AbstractM
 
   @volatile
   var clientCount: Int = 0
+  var registeredDevice: Option[MuxAware] = None
 
   def portnum: Int = {
     val o = getValueOption("PORTNUM")
@@ -65,12 +66,53 @@ class MuxDevice(machine: AbstractMachine) extends BasicDevice(machine: AbstractM
     Utils.outln(s"$getName: Starting MUX.  Listening on port $portnum")
     listenThread = new Thread(listener)
     listenThread.start()
-    // TODO Probably never ends, so no join.
     initComplete = true
+    // Any registered device is left alone...
+  }
+
+  /**
+    * Register a device for callback from the mux.  Existing units are not reconfigured.
+    *
+    * @param device
+    * @return true is successful, false otherwise
+    */
+  def registerDevice(device: MuxAware): Boolean = {
+    if (registeredDevice.isDefined) return false
+    registeredDevice = Some(device)
+
+    // Now find any units that aren't currently registered
+    getUnits.foreach(u => {
+
+      val x = u.asInstanceOf[MuxUnit]
+      if (x.callbackDevice.isEmpty) x.registerCallbackDevice(device)
+
+    })
+    true
+  }
+
+  /**
+    * Unregister any registered devices.  Callbacks for new connections
+    * will no longer occur, but existing units will still be connected.
+    *
+    * @return
+    */
+  def unregisterDevice(): Boolean = {
+    if (registeredDevice.isEmpty) return false
+    registeredDevice = None
+    getUnits.foreach(u => {
+
+      val x = u.asInstanceOf[MuxUnit]
+      if (x.callbackDevice.isEmpty) x.unregisterCallbackDevice()
+
+    })
+    true
   }
 
   override def showCommand(sb: StringBuilder): Unit = {
     super.showCommand(sb)
+    sb.append(s"$getName: Registered device: ")
+    if (registeredDevice.isDefined) sb.append(s"${registeredDevice.get.asInstanceOf[BasicDevice].getName}")
+    else sb.append("None")
 
 
   }
@@ -91,7 +133,13 @@ class MuxDevice(machine: AbstractMachine) extends BasicDevice(machine: AbstractM
   }
 }
 
-
+/**
+  * this is the listener thread class.  It waits on the socket and dispatches units to handle the connections.
+  *
+  * @param port
+  * @param maxClients
+  * @param device
+  */
 class MUXListener(val port: Int, val maxClients: Int, val device: MuxDevice) extends Runnable {
 
   var isShutdown = false
@@ -112,6 +160,9 @@ class MUXListener(val port: Int, val maxClients: Int, val device: MuxDevice) ext
             device.clientCount += 1
             val muxUnit = new MuxUnit(device, s)
             device.addUnit(muxUnit)
+            // If we have a registered device, then inform the unix about it.
+            // This unit will handle the callbacks.
+            if (device.registeredDevice.isDefined) muxUnit.callbackDevice = device.registeredDevice
             device.executor.execute(muxUnit)
           } else {
             Utils.outln(s"\n\n${device.getName}: Max clients exceeded.")

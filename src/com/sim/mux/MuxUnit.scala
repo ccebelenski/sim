@@ -3,14 +3,18 @@ package com.sim.mux
 import java.net.{Socket, SocketAddress}
 
 import com.sim.Utils
-import com.sim.device.{BasicDevice, BasicUnit, ValueUnitOption}
+import com.sim.device.{BasicDevice, BasicUnit, MuxAware, ValueUnitOption}
 import com.sim.unsigned.{UByte, UInt}
 
-class MuxUnit(device: BasicDevice, var socket: Socket) extends BasicUnit(device: BasicDevice) with Runnable {
+class MuxUnit(device: MuxDevice, var socket: Socket) extends BasicUnit(device: BasicDevice) with Runnable {
 
   private val socketAddress: SocketAddress = socket.getRemoteSocketAddress
   private val outputStream = socket.getOutputStream
   private val inputStream = socket.getInputStream
+
+  // Device we should call back on when closing
+  @volatile
+  var callbackDevice: Option[MuxAware] = None
 
   @volatile
   var char: Int = 0
@@ -21,12 +25,29 @@ class MuxUnit(device: BasicDevice, var socket: Socket) extends BasicUnit(device:
 
   }
 
+  // Call this when unregistering a callback device - either we're shutting down the unit,
+  // or it's being called from the Device itself to detach it, but keep the connection open.
+  def unregisterCallbackDevice() : Unit = {
+    if(callbackDevice.isDefined) callbackDevice.get.MUXDetachCallback(this)
+    callbackDevice = None
+  }
 
+  // Call this when registering a callback device - either we're new and setting it up,
+  // or we're being called from the Device itself to establish a new Connection.  If
+  // an existing connection exists, we disconnect from that first by calling unregister.
+  def registerCallbackDevice(ma:MuxAware): Unit = {
+    unregisterCallbackDevice()
+    // Try to connect it - if we can't, then just undo it.
+    if(!callbackDevice.get.MUXAttachCallback(this)) unregisterCallbackDevice()
+    else callbackDevice = Some(ma)
+
+  }
 
   override def init(): Unit = {
     socket.setSoTimeout(getTimeout)
     Utils.out(s"\n\n$getName: Telnet connection from: $socketAddress\n\n")
-  }
+    // Notify our registered device we are here.
+}
 
 
   // Called when options changed - this is only really going to be useful on init, since
@@ -41,16 +62,20 @@ class MuxUnit(device: BasicDevice, var socket: Socket) extends BasicUnit(device:
   override def showCommand(sb: StringBuilder): Unit = {
     super.showCommand(sb)
 
-    sb.append(s"Connected to: ${socketAddress}\n")
+    sb.append(s"Connected to: $socketAddress\n")
+    sb.append(s"Registered callback device: ")
+    if(callbackDevice.isEmpty) sb.append(s"${callbackDevice.get.asInstanceOf[BasicDevice].getName}\n")
+    else sb.append("None\n")
   }
 
-  override def handles(value: UInt): Boolean = ???
+  // Nothing - mux devices aren't regularly scheduled devices.
+  override def handles(value: UInt): Boolean = {false}
 
-  override def action(action: UInt, value: UByte, isWrite: Boolean): UByte = ???
+  override def action(action: UInt, value: UByte, isWrite: Boolean): UByte = {UByte(0)}
 
-  override def cancel(): Unit = ???
+  override def cancel(): Unit = {}
 
-  override def completeAction(): Unit = ???
+  override def completeAction(): Unit = {}
 
   def writeChar(char: Int): Unit = {
     if (socket.isConnected) {
@@ -64,6 +89,7 @@ class MuxUnit(device: BasicDevice, var socket: Socket) extends BasicUnit(device:
       try {
 
         char = inputStream.read()
+        if(callbackDevice.isDefined) callbackDevice.get.muxCharacterInterrupt(this)
 
       } catch {
         case t: Throwable => {}
@@ -75,6 +101,8 @@ class MuxUnit(device: BasicDevice, var socket: Socket) extends BasicUnit(device:
           Utils.out(s"\n\n$getName: Telnet session terminated.\n\n")
           device.removeUnit(this)
           device.asInstanceOf[MuxDevice].clientCount-=1
+          // Perform our callback, if we need to.
+          unregisterCallbackDevice()
           return
         }
       }

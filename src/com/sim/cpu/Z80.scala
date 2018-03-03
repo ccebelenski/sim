@@ -9,7 +9,7 @@ import scala.annotation.switch
 
 class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends BasicCPU(isBanked, machine) {
   override val name = "Z80"
-  override val MMU: BasicMMU = new Z80MMU(this)
+  override val MMU: Z80MMU = new Z80MMU(this)
   override val description: String = "Z80 CPU"
 
   override def init(): Unit = {} // TODO

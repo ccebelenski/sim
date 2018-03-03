@@ -3,6 +3,7 @@ package com.sim.machine
 import java.util.ServiceLoader
 
 import com.sim._
+import com.sim.cpu.BasicCPU
 import com.sim.device.{BasicDevice, BasicUnit}
 
 import scala.collection.JavaConverters._
@@ -78,6 +79,9 @@ abstract class AbstractMachine extends Named{
   }
 
   def init() : Unit
+
+  def getCPU: BasicCPU
+
 }
 
 object AbstractMachine {

@@ -1,7 +1,7 @@
 package com.sim.s100
 
-import com.sim.cpu.BasicMMU
-import com.sim.device.{BasicDevice, PortMappedUnit}
+import com.sim.cpu.{BasicMMU, Z80MMU}
+import com.sim.device.{BasicDevice, MuxUnitAware, PortMappedUnit}
 import com.sim.unsigned.UInt
 
 /**
@@ -28,9 +28,9 @@ import com.sim.unsigned.UInt
   * @param device
   * @param mmu
   * @param ports List of ports this unit responds to
-  * @param size
   */
-class S100SIOUnit(device: BasicDevice, mmu: BasicMMU, ports: List[UInt], size: UInt) extends PortMappedUnit(device: BasicDevice, mmu: BasicMMU, ports: List[UInt], size: UInt) {
+class S100SIOUnit(device: S100SIODevice, mmu: Z80MMU, ports: List[UInt]) extends PortMappedUnit(device: BasicDevice, mmu: BasicMMU, ports: List[UInt])
+  with MuxUnitAware {
   override def init(): Unit = {} // TODO
 
   // Supports file attaching
@@ -40,9 +40,11 @@ class S100SIOUnit(device: BasicDevice, mmu: BasicMMU, ports: List[UInt], size: U
 
   override def completeAction(): Unit = ???
 
-  override def showCommand(sb:StringBuilder): Unit = {
+  override def showCommand(sb: StringBuilder): Unit = {
     super.showCommand(sb)
   }
 
   override def optionChanged(sb: StringBuilder): Unit = ???
+
+  override def muxCharacterInterrupt(char: Int): Unit = ???
 }

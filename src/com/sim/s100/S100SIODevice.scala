@@ -1,28 +1,32 @@
 package com.sim.s100
 
-import com.sim.device.{BasicDevice, BinaryUnitOption, ValueUnitOption}
+import com.sim.device._
 import com.sim.machine.AbstractMachine
 
-class S100SIODevice(machine:AbstractMachine) extends BasicDevice(machine:AbstractMachine){
+class S100SIODevice(machine:S100Machine) extends BasicDevice(machine:AbstractMachine) with MuxAware with SerialDevice {
 
   override val description :String = "MITS 2SIO interface card"
   override val name = "SIO"
 
-  override def init(): Unit = ???
+  override def init(): Unit = {
+    //super.init()
 
-  override def showCommand(sb: StringBuilder): Unit = ???
+    // Create a default serial console unit
+    val unit = new S100SIOUnit(this, machine.getCPU.MMU, List())
+    this.addUnit(unit)
+
+  }
+
+  override def showCommand(sb: StringBuilder): Unit = {
+    super.showCommand(sb)
+
+  }
 
   override def createUnitOptions: Unit = {
-    unitOptions.append(new BinaryUnitOption("TTY","Do not touch bit 8 of console output", value = false))
-    unitOptions.append(new BinaryUnitOption("ANSI","Set bit 8 of console output to 0", value = false))
-    unitOptions.append(new BinaryUnitOption("UPPER","Convert console input to upper case", value = false))
-    unitOptions.append(new BinaryUnitOption("BS","Map delete to backspace", value = false))
-    unitOptions.append(new BinaryUnitOption("QUIET","Display SIO error messages", value = false))
-    unitOptions.append(new BinaryUnitOption("MAP","Enable mapping of characters", value = false))
-    unitOptions.append(new BinaryUnitOption("BELL","Control-G sounds the bell", value = false))
-    unitOptions.append(new BinaryUnitOption("SLEEP","Sleep after SIO status checks", value = false))
-    unitOptions.append(new BinaryUnitOption("INTERRUPT","Status port 0 creates an interrupt when a character becomes available", value = false))
-    unitOptions.append(new ValueUnitOption("IOPORT","Set I/O port to IOPORT", value = 0))
+    createSerialUnitOptions
+
+    unitOptions.append(BinaryUnitOption("INTERRUPT","Status port 0 creates an interrupt when a character becomes available", value = false))
+    unitOptions.append(ValueUnitOption("IOPORT","Set I/O port to IOPORT", value = 0))
 
   }
 

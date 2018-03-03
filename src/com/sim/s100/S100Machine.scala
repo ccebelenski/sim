@@ -1,7 +1,6 @@
 package com.sim.s100
 
-import com.sim.{Named, SimTimer}
-import com.sim.cpu.Z80
+import com.sim.cpu.{BasicCPU, Z80, Z80MMU}
 import com.sim.machine.AbstractMachine
 import com.sim.mux.MuxDevice
 
@@ -12,6 +11,7 @@ class S100Machine extends AbstractMachine{
   override val name = "S100"
 
 
+  var cpu: Z80 = _
 
 
   override def init():Unit = {
@@ -21,5 +21,11 @@ class S100Machine extends AbstractMachine{
     addDevice(cpu)
     val mux = new MuxDevice(this)
     addDevice(mux)
+    val sio = new S100SIODevice(this)
+    addDevice(sio)
+
   }
+
+
+  override def getCPU: Z80 = cpu
 }

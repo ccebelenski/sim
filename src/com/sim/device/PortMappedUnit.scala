@@ -11,9 +11,8 @@ import scala.collection.mutable.ArrayBuffer
   *
   * @param device
   * @param ports List of ports this unit responds to
-  * @param size
   */
-abstract class PortMappedUnit(device: BasicDevice, mmu: BasicMMU, val ports: List[UInt], val size: UInt) extends BasicUnit(device) {
+abstract class PortMappedUnit(device: BasicDevice, mmu: BasicMMU, val ports: List[UInt]) extends BasicUnit(device) {
 
   override val isPortMapped: Boolean = true
 
