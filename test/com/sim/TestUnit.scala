@@ -19,4 +19,6 @@ class TestUnit(device:BasicDevice) extends BasicUnit(device: BasicDevice){
   }
 
   override def optionChanged(sb: StringBuilder): Unit = ???
+
+  override val waitTime: Long = 0
 }

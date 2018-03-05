@@ -15,6 +15,9 @@ abstract class BasicUnit(val device: BasicDevice) extends Ordered[BasicUnit] wit
   var time: Long = 0L
   var usecs_remaining : Long = 0L
 
+  // How long before the schedule timer runs this unit. (simulates device time)
+  val waitTime:Long
+
   val isMemoryMapped = false
   val isPortMapped = false
 

@@ -2,6 +2,7 @@ package com.sim.s100
 
 import com.sim.device._
 import com.sim.machine.AbstractMachine
+import com.sim.unsigned.UInt
 
 class S100SIODevice(machine:S100Machine) extends BasicDevice(machine:AbstractMachine) with MuxAware with SerialDevice {
 
@@ -12,7 +13,7 @@ class S100SIODevice(machine:S100Machine) extends BasicDevice(machine:AbstractMac
     //super.init()
 
     // Create a default serial console unit
-    val unit = new S100SIOUnit(this, machine.getCPU.MMU, List())
+    val unit = new S100SIOUnit(this, machine.getCPU.MMU, List(UInt(0x00),UInt(0x01),UInt(0x02),UInt(0x03),UInt(0x10),UInt(0x11)))
     this.addUnit(unit)
 
   }

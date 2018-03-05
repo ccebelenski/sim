@@ -12,6 +12,8 @@ class MuxUnit(device: MuxDevice, var socket: Socket) extends BasicUnit(device: B
   private val outputStream = socket.getOutputStream
   private val inputStream = socket.getInputStream
 
+  override val waitTime: Long = 0 // Doesn't matter, unit is not scheduled.
+
   // Device we should call back on when closing
   @volatile
   var callbackDevice: Option[MuxAware] = None

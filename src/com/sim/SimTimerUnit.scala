@@ -7,6 +7,9 @@ import scala.collection.JavaConverters._
 
 class SimTimerUnit(override val device: SimTimer, val isCalibrated: Boolean = false) extends BasicUnit(device) {
 
+
+  override val waitTime: Long = 0
+
   var rtc_ticks: Int = 0
   /* ticks */
   var rtc_hz = 0L
