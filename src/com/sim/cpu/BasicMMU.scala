@@ -1,7 +1,7 @@
 package com.sim.cpu
 
 import com.sim.Utils
-import com.sim.device.{MemoryMappedUnit, PortMappedUnit}
+import com.sim.device.{MemoryMappedDevice, PortMappedDevice}
 import com.sim.memory.{AddressSpace, MemoryAddressSpace}
 import com.sim.unsigned.{UByte, UInt, UShort}
 
@@ -33,7 +33,7 @@ abstract class BasicMMU(val cpu: BasicCPU) {
   for (x <- mtab.indices) mtab(x) = None
 
   // 256 Ports
-  val iotab: Array[Option[PortMappedUnit]] = new Array[Option[PortMappedUnit]](256)
+  val iotab: Array[Option[PortMappedDevice]] = new Array[Option[PortMappedDevice]](256)
 
   private var bankSelect: Int = 0
 
@@ -52,28 +52,28 @@ abstract class BasicMMU(val cpu: BasicCPU) {
 
   }
 
-  def mapMemoryMappedUnit(u: MemoryMappedUnit): Unit = {
+  def mapMemoryMappedDevice(u: MemoryMappedDevice): Unit = {
 
     // TODO
   }
 
-  def mapPortMappedUnit(u: PortMappedUnit): Unit = {
+  def mapPortMappedDevice(u: PortMappedDevice): Unit = {
 
     u.ports.foreach(i => {
       if (iotab(i & 0xff).isDefined) {
         Utils.outln(f"MMU: IO Port: 0x${i & 0xff}%02X already mapped to Unit: ${iotab(i & 0xff).get.getName}")
       } else {
         iotab(i & 0xff) = Some(u)
-        Utils.outln(f"MMU: Mapping IO Port: 0x${i & 0xff}%02X Unit: ${u.getName}")
+        Utils.outln(f"MMU: Mapping IO Port: 0x${i & 0xff}%02X Device: ${u.getName}")
       }
     })
   }
 
-  def unMapIOPort(u: PortMappedUnit): Unit = {
+  def unMapIOPort(u: PortMappedDevice): Unit = {
 
     u.ports.foreach(i => {
       if (iotab(i & 0xff).isDefined) {
-        Utils.outln(f"MMU: Unmapping IO Port: 0x${i & 0xff}%02X Unit: ${u.getName}")
+        Utils.outln(f"MMU: Unmapping IO Port: 0x${i & 0xff}%02X Device: ${u.getName}")
         iotab(i & 0xff) = None
       } else {
         Utils.outln(f"MMU: IO Port: 0x${i & 0xff}%02X is not mapped.")
@@ -90,8 +90,8 @@ abstract class BasicMMU(val cpu: BasicCPU) {
           val as = e.get.memory.get
           val msg = f"Page: 0x$x%04X : 0x${as.lowAddress.intValue}%04X - 0x${as.highAddress.intValue}%04X : Type: ${as.getClass} Mapped: RO: ${as.isReadOnly}"
           Utils.outln(msg)
-        } else if (e.get.memoryUnit.isDefined) {
-          val unit = e.get.memoryUnit.get
+        } else if (e.get.memoryDevice.isDefined) {
+          val unit = e.get.memoryDevice.get
           val msg = f"Page: 0x$x%04X : 0x${unit.lowAddress.intValue}%04X - 0x${unit.highAddress.intValue}%04X : Type: ${unit.getClass}"
           Utils.outln(msg)
         }
@@ -136,9 +136,9 @@ abstract class BasicMMU(val cpu: BasicCPU) {
             val msg = f"MMU: Page table error - Addr: 0x$addr%04X address space: 0x${as.lowAddress.intValue}%04X - 0x${as.highAddress.intValue}%04X"
             Utils.outln(msg)
           }
-        } else if (e.memoryUnit.isDefined) {
+        } else if (e.memoryDevice.isDefined) {
           // TODO This needs work
-          e.memoryUnit.get.action(UInt(addr), value, isWrite = true)
+          e.memoryDevice.get.action(UInt(addr), value, isWrite = true)
         } else Utils.outln(f"MMU: Mis-configured page/address entry - no type found. Addr: 0x$addr%04X")
       }
     }
@@ -199,9 +199,9 @@ abstract class BasicMMU(val cpu: BasicCPU) {
             Utils.outln(msg)
             UByte(0)
           }
-        } else if (e.memoryUnit.isDefined) {
+        } else if (e.memoryDevice.isDefined) {
           // TODO This needs work.
-          e.memoryUnit.get.action(UInt(addr), UByte(0), isWrite = false)
+          e.memoryDevice.get.action(UInt(addr), UByte(0), isWrite = false)
         } else {
           Utils.outln(f"MMU: Mis-configured page/address entry - no type found. Addr: 0x$addr%04X")
           UByte(0)
@@ -233,4 +233,4 @@ abstract class BasicMMU(val cpu: BasicCPU) {
   def getBank: Int = this.bankSelect
 }
 
-case class MMU_ENTRY(memoryUnit: Option[MemoryMappedUnit] = None, memory: Option[AddressSpace] = None)
+case class MMU_ENTRY(memoryDevice: Option[MemoryMappedDevice] = None, memory: Option[AddressSpace] = None)

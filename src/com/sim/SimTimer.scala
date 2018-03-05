@@ -2,12 +2,15 @@ package com.sim
 
 import com.sim.device.{BasicDevice, BasicUnit}
 import com.sim.machine.AbstractMachine
+import com.sim.unsigned.UInt
 
 
 class SimTimer(override val machine: AbstractMachine) extends BasicDevice(machine) {
 
   override val description: String = "Timer Device"
   override val name = "TIMER"
+
+  override def handles(value: UInt): Boolean = ???
 
   override def optionChanged(sb: StringBuilder): Unit = ???
 

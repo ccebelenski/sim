@@ -6,6 +6,7 @@ import java.util.concurrent.{ExecutorService, Executors, TimeUnit}
 import com.sim.Utils
 import com.sim.device.{BasicDevice, BasicUnit, MuxAware, ValueUnitOption}
 import com.sim.machine.AbstractMachine
+import com.sim.unsigned.UInt
 
 /**
   * Psuedo device - System MUX - multiterminal telnet server.  Units are created dynamically as connections are made.
@@ -131,6 +132,9 @@ class MuxDevice(machine: AbstractMachine) extends BasicDevice(machine: AbstractM
     listenThread.join(10000)
     init() // re-init
   }
+
+  override def handles(value: UInt): Boolean = ???
+
 }
 
 /**

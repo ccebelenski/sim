@@ -2,10 +2,8 @@ package com.sim.device
 
 import java.nio.file.Path
 
-import com.sim.{Named, Utils}
+import com.sim.Utils
 import com.sim.unsigned.{UByte, UInt}
-
-import scala.collection.mutable.ArrayBuffer
 
 /**
   * Created by christophercebelenski on 7/18/16.
@@ -18,8 +16,6 @@ abstract class BasicUnit(val device: BasicDevice) extends Ordered[BasicUnit] wit
   // How long before the schedule timer runs this unit. (simulates device time)
   val waitTime:Long
 
-  val isMemoryMapped = false
-  val isPortMapped = false
 
   // Unit Number - First unit is typically 0, then 1, etc.
   var unitNumber:Int = 0
@@ -39,7 +35,7 @@ abstract class BasicUnit(val device: BasicDevice) extends Ordered[BasicUnit] wit
 
   def showCommand(sb:StringBuilder): Unit = {
 
-    sb.append(s"${dn}  Unit ${getName} Active: ${active}\n")
+    sb.append(s"$dn  Unit $getName Active: $active\n")
 
     if(supportsAttach && attachedPath.isDefined) sb.append(s"$dn Attached: ${attachedPath.get.getFileName.toString}\n")
 
@@ -52,8 +48,7 @@ abstract class BasicUnit(val device: BasicDevice) extends Ordered[BasicUnit] wit
   // device and machine names are always upper case
   def getName: String = device.getName + unitNumber
 
-  // Does this unit handle requests for this port/memory address/etc?
-  def handles(value: UInt) : Boolean
+
   // Perform a unit action
   def action(action: UInt, value: UByte, isWrite: Boolean) : UByte
 
@@ -73,7 +68,7 @@ abstract class BasicUnit(val device: BasicDevice) extends Ordered[BasicUnit] wit
   // General enable function - devices can implement their own for device specific things
   def setEnable(state: Boolean) : Unit = {
     enabled = state
-    Utils.outln(s"UNIT: Unit ${getName} Enabled: $state")
+    Utils.outln(s"UNIT: Unit $getName Enabled: $state")
   }
 
   def isEnabled: Boolean = enabled

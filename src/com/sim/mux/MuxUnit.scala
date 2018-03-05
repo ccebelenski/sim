@@ -70,9 +70,6 @@ class MuxUnit(device: MuxDevice, var socket: Socket) extends BasicUnit(device: B
     else sb.append("None\n")
   }
 
-  // Nothing - mux devices aren't regularly scheduled devices.
-  override def handles(value: UInt): Boolean = {false}
-
   override def action(action: UInt, value: UByte, isWrite: Boolean): UByte = {UByte(0)}
 
   override def cancel(): Unit = {}

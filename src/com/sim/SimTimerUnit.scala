@@ -320,7 +320,7 @@ class SimTimerUnit(override val device: SimTimer, val isCalibrated: Boolean = fa
     inst_per_sec
   }
 
-  override def handles(value: UInt): Boolean = ???
+
 
   override def action(action: UInt, value: UByte, isWrite: Boolean): UByte = {
     sim_rtcn_calb(SimTimer.sim_internal_clock_tps)

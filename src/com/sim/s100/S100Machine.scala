@@ -3,6 +3,7 @@ package com.sim.s100
 import com.sim.cpu.{BasicCPU, Z80, Z80MMU}
 import com.sim.machine.AbstractMachine
 import com.sim.mux.MuxDevice
+import com.sim.unsigned.UInt
 
 class S100Machine extends AbstractMachine{
 
@@ -21,7 +22,7 @@ class S100Machine extends AbstractMachine{
     addDevice(cpu)
     val mux = new MuxDevice(this)
     addDevice(mux)
-    val sio = new S100SIODevice(this)
+    val sio = new S100SIODevice(this, cpu.MMU, List(UInt(0x00),UInt(0x01),UInt(0x02),UInt(0x03),UInt(0x10),UInt(0x11)))
     addDevice(sio)
 
   }

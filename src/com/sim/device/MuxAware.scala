@@ -14,6 +14,9 @@ trait MuxAware {
   // Map Muxunit name to device unit name
   val muxToUnitMap: mutable.HashMap[String,MuxUnitAware] = new mutable.HashMap[String,MuxUnitAware]()
 
+  // This will be called when a character is available - the processing is of course
+  // device specific.
+  def muxCharacterInterrupt(unit: MuxUnitAware, char:Int) : Unit
 
   /**
     * Register this device with the mux.  The MUX will perform callbacks.
@@ -96,12 +99,10 @@ trait MuxAware {
     */
   def closeAttachedMuxUnit(mux:MuxDevice) : Unit = ???
 
-
   // This is called from the mux when a character is available.
   def muxCharacterInterrupt(u:MuxUnit) : Unit = {
     synchronized {
       val unit = muxToUnitMap.get(u.getName)
-      if(unit.isDefined) unit.get.muxCharacterInterrupt(u.char)
     }
   }
 

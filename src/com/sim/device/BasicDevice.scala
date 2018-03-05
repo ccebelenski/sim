@@ -71,7 +71,7 @@ abstract class BasicDevice(val machine:AbstractMachine) extends Named with Suppo
   // General enable function - devices can implement their own for device specific things
   def setEnable(state: Boolean) : Unit = {
     enabled = state
-    Utils.outln(s"DEV: Device ${getName} Enabled: $state")
+    Utils.outln(s"DEV: Device $getName Enabled: $state")
   }
 
   def isEnabled: Boolean = enabled
@@ -102,6 +102,12 @@ abstract class BasicDevice(val machine:AbstractMachine) extends Named with Suppo
   // Called when the options have changed for a device.  This allows dynamic reloading when appropriate
   // Default is to do nothing.
   def optionsChanged(): Unit = {}
+
+  val isMemoryMapped :Boolean = false
+  val isPortMapped :Boolean = false
+
+  // Does this unit handle requests for this port/memory address/etc?
+  def handles(value: UInt) : Boolean
 
 }
 

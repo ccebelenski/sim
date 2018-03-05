@@ -1,10 +1,11 @@
 package com.sim.device
 
+import com.sim.machine.AbstractMachine
 import com.sim.unsigned.{UByte, UInt}
 
 import scala.collection.mutable.ArrayBuffer
 
-abstract class MemoryMappedUnit(device: BasicDevice, val lowAddress: UInt, val highAddress: UInt) extends BasicUnit(device) {
+abstract class MemoryMappedDevice(machine: AbstractMachine, val lowAddress: UInt, val highAddress: UInt) extends BasicDevice(machine) {
 
   override val isMemoryMapped: Boolean = true
   def handles(address: UInt) : Boolean= {
@@ -14,16 +15,17 @@ abstract class MemoryMappedUnit(device: BasicDevice, val lowAddress: UInt, val h
     } else false
   }
 
-  override def action(action: UInt, value: UByte, isWrite: Boolean): UByte = {
+  def action(action: UInt, value: UByte, isWrite: Boolean): UByte = {
     A.find(a => a.address == action) match {
       case None => new UByte(0)
       case Some(a) => a.action(value, isWrite)
     }
   }
 
-  val A: ArrayBuffer[MappedUnitAction] = new ArrayBuffer()
+  val A: ArrayBuffer[MappedDeviceAction] = new ArrayBuffer()
 
-  case class MappedUnitAction(address : UInt, action: (UInt, Boolean) => UByte)
+
 
 }
 
+case class MappedDeviceAction(address : UInt, action: (UInt, Boolean) => UByte)
