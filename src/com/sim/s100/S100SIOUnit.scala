@@ -16,9 +16,6 @@ class S100SIOUnit(device: S100SIODevice) extends BasicUnit(device: BasicDevice)
 
   override val waitTime:Long = 100000L
 
-  // Supports file attaching
-  override val supportsAttach = true
-
   override def cancel(): Unit = ???
 
   override def completeAction(): Unit = ???

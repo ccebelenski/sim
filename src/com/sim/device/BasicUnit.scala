@@ -26,10 +26,6 @@ abstract class BasicUnit(val device: BasicDevice) extends Ordered[BasicUnit] wit
   private var enabled:Boolean = false
   var active: Boolean = false // Is the unit currently active? (processing event)
 
-  // Attached path
-  var attachedPath: Option[Path] = None
-  // Does this unit support being attached?
-  val supportsAttach: Boolean = false
 
   val dn = s"$getName:"
 
@@ -37,7 +33,6 @@ abstract class BasicUnit(val device: BasicDevice) extends Ordered[BasicUnit] wit
 
     sb.append(s"$dn  Unit $getName Active: $active\n")
 
-    if(supportsAttach && attachedPath.isDefined) sb.append(s"$dn Attached: ${attachedPath.get.getFileName.toString}\n")
 
     sb.append(s"${dn}Unit options:\n")
     unitOptions.foreach{uo => {

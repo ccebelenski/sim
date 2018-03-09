@@ -617,6 +617,41 @@ class Z80Tests {
 
   }
 
+  @Test
+  def testDasm(): Unit = {
+    z80.deposit(0x0000, 0x4f) // LD C,A
+    z80.deposit(0x0001, 0xCD) // CALL nnnn
+    z80.deposit(0x0002, 0x00)
+    z80.deposit(0x0003, 0x01) // CALL 0100 num1
+    z80.deposit(0x0004, 0x57) // LD D,A
+    z80.deposit(0x0005, 0x79) // LD A,C
+    z80.deposit(0x0006, 0x00) // NOP
+    z80.deposit(0x0007, 0xCD) // CALL nnnn
+    z80.deposit(0x0008, 0x04)
+    z80.deposit(0x0009, 0x01) // CALL 0104 num2
+    z80.deposit(0x000A, 0x5F) // LD E,A
+    z80.deposit(0x000B, 0x76) // HLT
+
+    z80.deposit(0x0100, 0x1f) // RRA
+    z80.deposit(0x0101, 0x1f) // RRA
+    z80.deposit(0x0102, 0x1f) // RRA
+    z80.deposit(0x0103, 0x1f) // RRA
+    z80.deposit(0x0104, 0xF6) // or $F0
+    z80.deposit(0x0105, 0xF0)
+    z80.deposit(0x0106, 0x27) // DAA
+    z80.deposit(0x0107, 0xC6) // ADD A,$A0
+    z80.deposit(0x0108, 0xA0)
+    z80.deposit(0x0109, 0xCE) // ADC A,$40
+    z80.deposit(0x010a, 0x40)
+    z80.deposit(0x010b, 0xC9) // RET
+
+    assertTrue(z80.DAsm(0x0000) == "LD C,A")
+    assertTrue(z80.DAsm(0x0107) == "ADD A,a0h")
+    assertTrue(z80.DAsm(0x0007) == "CALL 0104h")
+    assertTrue(z80.DAsm(0x0104) == "OR f0h")
+
+  }
+
 }
 
 object Z80Tests {

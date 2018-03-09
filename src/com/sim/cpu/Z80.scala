@@ -15,6 +15,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
   override def init(): Unit = {} // TODO
 
   override def optionChanged(sb: StringBuilder): Unit = ???
+
   override def handles(value: UInt): Boolean = ???
 
   var tStates: Long = 0L
@@ -169,14 +170,14 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
           }
         }
 
-          // Quick check for special processing
-          if (clockFrequency != 0 || timerInterrupt || keyboardInterrupt) {
-            if (clockFrequency != 0 && (tStates >= tStatesInSlice)) {
-              startTime += sliceLength
-              tStates -= tStatesInSlice
-              now = System.currentTimeMillis()
-              if (startTime > now) Thread.sleep(0, (1000 * (startTime - now)).intValue())
-            }
+        // Quick check for special processing
+        if (clockFrequency != 0 || timerInterrupt || keyboardInterrupt) {
+          if (clockFrequency != 0 && (tStates >= tStatesInSlice)) {
+            startTime += sliceLength
+            tStates -= tStatesInSlice
+            now = System.currentTimeMillis()
+            if (startTime > now) Thread.sleep(0, (1000 * (startTime - now)).intValue())
+          }
 
           if (timerInterrupt && (IFF & 1) != 0) {
             timerInterrupt = false
@@ -778,11 +779,11 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
             addTStates(4)
             PC(PC - 1)
             // Check stop on halt, otherwise sim_sleep
-            if(stopOnHALT) execute = false
+            if (stopOnHALT) execute = false
             else {
               SimTimer.sim_interval = 0
               // Only sleep if there are no interrupts pending
-              if(!keyboardInterrupt && !timerInterrupt) Thread.sleep(0,100) // 100 uSecs
+              if (!keyboardInterrupt && !timerInterrupt) Thread.sleep(0, 100) // 100 uSecs
             }
 
 
@@ -3924,4 +3925,273 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
     } |
       parityTable(((acu + x) & 7) ^ temp))
   }
+
+
+
+  def DAsm(addr:Int ) : String = {
+
+    var pc = addr
+
+    var T:String = null
+    var J = false
+    var Offset = 0
+
+    var C:Char = 0x00
+
+    val op = MMU.get8(pc).intValue
+
+      op match {
+
+      case (0xcb) =>
+      pc += 1
+      T = Z80.MnemonicsCB(MMU.get8(pc).intValue)
+          pc += 1
+
+      case (0xed) =>
+        pc += 1
+      T = Z80.MnemonicsED(MMU.get8(pc).intValue)
+
+      case (0xdd) | (0xfd) =>
+
+        C = {
+          val x = MMU.get8(pc).intValue
+          pc += 1
+          if(x == 0xdd) 'X' else 'Y'
+
+          }
+      if (MMU.get8(pc).intValue == 0xcb) {
+        pc += 1
+        Offset = MMU.get8(pc)
+        pc += 1
+        J = true
+        T = Z80.MnemonicsXCB(MMU.get8(pc).intValue)
+        pc += 1
+      }
+      else {
+        T = Z80.MnemonicsXX(MMU.get8(pc).intValue)
+        pc += 1
+      }
+
+      case _ =>
+        T = Z80.MnemonicsZ80(MMU.get8(pc).intValue)
+          pc += 1
+    }
+
+    var R :String = if(T.contains("^")) {
+      val x = MMU.get8(pc).intValue
+      pc += 1
+      T.replace("^", f"$x%02x")
+
+
+    } else T
+
+    R = R.replace('%', C)
+
+    R = if(R.contains("*")) {
+      val x = MMU.get8(pc).intValue
+      pc += 1
+      R.replace("*", f"$x%02x")
+    } else if (R.contains("@")) {
+      if(J) {
+        Offset = MMU.get8(pc).intValue
+        pc += 1
+
+      }
+      val S = {if((Offset & 0x80) != 0) "-" else "+"}
+      val j = {if((Offset & 0x80) != 0) 256 - Offset else Offset}
+      R.replace("@", f"$S$j%02x")
+    } else if (R.contains("$")) {
+      Offset = MMU.get8(pc).intValue
+      pc += 1
+      val x = pc + 2 + {
+        if ((Offset & 0x80) != 0) Offset - 256 else Offset
+      } & 0xFFFF
+      R.replace("$", f"$x%04x")
+    } else if (R.contains("#")) {
+      val x = MMU.get8(pc).intValue + 256 * MMU.get8(pc + 1).intValue
+      R.replace("#",f"$x%04x")
+    } else R
+
+    R
+  }
+}
+
+
+object Z80 {
+
+  final val MnemonicsZ80: List[String] =
+    List("NOP", "LD BC,#h", "LD (BC),A", "INC BC", "INC B", "DEC B", "LD B,*h", "RLCA", /*  00-07   */
+      "EX AF,AF'", "ADD HL,BC", "LD A,(BC)", "DEC BC", "INC C", "DEC C", "LD C,*h", "RRCA", /*  08-0f   */
+      "DJNZ $h", "LD DE,#h", "LD (DE),A", "INC DE", "INC D", "DEC D", "LD D,*h", "RLA", /*  10-17   */
+      "JR $h", "ADD HL,DE", "LD A,(DE)", "DEC DE", "INC E", "DEC E", "LD E,*h", "RRA", /*  18-1f   */
+      "JR NZ,$h", "LD HL,#h", "LD (#h),HL", "INC HL", "INC H", "DEC H", "LD H,*h", "DAA", /*  20-27   */
+      "JR Z,$h", "ADD HL,HL", "LD HL,(#h)", "DEC HL", "INC L", "DEC L", "LD L,*h", "CPL", /*  28-2f   */
+      "JR NC,$h", "LD SP,#h", "LD (#h),A", "INC SP", "INC (HL)", "DEC (HL)", "LD (HL),*h", "SCF", /*  30-37   */
+      "JR C,$h", "ADD HL,SP", "LD A,(#h)", "DEC SP", "INC A", "DEC A", "LD A,*h", "CCF", /*  38-3f   */
+      "LD B,B", "LD B,C", "LD B,D", "LD B,E", "LD B,H", "LD B,L", "LD B,(HL)", "LD B,A", /*  40-47   */
+      "LD C,B", "LD C,C", "LD C,D", "LD C,E", "LD C,H", "LD C,L", "LD C,(HL)", "LD C,A", /*  48-4f   */
+      "LD D,B", "LD D,C", "LD D,D", "LD D,E", "LD D,H", "LD D,L", "LD D,(HL)", "LD D,A", /*  50-57   */
+      "LD E,B", "LD E,C", "LD E,D", "LD E,E", "LD E,H", "LD E,L", "LD E,(HL)", "LD E,A", /*  58-5f   */
+      "LD H,B", "LD H,C", "LD H,D", "LD H,E", "LD H,H", "LD H,L", "LD H,(HL)", "LD H,A", /*  60-67   */
+      "LD L,B", "LD L,C", "LD L,D", "LD L,E", "LD L,H", "LD L,L", "LD L,(HL)", "LD L,A", /*  68-6f   */
+      "LD (HL),B", "LD (HL),C", "LD (HL),D", "LD (HL),E", "LD (HL),H", "LD (HL),L", "HALT", "LD (HL),A", /*  70-77   */
+      "LD A,B", "LD A,C", "LD A,D", "LD A,E", "LD A,H", "LD A,L", "LD A,(HL)", "LD A,A", /*  78-7f   */
+      "ADD A,B", "ADD A,C", "ADD A,D", "ADD A,E", "ADD A,H", "ADD A,L", "ADD A,(HL)", "ADD A,A", /*  80-87   */
+      "ADC A,B", "ADC A,C", "ADC A,D", "ADC A,E", "ADC A,H", "ADC A,L", "ADC A,(HL)", "ADC A,A", /*  88-8f   */
+      "SUB B", "SUB C", "SUB D", "SUB E", "SUB H", "SUB L", "SUB (HL)", "SUB A", /*  90-97   */
+      "SBC A,B", "SBC A,C", "SBC A,D", "SBC A,E", "SBC A,H", "SBC A,L", "SBC A,(HL)", "SBC A,A", /*  98-9f   */
+      "AND B", "AND C", "AND D", "AND E", "AND H", "AND L", "AND (HL)", "AND A", /*  a0-a7   */
+      "XOR B", "XOR C", "XOR D", "XOR E", "XOR H", "XOR L", "XOR (HL)", "XOR A", /*  a8-af   */
+      "OR B", "OR C", "OR D", "OR E", "OR H", "OR L", "OR (HL)", "OR A", /*  b0-b7   */
+      "CP B", "CP C", "CP D", "CP E", "CP H", "CP L", "CP (HL)", "CP A", /*  b8-bf   */
+      "RET NZ", "POP BC", "JP NZ,#h", "JP #h", "CALL NZ,#h", "PUSH BC", "ADD A,*h", "RST 00h", /*  c0-c7   */
+      "RET Z", "RET", "JP Z,#h", "PFX_CB", "CALL Z,#h", "CALL #h", "ADC A,*h", "RST 08h", /*  c8-cf   */
+      "RET NC", "POP DE", "JP NC,#h", "OUT (*h),A", "CALL NC,#h", "PUSH DE", "SUB *h", "RST 10h", /*  d0-d7   */
+      "RET C", "EXX", "JP C,#h", "IN A,(*h)", "CALL C,#h", "PFX_DD", "SBC A,*h", "RST 18h", /*  d8-df   */
+      "RET PO", "POP HL", "JP PO,#h", "EX (SP),HL", "CALL PO,#h", "PUSH HL", "AND *h", "RST 20h", /*  e0-e7   */
+      "RET PE", "LD PC,HL", "JP PE,#h", "EX DE,HL", "CALL PE,#h", "PFX_ED", "XOR *h", "RST 28h", /*  e8-ef   */
+      "RET P", "POP AF", "JP P,#h", "DI", "CALL P,#h", "PUSH AF", "OR *h", "RST 30h", /*  f0-f7   */
+      "RET M", "LD SP,HL", "JP M,#h", "EI", "CALL M,#h", "PFX_FD", "CP *h", "RST 38h") /*  f8-ff   */
+
+
+  final val MnemonicsCB: List[String] =
+    List("RLC B", "RLC C", "RLC D", "RLC E", "RLC H", "RLC L", "RLC (HL)", "RLC A", /*  00-07   */
+      "RRC B", "RRC C", "RRC D", "RRC E", "RRC H", "RRC L", "RRC (HL)", "RRC A", /*  08-0f   */
+      "RL B", "RL C", "RL D", "RL E", "RL H", "RL L", "RL (HL)", "RL A", /*  10-17   */
+      "RR B", "RR C", "RR D", "RR E", "RR H", "RR L", "RR (HL)", "RR A", /*  18-1f   */
+      "SLA B", "SLA C", "SLA D", "SLA E", "SLA H", "SLA L", "SLA (HL)", "SLA A", /*  20-27   */
+      "SRA B", "SRA C", "SRA D", "SRA E", "SRA H", "SRA L", "SRA (HL)", "SRA A", /*  28-2f   */
+      "SLL B", "SLL C", "SLL D", "SLL E", "SLL H", "SLL L", "SLL (HL)", "SLL A", /*  30-37   */
+      "SRL B", "SRL C", "SRL D", "SRL E", "SRL H", "SRL L", "SRL (HL)", "SRL A", /*  38-3f   */
+      "BIT 0,B", "BIT 0,C", "BIT 0,D", "BIT 0,E", "BIT 0,H", "BIT 0,L", "BIT 0,(HL)", "BIT 0,A", /*  40-47   */
+      "BIT 1,B", "BIT 1,C", "BIT 1,D", "BIT 1,E", "BIT 1,H", "BIT 1,L", "BIT 1,(HL)", "BIT 1,A", /*  48-4f   */
+      "BIT 2,B", "BIT 2,C", "BIT 2,D", "BIT 2,E", "BIT 2,H", "BIT 2,L", "BIT 2,(HL)", "BIT 2,A", /*  50-57   */
+      "BIT 3,B", "BIT 3,C", "BIT 3,D", "BIT 3,E", "BIT 3,H", "BIT 3,L", "BIT 3,(HL)", "BIT 3,A", /*  58-5f   */
+      "BIT 4,B", "BIT 4,C", "BIT 4,D", "BIT 4,E", "BIT 4,H", "BIT 4,L", "BIT 4,(HL)", "BIT 4,A", /*  60-67   */
+      "BIT 5,B", "BIT 5,C", "BIT 5,D", "BIT 5,E", "BIT 5,H", "BIT 5,L", "BIT 5,(HL)", "BIT 5,A", /*  68-6f   */
+      "BIT 6,B", "BIT 6,C", "BIT 6,D", "BIT 6,E", "BIT 6,H", "BIT 6,L", "BIT 6,(HL)", "BIT 6,A", /*  70-77   */
+      "BIT 7,B", "BIT 7,C", "BIT 7,D", "BIT 7,E", "BIT 7,H", "BIT 7,L", "BIT 7,(HL)", "BIT 7,A", /*  78-7f   */
+      "RES 0,B", "RES 0,C", "RES 0,D", "RES 0,E", "RES 0,H", "RES 0,L", "RES 0,(HL)", "RES 0,A", /*  80-87   */
+      "RES 1,B", "RES 1,C", "RES 1,D", "RES 1,E", "RES 1,H", "RES 1,L", "RES 1,(HL)", "RES 1,A", /*  88-8f   */
+      "RES 2,B", "RES 2,C", "RES 2,D", "RES 2,E", "RES 2,H", "RES 2,L", "RES 2,(HL)", "RES 2,A", /*  90-97   */
+      "RES 3,B", "RES 3,C", "RES 3,D", "RES 3,E", "RES 3,H", "RES 3,L", "RES 3,(HL)", "RES 3,A", /*  98-9f   */
+      "RES 4,B", "RES 4,C", "RES 4,D", "RES 4,E", "RES 4,H", "RES 4,L", "RES 4,(HL)", "RES 4,A", /*  a0-a7   */
+      "RES 5,B", "RES 5,C", "RES 5,D", "RES 5,E", "RES 5,H", "RES 5,L", "RES 5,(HL)", "RES 5,A", /*  a8-af   */
+      "RES 6,B", "RES 6,C", "RES 6,D", "RES 6,E", "RES 6,H", "RES 6,L", "RES 6,(HL)", "RES 6,A", /*  b0-b7   */
+      "RES 7,B", "RES 7,C", "RES 7,D", "RES 7,E", "RES 7,H", "RES 7,L", "RES 7,(HL)", "RES 7,A", /*  b8-bf   */
+      "SET 0,B", "SET 0,C", "SET 0,D", "SET 0,E", "SET 0,H", "SET 0,L", "SET 0,(HL)", "SET 0,A", /*  c0-c7   */
+      "SET 1,B", "SET 1,C", "SET 1,D", "SET 1,E", "SET 1,H", "SET 1,L", "SET 1,(HL)", "SET 1,A", /*  c8-cf   */
+      "SET 2,B", "SET 2,C", "SET 2,D", "SET 2,E", "SET 2,H", "SET 2,L", "SET 2,(HL)", "SET 2,A", /*  d0-d7   */
+      "SET 3,B", "SET 3,C", "SET 3,D", "SET 3,E", "SET 3,H", "SET 3,L", "SET 3,(HL)", "SET 3,A", /*  d8-df   */
+      "SET 4,B", "SET 4,C", "SET 4,D", "SET 4,E", "SET 4,H", "SET 4,L", "SET 4,(HL)", "SET 4,A", /*  e0-e7   */
+      "SET 5,B", "SET 5,C", "SET 5,D", "SET 5,E", "SET 5,H", "SET 5,L", "SET 5,(HL)", "SET 5,A", /*  e8-ef   */
+      "SET 6,B", "SET 6,C", "SET 6,D", "SET 6,E", "SET 6,H", "SET 6,L", "SET 6,(HL)", "SET 6,A", /*  f0-f7   */
+      "SET 7,B", "SET 7,C", "SET 7,D", "SET 7,E", "SET 7,H", "SET 7,L", "SET 7,(HL)", "SET 7,A") /*  f8-ff   */
+
+
+  final val MnemonicsED: List[String] =
+    List("DB EDh,00h", "DB EDh,01h", "DB EDh,02h", "DB EDh,03h", "DB EDh,04h", "DB EDh,05h", "DB EDh,06h", "DB EDh,07h", /*  00-07   */
+      "DB EDh,08h", "DB EDh,09h", "DB EDh,0Ah", "DB EDh,0Bh", "DB EDh,0Ch", "DB EDh,0Dh", "DB EDh,0Eh", "DB EDh,0Fh", /*  08-0f   */
+      "DB EDh,10h", "DB EDh,11h", "DB EDh,12h", "DB EDh,13h", "DB EDh,14h", "DB EDh,15h", "DB EDh,16h", "DB EDh,17h", /*  10-17   */
+      "DB EDh,18h", "DB EDh,19h", "DB EDh,1Ah", "DB EDh,1Bh", "DB EDh,1Ch", "DB EDh,1Dh", "DB EDh,1Eh", "DB EDh,1Fh", /*  18-1f   */
+      "DB EDh,20h", "DB EDh,21h", "DB EDh,22h", "DB EDh,23h", "DB EDh,24h", "DB EDh,25h", "DB EDh,26h", "DB EDh,27h", /*  20-27   */
+      "DB EDh,28h", "DB EDh,29h", "DB EDh,2Ah", "DB EDh,2Bh", "DB EDh,2Ch", "DB EDh,2Dh", "DB EDh,2Eh", "DB EDh,2Fh", /*  28-2f   */
+      "DB EDh,30h", "DB EDh,31h", "DB EDh,32h", "DB EDh,33h", "DB EDh,34h", "DB EDh,35h", "DB EDh,36h", "DB EDh,37h", /*  30-37   */
+      "DB EDh,38h", "DB EDh,39h", "DB EDh,3Ah", "DB EDh,3Bh", "DB EDh,3Ch", "DB EDh,3Dh", "DB EDh,3Eh", "DB EDh,3Fh", /*  38-3f   */
+      "IN B,(C)", "OUT (C),B", "SBC HL,BC", "LD (#h),BC", "NEG", "RETN", "IM 0", "LD I,A", /*  40-47   */
+      "IN C,(C)", "OUT (C),C", "ADC HL,BC", "LD BC,(#h)", "DB EDh,4Ch", "RETI", "DB EDh,4Eh", "LD R,A", /*  48-4f   */
+      "IN D,(C)", "OUT (C),D", "SBC HL,DE", "LD (#h),DE", "DB EDh,54h", "DB EDh,55h", "IM 1", "LD A,I", /*  50-57   */
+      "IN E,(C)", "OUT (C),E", "ADC HL,DE", "LD DE,(#h)", "DB EDh,5Ch", "DB EDh,5Dh", "IM 2", "LD A,R", /*  58-5f   */
+      "IN H,(C)", "OUT (C),H", "SBC HL,HL", "LD (#h),HL", "DB EDh,64h", "DB EDh,65h", "DB EDh,66h", "RRD", /*  60-67   */
+      "IN L,(C)", "OUT (C),L", "ADC HL,HL", "LD HL,(#h)", "DB EDh,6Ch", "DB EDh,6Dh", "DB EDh,6Eh", "RLD", /*  68-6f   */
+      "IN F,(C)", "DB EDh,71h", "SBC HL,SP", "LD (#h),SP", "DB EDh,74h", "DB EDh,75h", "DB EDh,76h", "DB EDh,77h", /*  70-77   */
+      "IN A,(C)", "OUT (C),A", "ADC HL,SP", "LD SP,(#h)", "DB EDh,7Ch", "DB EDh,7Dh", "DB EDh,7Eh", "DB EDh,7Fh", /*  78-7f   */
+      "DB EDh,80h", "DB EDh,81h", "DB EDh,82h", "DB EDh,83h", "DB EDh,84h", "DB EDh,85h", "DB EDh,86h", "DB EDh,87h", /*  80-87   */
+      "DB EDh,88h", "DB EDh,89h", "DB EDh,8Ah", "DB EDh,8Bh", "DB EDh,8Ch", "DB EDh,8Dh", "DB EDh,8Eh", "DB EDh,8Fh", /*  88-8f   */
+      "DB EDh,90h", "DB EDh,91h", "DB EDh,92h", "DB EDh,93h", "DB EDh,94h", "DB EDh,95h", "DB EDh,96h", "DB EDh,97h", /*  90-97   */
+      "DB EDh,98h", "DB EDh,99h", "DB EDh,9Ah", "DB EDh,9Bh", "DB EDh,9Ch", "DB EDh,9Dh", "DB EDh,9Eh", "DB EDh,9Fh", /*  98-9f   */
+      "LDI", "CPI", "INI", "OUTI", "DB EDh,A4h", "DB EDh,A5h", "DB EDh,A6h", "DB EDh,A7h", /*  a0-a7   */
+      "LDD", "CPD", "IND", "OUTD", "DB EDh,ACh", "DB EDh,ADh", "DB EDh,AEh", "DB EDh,AFh", /*  a8-af   */
+      "LDIR", "CPIR", "INIR", "OTIR", "DB EDh,B4h", "DB EDh,B5h", "DB EDh,B6h", "DB EDh,B7h", /*  b0-b7   */
+      "LDDR", "CPDR", "INDR", "OTDR", "DB EDh,BCh", "DB EDh,BDh", "DB EDh,BEh", "DB EDh,BFh", /*  b8-bf   */
+      "DB EDh,C0h", "DB EDh,C1h", "DB EDh,C2h", "DB EDh,C3h", "DB EDh,C4h", "DB EDh,C5h", "DB EDh,C6h", "DB EDh,C7h", /*  c0-c7   */
+      "DB EDh,C8h", "DB EDh,C9h", "DB EDh,CAh", "DB EDh,CBh", "DB EDh,CCh", "DB EDh,CDh", "DB EDh,CEh", "DB EDh,CFh", /*  c8-cf   */
+      "DB EDh,D0h", "DB EDh,D1h", "DB EDh,D2h", "DB EDh,D3h", "DB EDh,D4h", "DB EDh,D5h", "DB EDh,D6h", "DB EDh,D7h", /*  d0-d7   */
+      "DB EDh,D8h", "DB EDh,D9h", "DB EDh,DAh", "DB EDh,DBh", "DB EDh,DCh", "DB EDh,DDh", "DB EDh,DEh", "DB EDh,DFh", /*  d8-df   */
+      "DB EDh,E0h", "DB EDh,E1h", "DB EDh,E2h", "DB EDh,E3h", "DB EDh,E4h", "DB EDh,E5h", "DB EDh,E6h", "DB EDh,E7h", /*  e0-e7   */
+      "DB EDh,E8h", "DB EDh,E9h", "DB EDh,EAh", "DB EDh,EBh", "DB EDh,ECh", "DB EDh,EDh", "DB EDh,EEh", "DB EDh,EFh", /*  e8-ef   */
+      "DB EDh,F0h", "DB EDh,F1h", "DB EDh,F2h", "DB EDh,F3h", "DB EDh,F4h", "DB EDh,F5h", "DB EDh,F6h", "DB EDh,F7h", /*  f0-f7   */
+      "DB EDh,F8h", "DB EDh,F9h", "DB EDh,FAh", "DB EDh,FBh", "DB EDh,FCh", "DB EDh,FDh", "DB EDh,FEh", "DB EDh,FFh") /*  f8-ff   */
+
+
+  final val MnemonicsXX: List[String] =
+    List("NOP", "LD BC,#h", "LD (BC),A", "INC BC", "INC B", "DEC B", "LD B,*h", "RLCA", /*  00-07   */
+      "EX AF,AF'", "ADD I%,BC", "LD A,(BC)", "DEC BC", "INC C", "DEC C", "LD C,*h", "RRCA", /*  08-0f   */
+      "DJNZ $h", "LD DE,#h", "LD (DE),A", "INC DE", "INC D", "DEC D", "LD D,*h", "RLA", /*  10-17   */
+      "JR $h", "ADD I%,DE", "LD A,(DE)", "DEC DE", "INC E", "DEC E", "LD E,*h", "RRA", /*  18-1f   */
+      "JR NZ,$h", "LD I%,#h", "LD (#h),I%", "INC I%", "INC I%H", "DEC I%H", "LD I%H,*h", "DAA", /*  20-27   */
+      "JR Z,$h", "ADD I%,I%", "LD I%,(#h)", "DEC I%", "INC I%L", "DEC I%L", "LD I%L,*h", "CPL", /*  28-2f   */
+      "JR NC,$h", "LD SP,#h", "LD (#h),A", "INC SP", "INC (I%+^h)", "DEC (I%+^h)", "LD (I%+^h),*h", "SCF", /*  30-37   */
+      "JR C,$h", "ADD I%,SP", "LD A,(#h)", "DEC SP", "INC A", "DEC A", "LD A,*h", "CCF", /*  38-3f   */
+      "LD B,B", "LD B,C", "LD B,D", "LD B,E", "LD B,I%H", "LD B,I%L", "LD B,(I%+^h)", "LD B,A", /*  40-47   */
+      "LD C,B", "LD C,C", "LD C,D", "LD C,E", "LD C,I%H", "LD C,I%L", "LD C,(I%+^h)", "LD C,A", /*  48-4f   */
+      "LD D,B", "LD D,C", "LD D,D", "LD D,E", "LD D,I%H", "LD D,I%L", "LD D,(I%+^h)", "LD D,A", /*  50-57   */
+      "LD E,B", "LD E,C", "LD E,D", "LD E,E", "LD E,I%H", "LD E,I%L", "LD E,(I%+^h)", "LD E,A", /*  58-5f   */
+      "LD I%H,B", "LD I%H,C", "LD I%H,D", "LD I%H,E", "LD I%H,I%H", "LD I%H,I%L", "LD H,(I%+^h)", "LD I%H,A", /*  60-67   */
+      "LD I%L,B", "LD I%L,C", "LD I%L,D", "LD I%L,E", "LD I%L,I%H", "LD I%L,I%L", "LD L,(I%+^h)", "LD I%L,A", /*  68-6f   */
+      "LD (I%+^h),B", "LD (I%+^h),C", "LD (I%+^h),D", "LD (I%+^h),E", "LD (I%+^h),H", "LD (I%+^h),L", "HALT", "LD (I%+^h),A", /*  70-77   */
+      "LD A,B", "LD A,C", "LD A,D", "LD A,E", "LD A,I%H", "LD A,I%L", "LD A,(I%+^h)", "LD A,A", /*  78-7f   */
+      "ADD A,B", "ADD A,C", "ADD A,D", "ADD A,E", "ADD A,I%H", "ADD A,I%L", "ADD A,(I%+^h)", "ADD A,A", /*  80-87   */
+      "ADC A,B", "ADC A,C", "ADC A,D", "ADC A,E", "ADC A,I%H", "ADC A,I%L", "ADC A,(I%+^h)", "ADC A,A", /*  88-8f   */
+      "SUB B", "SUB C", "SUB D", "SUB E", "SUB I%H", "SUB I%L", "SUB (I%+^h)", "SUB A", /*  90-97   */
+      "SBC A,B", "SBC A,C", "SBC A,D", "SBC A,E", "SBC A,I%H", "SBC A,I%L", "SBC A,(I%+^h)", "SBC A,A", /*  98-9f   */
+      "AND B", "AND C", "AND D", "AND E", "AND I%H", "AND I%L", "AND (I%+^h)", "AND A", /*  a0-a7   */
+      "XOR B", "XOR C", "XOR D", "XOR E", "XOR I%H", "XOR I%L", "XOR (I%+^h)", "XOR A", /*  a8-af   */
+      "OR B", "OR C", "OR D", "OR E", "OR I%H", "OR I%L", "OR (I%+^h)", "OR A", /*  b0-b7   */
+      "CP B", "CP C", "CP D", "CP E", "CP I%H", "CP I%L", "CP (I%+^h)", "CP A", /*  b8-bf   */
+      "RET NZ", "POP BC", "JP NZ,#h", "JP #h", "CALL NZ,#h", "PUSH BC", "ADD A,*h", "RST 00h", /*  c8-cf   */
+      "RET Z", "RET", "JP Z,#h", "PFX_CB", "CALL Z,#h", "CALL #h", "ADC A,*h", "RST 08h", /*  c8-cf   */
+      "RET NC", "POP DE", "JP NC,#h", "OUT (*h),A", "CALL NC,#h", "PUSH DE", "SUB *h", "RST 10h", /*  d0-d7   */
+      "RET C", "EXX", "JP C,#h", "IN A,(*h)", "CALL C,#h", "PFX_DD", "SBC A,*h", "RST 18h", /*  d8-df   */
+      "RET PO", "POP I%", "JP PO,#h", "EX (SP),I%", "CALL PO,#h", "PUSH I%", "AND *h", "RST 20h", /*  e0-e7   */
+      "RET PE", "LD PC,I%", "JP PE,#h", "EX DE,I%", "CALL PE,#h", "PFX_ED", "XOR *h", "RST 28h", /*  e8-ef   */
+      "RET P", "POP AF", "JP P,#h", "DI", "CALL P,#h", "PUSH AF", "OR *h", "RST 30h", /*  f0-f7   */
+      "RET M", "LD SP,I%", "JP M,#h", "EI", "CALL M,#h", "PFX_FD", "CP *h", "RST 38h") /*  f8-ff   */
+
+
+  final val MnemonicsXCB: List[String] =
+    List("RLC B", "RLC C", "RLC D", "RLC E", "RLC H", "RLC L", "RLC (I%@h)", "RLC A", /*  00-07   */
+      "RRC B", "RRC C", "RRC D", "RRC E", "RRC H", "RRC L", "RRC (I%@h)", "RRC A", /*  08-0f   */
+      "RL B", "RL C", "RL D", "RL E", "RL H", "RL L", "RL (I%@h)", "RL A", /*  10-17   */
+      "RR B", "RR C", "RR D", "RR E", "RR H", "RR L", "RR (I%@h)", "RR A", /*  18-1f   */
+      "SLA B", "SLA C", "SLA D", "SLA E", "SLA H", "SLA L", "SLA (I%@h)", "SLA A", /*  20-27   */
+      "SRA B", "SRA C", "SRA D", "SRA E", "SRA H", "SRA L", "SRA (I%@h)", "SRA A", /*  28-2f   */
+      "SLL B", "SLL C", "SLL D", "SLL E", "SLL H", "SLL L", "SLL (I%@h)", "SLL A", /*  30-37   */
+      "SRL B", "SRL C", "SRL D", "SRL E", "SRL H", "SRL L", "SRL (I%@h)", "SRL A", /*  38-3f   */
+      "BIT 0,B", "BIT 0,C", "BIT 0,D", "BIT 0,E", "BIT 0,H", "BIT 0,L", "BIT 0,(I%@h)", "BIT 0,A", /*  40-47   */
+      "BIT 1,B", "BIT 1,C", "BIT 1,D", "BIT 1,E", "BIT 1,H", "BIT 1,L", "BIT 1,(I%@h)", "BIT 1,A", /*  48-4f   */
+      "BIT 2,B", "BIT 2,C", "BIT 2,D", "BIT 2,E", "BIT 2,H", "BIT 2,L", "BIT 2,(I%@h)", "BIT 2,A", /*  50-57   */
+      "BIT 3,B", "BIT 3,C", "BIT 3,D", "BIT 3,E", "BIT 3,H", "BIT 3,L", "BIT 3,(I%@h)", "BIT 3,A", /*  58-5f   */
+      "BIT 4,B", "BIT 4,C", "BIT 4,D", "BIT 4,E", "BIT 4,H", "BIT 4,L", "BIT 4,(I%@h)", "BIT 4,A", /*  60-67   */
+      "BIT 5,B", "BIT 5,C", "BIT 5,D", "BIT 5,E", "BIT 5,H", "BIT 5,L", "BIT 5,(I%@h)", "BIT 5,A", /*  68-6f   */
+      "BIT 6,B", "BIT 6,C", "BIT 6,D", "BIT 6,E", "BIT 6,H", "BIT 6,L", "BIT 6,(I%@h)", "BIT 6,A", /*  70-77   */
+      "BIT 7,B", "BIT 7,C", "BIT 7,D", "BIT 7,E", "BIT 7,H", "BIT 7,L", "BIT 7,(I%@h)", "BIT 7,A", /*  78-7f   */
+      "RES 0,B", "RES 0,C", "RES 0,D", "RES 0,E", "RES 0,H", "RES 0,L", "RES 0,(I%@h)", "RES 0,A", /*  80-87   */
+      "RES 1,B", "RES 1,C", "RES 1,D", "RES 1,E", "RES 1,H", "RES 1,L", "RES 1,(I%@h)", "RES 1,A", /*  88-8f   */
+      "RES 2,B", "RES 2,C", "RES 2,D", "RES 2,E", "RES 2,H", "RES 2,L", "RES 2,(I%@h)", "RES 2,A", /*  90-97   */
+      "RES 3,B", "RES 3,C", "RES 3,D", "RES 3,E", "RES 3,H", "RES 3,L", "RES 3,(I%@h)", "RES 3,A", /*  98-9f   */
+      "RES 4,B", "RES 4,C", "RES 4,D", "RES 4,E", "RES 4,H", "RES 4,L", "RES 4,(I%@h)", "RES 4,A", /*  a0-a7   */
+      "RES 5,B", "RES 5,C", "RES 5,D", "RES 5,E", "RES 5,H", "RES 5,L", "RES 5,(I%@h)", "RES 5,A", /*  a8-af   */
+      "RES 6,B", "RES 6,C", "RES 6,D", "RES 6,E", "RES 6,H", "RES 6,L", "RES 6,(I%@h)", "RES 6,A", /*  b0-b7   */
+      "RES 7,B", "RES 7,C", "RES 7,D", "RES 7,E", "RES 7,H", "RES 7,L", "RES 7,(I%@h)", "RES 7,A", /*  b8-bf   */
+      "SET 0,B", "SET 0,C", "SET 0,D", "SET 0,E", "SET 0,H", "SET 0,L", "SET 0,(I%@h)", "SET 0,A", /*  c0-c7   */
+      "SET 1,B", "SET 1,C", "SET 1,D", "SET 1,E", "SET 1,H", "SET 1,L", "SET 1,(I%@h)", "SET 1,A", /*  c8-cf   */
+      "SET 2,B", "SET 2,C", "SET 2,D", "SET 2,E", "SET 2,H", "SET 2,L", "SET 2,(I%@h)", "SET 2,A", /*  d0-d7   */
+      "SET 3,B", "SET 3,C", "SET 3,D", "SET 3,E", "SET 3,H", "SET 3,L", "SET 3,(I%@h)", "SET 3,A", /*  d8-df   */
+      "SET 4,B", "SET 4,C", "SET 4,D", "SET 4,E", "SET 4,H", "SET 4,L", "SET 4,(I%@h)", "SET 4,A", /*  e0-e7   */
+      "SET 5,B", "SET 5,C", "SET 5,D", "SET 5,E", "SET 5,H", "SET 5,L", "SET 5,(I%@h)", "SET 5,A", /*  e8-ef   */
+      "SET 6,B", "SET 6,C", "SET 6,D", "SET 6,E", "SET 6,H", "SET 6,L", "SET 6,(I%@h)", "SET 6,A", /*  f0-f7   */
+      "SET 7,B", "SET 7,C", "SET 7,D", "SET 7,E", "SET 7,H", "SET 7,L", "SET 7,(I%@h)", "SET 7,A") /*  f8-ff   */
+
+
 }

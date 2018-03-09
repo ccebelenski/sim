@@ -25,6 +25,14 @@ trait SupportsOptions {
     else false
   }
 
+  def getEnumValueOption(optionName:String): Option[String] = {
+    val o = unitOptions.find(p => p.optionName == optionName)
+    if(o.isDefined) {
+      val z = o.get.asInstanceOf[EnumValueUnitOption].values.find(x => x.value)
+      if(z.isDefined) Some(z.get.name) else None
+    } else None
+  }
+
   def setOption(optionName: String, optionValue: String, sb: StringBuilder): Boolean = {
     // First find the option - if we don't find it, then we're done already
     var optionsChanged = false
