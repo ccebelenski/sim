@@ -3927,8 +3927,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
   }
 
 
-
-  def DAsm(addr:Int ) : String = {
+  override def DAsm(addr:Int, sb:StringBuilder ) : Int = {
 
     var pc = addr
 
@@ -4006,14 +4005,20 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
       val x = pc + 2 + {
         if ((Offset & 0x80) != 0) Offset - 256 else Offset
       } & 0xFFFF
+      pc += 2
       R.replace("$", f"$x%04x")
+
     } else if (R.contains("#")) {
       val x = MMU.get8(pc).intValue + 256 * MMU.get8(pc + 1).intValue
+      pc += 2
       R.replace("#",f"$x%04x")
+
     } else R
 
-    R
+    sb.append(R)
+    pc
   }
+
 }
 
 

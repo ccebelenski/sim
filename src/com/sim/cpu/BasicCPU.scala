@@ -168,6 +168,19 @@ abstract class BasicCPU(val isBanked: Boolean, override val machine: AbstractMac
     stringBuilder.append(s"$getName> Registers:\n" + showRegisters() + "\n")
     stringBuilder.append(s"$getName> Flags:\n" + showFlags() + "\n")
   }
+
+  // Dissassembly
+  def DAsm(addr:Int, sb:StringBuilder ) : Int
+  def DAsm(addr:Int, toAddr:Int, sb:StringBuilder) : Int = {
+    var pc = addr
+    while (pc <= toAddr) {
+      sb.append(f"\n$pc%08x: ")
+      pc = DAsm(pc,sb)
+    }
+    pc
+  }
+
+
 }
 
 abstract class Register(val nmenomic: String) {

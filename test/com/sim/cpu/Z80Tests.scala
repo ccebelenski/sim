@@ -23,7 +23,7 @@ class Z80Tests {
       Z80Tests.z80.setMemorySize(UInt(0xFFFF))
       Z80Tests.mmu.mapRAM(UInt(0x0000), UInt(0x500))
       Z80Tests.PC = Z80Tests.z80.registers("PC").asInstanceOf[Register16]
-      val sb : StringBuilder = new StringBuilder
+      val sb: StringBuilder = new StringBuilder
       Z80Tests.z80.setOption("STOPONHALT", "true", sb)
       Utils.outln(sb.toString())
 
@@ -284,17 +284,17 @@ class Z80Tests {
 
   @Test
   // JR NZ
-  def test0x20() :Unit = {
-   z80.deposit(0x0000, 0x20) // JR NZ
-   z80.deposit(0x0001, 0x01) // 1
-   z80.deposit(0x0002, 0x3C) // INC A
-   z80.deposit(0x0003, 0x3D) // DEC A
-   z80.deposit(0x0004, 0x3C) // INC A
-   z80.deposit(0x0005, 0xC0) // RET NZ
-   z80.deposit(0x0006, 0x20) // JR NZ
-   z80.deposit(0x0007, 0x01) // 1
-   z80.deposit(0x0008, 0x3C) // INC A
-   z80.deposit(0x0009, 0x76) // HALT
+  def test0x20(): Unit = {
+    z80.deposit(0x0000, 0x20) // JR NZ
+    z80.deposit(0x0001, 0x01) // 1
+    z80.deposit(0x0002, 0x3C) // INC A
+    z80.deposit(0x0003, 0x3D) // DEC A
+    z80.deposit(0x0004, 0x3C) // INC A
+    z80.deposit(0x0005, 0xC0) // RET NZ
+    z80.deposit(0x0006, 0x20) // JR NZ
+    z80.deposit(0x0007, 0x01) // 1
+    z80.deposit(0x0008, 0x3C) // INC A
+    z80.deposit(0x0009, 0x76) // HALT
     z80.PC(0x0000)
     z80.resetCPU()
     z80.runcpu()
@@ -645,11 +645,30 @@ class Z80Tests {
     z80.deposit(0x010a, 0x40)
     z80.deposit(0x010b, 0xC9) // RET
 
-    assertTrue(z80.DAsm(0x0000) == "LD C,A")
-    assertTrue(z80.DAsm(0x0107) == "ADD A,a0h")
-    assertTrue(z80.DAsm(0x0007) == "CALL 0104h")
-    assertTrue(z80.DAsm(0x0104) == "OR f0h")
+    val sb = new StringBuilder
+    assertTrue({
+      z80.DAsm(0x0000, sb)
+      sb.toString == "LD C,A"
+    })
+    sb.clear()
+    assertTrue({
+      z80.DAsm(0x0107, sb)
+      sb.toString() == "ADD A,a0h"
+    })
+    sb.clear()
+    assertTrue({
+      z80.DAsm(0x0007, sb)
+      sb.toString() == "CALL 0104h"
+    })
+    sb.clear()
+    assertTrue({
+      z80.DAsm(0x0104, sb)
+      sb.toString() == "OR f0h"
+    })
+    sb.clear()
 
+    z80.DAsm(0x00, 0x10b, sb)
+    Utils.outln(sb.toString)
   }
 
 }
