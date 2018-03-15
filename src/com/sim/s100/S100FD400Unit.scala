@@ -6,16 +6,20 @@ import com.sim.unsigned.{UByte, UInt}
 
 class S100FD400Unit(device:S100FD400Device) extends BasicUnit(device) with  DiskUnit {
 
-  // Unit specific information
-  var current_track:Int = 0
-  var current_sector:Int = 0
-  var current_byte:Int = 0
-  var current_flag:Int = 0
-  var sectors_per_track:Int  = device.DSK_SECT
-  var tracks:Int = device.MAX_TRACKS
+  override val DSK_SECTSIZE: Int = 137 // Size of sector
+  override val DSK_SECT: Int = 32 // Sectors per track
+  override val MAX_TRACKS: Int = 254 // Number of tracts, original Altair has 77 only
 
+  var current_flag:Int = 0
 
   var sector_true :Int = 0
+
+
+  override def writebuf(): Unit = {
+    super.writebuf()
+    current_flag &= 0xfe
+
+  }
 
   override val waitTime: Long =0 // TODO
 
@@ -31,9 +35,4 @@ class S100FD400Unit(device:S100FD400Device) extends BasicUnit(device) with  Disk
 
   override def detach(): Unit = ???
 
-  override def readSector(): Unit = ???
-
-  override def writeSector(): Unit = ???
-
-  override def seek(pos: Long): Unit = ???
 }

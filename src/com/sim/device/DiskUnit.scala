@@ -23,13 +23,20 @@ trait DiskUnit extends BasicUnit with UnitAttachable with SupportsOptions{
   var fileChannel : FileChannel = _
   var byteBuffer: ByteBuffer = _
 
-  // disk sector size
-  var sectorSize: Int = 512
-  // Units of capacity( word, byte)
-  var capacFactor: DiskCapacityFormat.Value = DiskCapacityFormat.Byte
-  // Sector size of the containing storage
-  var storageSectorSize: UInt = UInt(0)
-  var autoFormat: Boolean = false
+  // These should be overridden
+  val MAX_TRACKS:Int = 0
+  val DSK_SECT = 0
+  val DSK_SECTSIZE = 0
+
+  // Unit specific information
+  var current_track:Int = 0
+  var current_sector:Int = 0
+  var current_byte:Int = 0
+
+  var sectors_per_track:Int  = DSK_SECT
+  var tracks:Int = MAX_TRACKS
+
+
 
   var FixedCapacity: Boolean = false
   var isSequential: Boolean = false
@@ -38,19 +45,26 @@ trait DiskUnit extends BasicUnit with UnitAttachable with SupportsOptions{
   // Capacity
   var capacity: Long = 0L
 
-  // File position
-  var pos: Long = 0L
-
   // I/O Start time
   var ioStartTime: Long = 0L
 
   var dirty:Boolean = false
 
-  def readSector()
+  def readSector() : Unit = {
+    byteBuffer.clear()
+    fileChannel.position(DSK_SECTSIZE * sectors_per_track * current_track +
+      DSK_SECTSIZE * current_sector)
+    do {
+      fileChannel.read(byteBuffer)
+    } while (byteBuffer.hasRemaining)
 
-  def writeSector()
+    current_byte = 0
+  }
 
-  def seek(pos:Long)
+  def seek() : Unit = {
+    fileChannel.position(DSK_SECTSIZE * sectors_per_track * current_track +
+      DSK_SECTSIZE * current_sector)
+  }
 
   /**
     * Quick check for write-protect
@@ -82,35 +96,6 @@ trait DiskUnit extends BasicUnit with UnitAttachable with SupportsOptions{
     true
   }
 
-  def setCapacity(cap:String, sb:StringBuilder) : Boolean = {
-
-    Objects.requireNonNull(cap)
-    val bytes:Long  = Utils.toBytes(cap)
-    if(bytes <= 0 || bytes >= 20000000) {
-
-      sb.append(s"$getName: Disk Unit misconfiguration - Capacity out of spec.")
-      return false
-    } else  if(sectorSize <= 0) {
-      sb.append(s"$getName: Disk Unit misconfiguration - Sector size out of spec.")
-      return false
-    }
-      capacity = ((bytes * 1000000) / sectorSize).longValue()
-      sb.append(s"$getName: Capacity: ${Utils.formatBytes(capacity,true)} sectors.")
-
-      true
-  }
-
-  def showCapacity(sb:StringBuilder) : Unit = {
-    val cap = capacity * sectorSize
-    val capUnits = {if(capacFactor == DiskCapacityFormat.Byte) "B" else "W"}
-    if(cap == 0) {
-      sb.append(s"$getName: Capacity Undefined.")
-    } else {
-      if(cap >= 1000000) sb.append(s"$getName: Capacity: ${cap/1000000}M$capUnits")
-      else if(cap >= 1000) sb.append(s"$getName: Capacity: ${cap/1000}K$capUnits")
-      else sb.append(s"$getName: Capacity: ${cap}$capUnits")
-    }
-  }
 
   /**
     * get disk size - #450 sim_disk.c
@@ -151,6 +136,24 @@ trait DiskUnit extends BasicUnit with UnitAttachable with SupportsOptions{
 
 
     sb
+  }
+
+
+  def writebuf(): Unit = {
+    var i = current_byte
+    while (i < DSK_SECTSIZE) { // null-fill rest of sector if any
+      byteBuffer.put(i, 0)
+      i += 1
+    }
+    if (!isWriteProtect) {
+      fileChannel.position(DSK_SECTSIZE * sectors_per_track * current_track +
+        DSK_SECTSIZE * current_sector)
+      while (byteBuffer.hasRemaining) fileChannel.write(byteBuffer)
+    }
+
+    current_byte = 0xff
+    dirty = false
+
   }
 
 }

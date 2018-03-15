@@ -79,35 +79,25 @@ import scala.collection.mutable.ListBuffer
   * T = Sector True, is a 0 when the sector is positioned to read or write.
   *
   */
-class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) extends PortMappedDiskDevice(machine, mmu, ports) with SupportsOptions with Bootable {
+class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) extends PortMappedDiskDevice(machine, mmu, ports)
+  with SupportsOptions with Bootable {
   override val description: String = "MITS FDisk Interface (88_DISK)"
   override val name = "FD"
   override val supportsBoot: Boolean = true
-
-  // Some device specific things
-  val IN_MSG: Int = 1 << 0
-  val OUT_MSG: Int = 1 << 1
-  val READ_MSG: Int = 1 << 2
-  val WRITE_MSG: Int = 1 << 3
-  val SECTOR_STUCK_MSG: Int = 1 << 4
-  val TRACK_STUCK_MSG: Int = 1 << 5
-  val VERBOSE_MSG: Int = 1 << 6
 
   /* NUM_OF_DSK must be power of two              */
   val NUM_OF_DSK: Int = 16
   val NUM_OF_DSK_MASK: Int = NUM_OF_DSK - 1
 
-  val DSK_SECTSIZE: Int = 137 // Size of sector
-  val DSK_SECT: Int = 32 // Sectors per track
-  val MAX_TRACKS: Int = 254 // Number of tracts, original Altair has 77 only
 
-  val DSK_TRACSIZE: Int = DSK_SECTSIZE * DSK_SECT
-  val MAX_DSK_SIZE: Int = DSK_TRACSIZE * MAX_TRACKS
+
+//  val DSK_TRACSIZE: Int = DSK_SECTSIZE * DSK_SECT
+//  val MAX_DSK_SIZE: Int = DSK_TRACSIZE * MAX_TRACKS
   val BOOTROM_SIZE_DSK: Int = 256 // size of boot rom
 
   val MINI_DISK_SECT: Int = 16
   val MINI_DISK_TRACKS: Int = 35
-  val MINI_DISK_SIZE: Int = MINI_DISK_TRACKS * MINI_DISK_SECT * DSK_SECTSIZE
+//  val MINI_DISK_SIZE: Int = MINI_DISK_TRACKS * MINI_DISK_SECT * DSK_SECTSIZE
   val MINI_DISK_DELTA: Int = 4096 // Threshold for detecting mini disks
 
   var current_disk: Option[S100FD400Unit] = None
@@ -178,7 +168,7 @@ class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exte
     var cd = current_disk.get
 
     // isWrite = true, controller set/reset/enable/disable
-    if (cd.dirty) writebuf()
+    if (cd.dirty) cd.writebuf()
 
     val disknum = action & NUM_OF_DSK_MASK
     current_disk = findUnitByNumber(disknum).asInstanceOf[Option[S100FD400Unit]]
@@ -222,7 +212,7 @@ class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exte
       // Read sector position
 
       val cd = current_disk.get
-      if (cd.dirty) writebuf()
+      if (cd.dirty) cd.writebuf()
 
       if ((cd.current_flag & 0x04) != 0) { // head loadded?}
         cd.sector_true ^= 1
@@ -249,7 +239,7 @@ class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exte
       cd.current_track += 1
       cd.current_flag &= 0xbf // track zero now false
       if (cd.current_track > cd.tracks - 1) cd.current_track = cd.tracks - 1
-      if (cd.dirty) writebuf()
+      if (cd.dirty) cd.writebuf()
       cd.current_sector = 0xff
       cd.current_byte = 0xff
 
@@ -264,12 +254,12 @@ class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exte
         cd.current_track = 0
         cd.current_flag |= 0x40 // Track 0 if there
       }
-      if (cd.dirty) writebuf()
+      if (cd.dirty) cd.writebuf()
       cd.current_sector = 0xff
       cd.current_byte = 0xff
     }
 
-    if (cd.dirty) writebuf()
+    if (cd.dirty) cd.writebuf()
 
     if ((action & 0x04) != 0) {
       // head load
@@ -309,16 +299,9 @@ class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exte
 
     val cd = current_disk.get
     if (!isWrite) {
-      if (cd.current_byte >= DSK_SECTSIZE) {
+      if (cd.current_byte >= cd.DSK_SECTSIZE) {
         // Physically read the sector
-        cd.byteBuffer.clear()
-        cd.fileChannel.position(DSK_SECTSIZE * cd.sectors_per_track * cd.current_track +
-          DSK_SECTSIZE * cd.current_sector)
-        do {
-          cd.fileChannel.read(cd.byteBuffer)
-        } while (cd.byteBuffer.hasRemaining)
-
-        cd.current_byte = 0
+        cd.readSector()
       }
       val rtn = cd.byteBuffer.get(cd.current_byte) & 0xff
       cd.current_byte += 1
@@ -326,8 +309,8 @@ class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exte
 
     }
 
-    if (cd.current_byte >= DSK_SECTSIZE)
-      writebuf()
+    if (cd.current_byte >= cd.DSK_SECTSIZE)
+      cd.writebuf()
     else {
       cd.dirty = true
       cd.byteBuffer.put(cd.current_byte, (action & 0xff).byteValue())
@@ -336,23 +319,6 @@ class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exte
     0
   }
 
-  private def writebuf(): Unit = {
-    val cd = current_disk.get
-    var i = cd.current_byte
-    while (i < DSK_SECTSIZE) { // null-fill rest of sector if any
-      cd.byteBuffer.put(i, 0)
-      i += 1
-    }
-    if (!cd.isWriteProtect) {
-      cd.fileChannel.position(DSK_SECTSIZE * cd.sectors_per_track * cd.current_track +
-        DSK_SECTSIZE * cd.current_sector)
-      while (cd.byteBuffer.hasRemaining) cd.fileChannel.write(cd.byteBuffer)
-    }
-    cd.current_flag &= 0xfe
-    cd.current_byte = 0xff
-    cd.dirty = false
-
-  }
 
   /*
   The boot routine modifies the boot ROM in such as way that the specified disk is
