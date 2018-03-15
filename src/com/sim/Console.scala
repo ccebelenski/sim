@@ -33,6 +33,9 @@ class Console {
     val exit:Command = new ExitCommand
     Console.commandTree.put(exit.commandToken, exit)
 
+    val boot:Command = new BootCommand
+    Console.commandTree.put(boot.commandToken, boot)
+
     version.process(null)
   }
 

@@ -46,7 +46,6 @@ trait DiskUnit extends BasicUnit with UnitAttachable with SupportsOptions{
 
   var dirty:Boolean = false
 
-
   def readSector()
 
   def writeSector()

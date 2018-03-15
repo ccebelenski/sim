@@ -1,8 +1,7 @@
 package com.sim.s100
 
-import com.sim.cpu.{BasicMMU, Z80MMU}
+import com.sim.cpu.Z80MMU
 import com.sim.device._
-import com.sim.machine.AbstractMachine
 import com.sim.unsigned.UInt
 
 /**

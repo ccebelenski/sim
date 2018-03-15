@@ -25,7 +25,7 @@ class S100FD400Unit(device:S100FD400Device) extends BasicUnit(device) with  Disk
 
   override def completeAction(): Unit = ???
 
-  override def init(): Unit = ???
+  override def init(): Unit = {}
 
   override def optionChanged(sb: StringBuilder): Unit = ???
 

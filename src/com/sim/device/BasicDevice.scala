@@ -116,8 +116,6 @@ abstract class BasicDevice(val machine:AbstractMachine) extends Named with Suppo
 
 
 
-  val supportsBoot = false
-  def boot(unitno:Int, sb:StringBuilder): Boolean = {false} // default no op
 
 }
 

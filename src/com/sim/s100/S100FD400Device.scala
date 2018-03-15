@@ -79,7 +79,7 @@ import scala.collection.mutable.ListBuffer
   * T = Sector True, is a 0 when the sector is positioned to read or write.
   *
   */
-class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) extends PortMappedDiskDevice(machine, mmu, ports) with SupportsOptions {
+class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) extends PortMappedDiskDevice(machine, mmu, ports) with SupportsOptions with Bootable {
   override val description: String = "MITS FDisk Interface (88_DISK)"
   override val name = "FD"
   override val supportsBoot: Boolean = true
@@ -125,7 +125,11 @@ class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exte
   private def ALTAIR_ROM_LOW = 0xff00
 
   override def init(): Unit = {
-    // TODO Create 16 units
+    // Create 16 units
+    for(i <- 0 until NUM_OF_DSK) {
+      val du = new S100FD400Unit(this)
+      addUnit(du)
+    }
 
     // TODO Map our ports into the MMU
 
