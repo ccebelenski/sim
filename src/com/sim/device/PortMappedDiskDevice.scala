@@ -1,11 +1,13 @@
 package com.sim.device
 
+import com.sim.cpu.BasicMMU
 import com.sim.machine.AbstractMachine
+import com.sim.unsigned.UInt
 
 /**
   * Created by christophercebelenski on 7/18/16.
   */
-abstract class DiskDevice(machine: AbstractMachine) extends BasicDevice(machine) {
+abstract class PortMappedDiskDevice(machine: AbstractMachine, mmu: BasicMMU, ports: List[UInt]) extends PortMappedDevice(machine, mmu, ports) {
 
 
   override def createUnitOptions: Unit = {

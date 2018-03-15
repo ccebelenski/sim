@@ -1,7 +1,7 @@
 package com.sim.cpu
 
 import com.sim.Utils
-import com.sim.s100.S100Machine
+import com.sim.s100.{S100FD400Device, S100Machine}
 import com.sim.unsigned.{UByte, UInt}
 import org.junit.{Before, BeforeClass, Test}
 import org.junit.Assert._
@@ -33,6 +33,22 @@ class Z80Tests {
     mmu = Z80Tests.mmu
     machine = Z80Tests.machine
     PC = Z80Tests.PC
+  }
+
+  @Test
+  def testROM(): Unit = {
+
+    val image = S100FD400Device.alt_bootrom_dsk
+    mmu.mapROM(UInt(0xff00),UInt(image.size - 1),image.toArray)
+
+    assertTrue(mmu.get8(0xff00) == 0x21)
+    assertTrue(mmu.get8(0xffff) == 0x00)
+    assertTrue(mmu.get8(0xff70) == 0x08)
+
+    // Write to ROM (expect console output)
+    mmu.put8(0xff70,UByte(0xff.byteValue()))
+    assertTrue(mmu.get8(0xff70) == 0x08) // Verify value did not change.
+
   }
 
   @Test

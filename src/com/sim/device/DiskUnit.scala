@@ -1,5 +1,7 @@
 package com.sim.device
 
+import java.nio.ByteBuffer
+import java.nio.channels.FileChannel
 import java.nio.file.{Files, Path}
 import java.util.Objects
 
@@ -16,6 +18,10 @@ trait DiskUnit extends BasicUnit with UnitAttachable with SupportsOptions{
 
   // The user controlled options come from the options...
 
+
+  // Java filechannel
+  var fileChannel : FileChannel = _
+  var byteBuffer: ByteBuffer = _
 
   // disk sector size
   var sectorSize: Int = 512
@@ -38,7 +44,14 @@ trait DiskUnit extends BasicUnit with UnitAttachable with SupportsOptions{
   // I/O Start time
   var ioStartTime: Long = 0L
 
-  def rdsect(lba: Int, buf: DiskBuffer)
+  var dirty:Boolean = false
+
+
+  def readSector()
+
+  def writeSector()
+
+  def seek(pos:Long)
 
   /**
     * Quick check for write-protect
@@ -140,10 +153,6 @@ trait DiskUnit extends BasicUnit with UnitAttachable with SupportsOptions{
 
     sb
   }
-
-}
-
-class DiskBuffer {
 
 }
 

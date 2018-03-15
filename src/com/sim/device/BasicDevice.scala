@@ -59,6 +59,11 @@ abstract class BasicDevice(val machine:AbstractMachine) extends Named with Suppo
     length
   }
 
+  def findUnitByNumber(unitNumber:Int) : Option[BasicUnit] = {
+    if(units.isEmpty) return None
+    units.find(u => u.unitNumber == unitNumber)
+  }
+
   def clearUnits(): Unit = synchronized {
     // TODO
     units.clear()
@@ -108,6 +113,11 @@ abstract class BasicDevice(val machine:AbstractMachine) extends Named with Suppo
 
   // Does this unit handle requests for this port/memory address/etc?
   def handles(value: UInt) : Boolean
+
+
+
+  val supportsBoot = false
+  def boot(unitno:Int, sb:StringBuilder): Boolean = {false} // default no op
 
 }
 

@@ -2,7 +2,7 @@ package com.sim.cpu
 
 import com.sim.Utils
 import com.sim.device.{MemoryMappedDevice, PortMappedDevice}
-import com.sim.memory.{AddressSpace, MemoryAddressSpace}
+import com.sim.memory.{AddressSpace, MemoryAddressSpace, ROMAddressSpace}
 import com.sim.unsigned.{UByte, UInt, UShort}
 
 /**
@@ -49,6 +49,25 @@ abstract class BasicMMU(val cpu: BasicCPU) {
       mtab(page) = Some(entry)
       Utils.outln(f"MMU: Mapped RAM memory space.  Page: 0x$page%04X, Addr: 0x$addr%04X - 0x${as.highAddress.intValue}%04X")
     }
+
+  }
+
+  def mapROM(baseAddress:UInt, size:UInt, image:Array[Int]): Unit = {
+    for (i <- 0 to (size >> LOG2PAGESIZE).toInt) {
+      var addr = (baseAddress & 0xfff00) + (i << LOG2PAGESIZE.toInt)
+      val pageaddr = if (cpu.isBanked && addr < COMMON) addr | (bankSelect << MAXBANKSIZELOG2.toInt) else addr
+      val page = pageaddr >> LOG2PAGESIZE.toInt
+      val as = new ROMAddressSpace(UInt(addr), UInt(addr) + PAGESIZE - UInt(1))
+
+      val imgIdx = i << LOG2PAGESIZE.toInt
+      val imgSize = PAGESIZE - UInt(1)
+      for(x <- imgIdx to imgSize.toInt) as.load8(UInt(addr + x), UByte(image(x).byteValue()))
+
+      val entry = MMU_ENTRY(memory = Some(as))
+      mtab(page) = Some(entry)
+      Utils.outln(f"MMU: Mapped ROM memory space.  Page: 0x$page%04X, Addr: 0x$addr%04X - 0x${as.highAddress.intValue}%04X")
+    }
+
 
   }
 
@@ -100,6 +119,11 @@ abstract class BasicMMU(val cpu: BasicCPU) {
     }
 
   }
+
+  def installROM(image:Array[Int], size:Int, baseAddr:UInt) : Unit = {
+    mapROM(baseAddr,UInt(image.size - 1),image)
+  }
+
 
   @inline
   def put8(register16: Register16, value: Register8): Unit = {
