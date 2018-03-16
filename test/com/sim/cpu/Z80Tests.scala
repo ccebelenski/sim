@@ -49,6 +49,9 @@ class Z80Tests {
     mmu.put8(0xff70,UByte(0xff.byteValue()))
     assertTrue(mmu.get8(0xff70) == 0x08) // Verify value did not change.
 
+    val sb = new StringBuilder
+    z80.DAsm(0xff00, 0xffff, sb)
+    Utils.out(sb.toString())
   }
 
   @Test

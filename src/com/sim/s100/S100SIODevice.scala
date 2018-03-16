@@ -38,8 +38,6 @@ class S100SIODevice(machine:S100Machine, mmu: Z80MMU, ports: List[UInt]) extends
   var SIOUnit : S100SIOUnit = _
 
   override def init(): Unit = {
-    super.init()
-
     // Create a default serial console unit
     SIOUnit = new S100SIOUnit(this)//, machine.getCPU.MMU, List(UInt(0x00),UInt(0x01),UInt(0x02),UInt(0x03),UInt(0x10),UInt(0x11)))
     addUnit(SIOUnit)
