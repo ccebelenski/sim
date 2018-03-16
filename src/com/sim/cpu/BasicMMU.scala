@@ -29,11 +29,12 @@ abstract class BasicMMU(val cpu: BasicCPU) {
 
   val COMMON = 0xc000 // Addreses greater than common are in the same memory.
 
-  val mtab: Array[Option[MMU_ENTRY]] = new Array[Option[MMU_ENTRY]]((MAXMEMORY >> LOG2PAGESIZE).toInt)
+  val mtab: Array[Option[MMU_ENTRY]] = new Array[Option[MMU_ENTRY]](1+(MAXMEMORY >> LOG2PAGESIZE).toInt)
   for (x <- mtab.indices) mtab(x) = None
 
   // 256 Ports
   val iotab: Array[Option[PortMappedDevice]] = new Array[Option[PortMappedDevice]](256)
+  for (x <- iotab.indices) iotab(x) = None
 
   private var bankSelect: Int = 0
 

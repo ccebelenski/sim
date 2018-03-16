@@ -4,9 +4,9 @@ import java.nio.file.Path
 
 trait UnitAttachable {
 
-  def attach(sectorSize: Int, xferElementSize: Int, autosize: Boolean, driveType: String, pdp11Tracksize: Int, completetionDelay: Int) : StringBuilder
+  def attach(filespec: String, sb: StringBuilder): Boolean
 
-  def detach()
+  def detach(sb: StringBuilder): Boolean
 
   // Attached path
   var attachedPath: Option[Path] = None

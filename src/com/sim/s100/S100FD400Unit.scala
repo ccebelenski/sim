@@ -23,8 +23,6 @@ class S100FD400Unit(device:S100FD400Device) extends BasicUnit(device) with  Disk
 
   override val waitTime: Long =0 // TODO
 
-  override def action(action: UInt, value: UByte, isWrite: Boolean): UByte = ???
-
   override def cancel(): Unit = ???
 
   override def completeAction(): Unit = ???
@@ -32,7 +30,5 @@ class S100FD400Unit(device:S100FD400Device) extends BasicUnit(device) with  Disk
   override def init(): Unit = {}
 
   override def optionChanged(sb: StringBuilder): Unit = ???
-
-  override def detach(): Unit = ???
 
 }

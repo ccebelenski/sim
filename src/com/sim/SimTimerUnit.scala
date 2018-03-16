@@ -322,7 +322,8 @@ class SimTimerUnit(override val device: SimTimer, val isCalibrated: Boolean = fa
 
 
 
-  override def action(action: UInt, value: UByte, isWrite: Boolean): UByte = {
+  // TODO this is a scheduled action - something else so needs work.
+  def action(action: UInt, value: UByte, isWrite: Boolean): UByte = {
     sim_rtcn_calb(SimTimer.sim_internal_clock_tps)
     device.machine.eventQueue.activateAfter(this, 1000000 / SimTimer.sim_internal_clock_tps)
     UByte(0)
@@ -334,7 +335,7 @@ class SimTimerUnit(override val device: SimTimer, val isCalibrated: Boolean = fa
 
   override def showCommand(sb:StringBuilder): Unit = {
     super.showCommand(sb)
-    sb.append(s"  Clock device is ${getName} ${if (this == SimTimer.internal_timer) "Internal Calibrated Timer"}\n")
+    sb.append(s"  Clock device is $getName ${if (this == SimTimer.internal_timer) "Internal Calibrated Timer"}\n")
     sb.append(s"${if (SimTimer.sim_asynch_timer) "Asynchronus" else if (rtc_hz != 0) "Calibrated" else "Uncalibrated"} Timer:\n")
     if (rtc_hz != 0) {
       sb.append(f"  Running at:                $rtc_hz%d Hz\n")

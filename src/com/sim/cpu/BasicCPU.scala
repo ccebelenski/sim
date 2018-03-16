@@ -74,14 +74,17 @@ abstract class BasicCPU(val isBanked: Boolean, override val machine: AbstractMac
   def setMemorySize(size: UInt): Unit = {
     val maxsize = if (isBanked) MMU.MAXMEMORY else MMU.MAXBANKSIZE
     var newsize = size << KBLOG2
-    if (isBanked) newsize = newsize & ~MMU.ADDRMASK
+    if (isBanked) newsize = newsize & MMU.ADDRMASK
     if (newsize < KB) newsize = KB
     if (newsize > maxsize) newsize = maxsize
     MEMORYSIZE = newsize
     awidth = MMU.MAXBANKSIZELOG2
     if (newsize > MMU.MAXBANKSIZE) awidth = awidth + MMU.MAXBANKSLOG2
 
-    Utils.outln(s"SIM: Memory size = ${Utils.formatBytes(MEMORYSIZE.toLong,true)} Banked: $isBanked")
+
+    MMU.mapRAM(UInt(0x0000), MEMORYSIZE )
+
+    Utils.outln(s"$getName: Memory size = ${Utils.formatBytes(MEMORYSIZE.toLong,true)} Banked: $isBanked")
 
   }
 
@@ -92,29 +95,29 @@ abstract class BasicCPU(val isBanked: Boolean, override val machine: AbstractMac
   /* UI Routines */
   def examine(address: Int): UByte = {
     val byte = MMU.get8(address)
-    Utils.outln(f"SIM: 0x$address%04X:0x${byte.byteValue}%02X")
+    Utils.outln(f"$getName: 0x$address%04X:0x${byte.byteValue}%02X")
     byte
   }
 
   def examineWord(address: Int): UShort = {
     val word = MMU.get16(address)
-    Utils.outln(f"SIM: 0x$address%04X:0x${word.shortValue}%04X")
+    Utils.outln(f"$getName: 0x$address%04X:0x${word.shortValue}%04X")
     word
   }
 
   def examineRegister(nmemonic: String): Int = {
     registers.get(nmemonic) match {
       case Some(r: Register8) =>
-        Utils.outln(f"SIM: $r")
+        Utils.outln(f"$getName: $r")
         r.get8.intValue
       case Some(r: CompositeRegister16) =>
-        Utils.outln(f"SIM: $r")
+        Utils.outln(f"$getName: $r")
         r.get16.intValue
       case Some(r: Register16) =>
-        Utils.outln(f"SIM: $r")
+        Utils.outln(f"$getName: $r")
         r.get16.intValue
       case _ =>
-        Utils.outln(s"SIM: Register $nmemonic is invalid.")
+        Utils.outln(s"$getName: Register $nmemonic is invalid.")
         0
     }
   }
@@ -143,30 +146,30 @@ abstract class BasicCPU(val isBanked: Boolean, override val machine: AbstractMac
   def setRegister8(nmemonic: String, value: UByte): Unit = {
     registers.get(nmemonic) match {
       case None =>
-        Utils.outln(s"SIM: Register $nmemonic is invalid.")
+        Utils.outln(s"$getName: Register $nmemonic is invalid.")
       case Some(r: Register8) =>
         r.set8(value)
       case _ =>
-        Utils.outln(s"SIM: Register is not an 8 bit register.")
+        Utils.outln(s"$getName: Register is not an 8 bit register.")
     }
   }
 
   def setRegister16(nmemonic: String, value: UShort): Unit = {
     registers.get(nmemonic) match {
       case None =>
-        Utils.outln(s"SIM: Register $nmemonic is invalid.")
+        Utils.outln(s"$getName: Register $nmemonic is invalid.")
       case Some(r: Register16) =>
         r.set16(value)
       case _ =>
-        Utils.outln(s"SIM: Register is not a 16 bit register.")
+        Utils.outln(s"$getName: Register is not a 16 bit register.")
     }
   }
 
 
   override def showCommand(stringBuilder: StringBuilder) : Unit = {
     super.showCommand(stringBuilder)
-    stringBuilder.append(s"$getName> Registers:\n" + showRegisters() + "\n")
-    stringBuilder.append(s"$getName> Flags:\n" + showFlags() + "\n")
+    stringBuilder.append(s"$getName: Registers:\n" + showRegisters() + "\n")
+    stringBuilder.append(s"$getName: Flags:\n" + showFlags() + "\n")
   }
 
   // Dissassembly

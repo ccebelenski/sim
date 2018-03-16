@@ -36,6 +36,12 @@ class Console {
     val boot:Command = new BootCommand
     Console.commandTree.put(boot.commandToken, boot)
 
+    val attach:Command = new AttachCommand
+    Console.commandTree.put(attach.commandToken, attach)
+
+    val detach:Command = new DetachCommand
+    Console.commandTree.put(detach.commandToken, detach)
+
     version.process(null)
   }
 

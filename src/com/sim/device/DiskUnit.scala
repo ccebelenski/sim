@@ -1,18 +1,18 @@
 package com.sim.device
 
-import java.nio.ByteBuffer
+import java.nio._
 import java.nio.channels.FileChannel
-import java.nio.file.{Files, Path}
-import java.util.Objects
+import java.nio.file.StandardOpenOption._
+import java.nio.file.{Files, OpenOption, Path, Paths}
+import java.util
 
 import com.sim.Utils
-import com.sim.unsigned.UInt
 import org.slf4j.{Logger, LoggerFactory}
 
 /**
   * Created by christophercebelenski on 7/18/16.
   */
-trait DiskUnit extends BasicUnit with UnitAttachable with SupportsOptions{
+trait DiskUnit extends BasicUnit with UnitAttachable with SupportsOptions {
 
   val logger: Logger = LoggerFactory.getLogger(classOf[DiskUnit])
 
@@ -20,22 +20,21 @@ trait DiskUnit extends BasicUnit with UnitAttachable with SupportsOptions{
 
 
   // Java filechannel
-  var fileChannel : FileChannel = _
+  var fileChannel: FileChannel = _
   var byteBuffer: ByteBuffer = _
 
   // These should be overridden
-  val MAX_TRACKS:Int = 0
+  val MAX_TRACKS: Int = 0
   val DSK_SECT = 0
   val DSK_SECTSIZE = 0
 
   // Unit specific information
-  var current_track:Int = 0
-  var current_sector:Int = 0
-  var current_byte:Int = 0
+  var current_track: Int = 0
+  var current_sector: Int = 0
+  var current_byte: Int = 0
 
-  var sectors_per_track:Int  = DSK_SECT
-  var tracks:Int = MAX_TRACKS
-
+  var sectors_per_track: Int = DSK_SECT
+  var tracks: Int = MAX_TRACKS
 
 
   var FixedCapacity: Boolean = false
@@ -48,9 +47,9 @@ trait DiskUnit extends BasicUnit with UnitAttachable with SupportsOptions{
   // I/O Start time
   var ioStartTime: Long = 0L
 
-  var dirty:Boolean = false
+  var dirty: Boolean = false
 
-  def readSector() : Unit = {
+  def readSector(): Unit = {
     byteBuffer.clear()
     fileChannel.position(DSK_SECTSIZE * sectors_per_track * current_track +
       DSK_SECTSIZE * current_sector)
@@ -61,13 +60,14 @@ trait DiskUnit extends BasicUnit with UnitAttachable with SupportsOptions{
     current_byte = 0
   }
 
-  def seek() : Unit = {
+  def seek(): Unit = {
     fileChannel.position(DSK_SECTSIZE * sectors_per_track * current_track +
       DSK_SECTSIZE * current_sector)
   }
 
   /**
     * Quick check for write-protect
+    *
     * @return
     */
   def isWriteProtect: Boolean = {
@@ -76,6 +76,7 @@ trait DiskUnit extends BasicUnit with UnitAttachable with SupportsOptions{
 
   /**
     * Disk format - should be SIMH or VHD
+    *
     * @return
     */
   def getDiskFormat: String = {
@@ -88,9 +89,9 @@ trait DiskUnit extends BasicUnit with UnitAttachable with SupportsOptions{
     *
     * @return
     */
-  def isAvailable:Boolean = {
-    if(attachedPath.isEmpty) return false
-    if(capacity <= 0) return false
+  def isAvailable: Boolean = {
+    if (attachedPath.isEmpty) return false
+    if (capacity <= 0) return false
 
 
     true
@@ -100,42 +101,69 @@ trait DiskUnit extends BasicUnit with UnitAttachable with SupportsOptions{
   /**
     * get disk size - #450 sim_disk.c
     * Assumes disk is attached...
+    *
     * @return
     */
-  protected def sim_disk_size:Long = {
-    var physical_size:Long = 0L
-    var filesystem_size:Long = get_filesystem_size()
+  protected def sim_disk_size: Long = {
+    var physical_size: Long = 0L
 
     physical_size = getDiskFormat match {
       case "SIMH" => sim_fsize_ex(attachedPath.get)
-      case "VHD" => sim_vhd_disk_size()
       case _ => -1
     }
-    if(filesystem_size == -1 || filesystem_size < physical_size) physical_size else filesystem_size
+    physical_size
   }
 
-  private def sim_fsize_ex(p:Path) : Long = {
+  private def sim_fsize_ex(p: Path): Long = {
     Files.size(p)
   }
 
-  // TODO VHD Not implmented here.
-  private def sim_vhd_disk_size(): Long = {-1L}
-  // TODO ODS1,ODS2,Ultrix filesystems...
-  private def get_filesystem_size() : Long = {-1L}
+
+  override def attach(fileSpec: String, sb: StringBuilder): Boolean = {
+
+    if(isAvailable) {
+      sb.append(s"$getName: Unit is still attached.   DETACH first.\n")
+      return true
+    }
+
+    // TODO Check file spec, if doesn't exist then assume create a new file
+    val p = Paths.get(fileSpec)
+    val options = new util.HashSet[OpenOption]
+    options.add(SPARSE)
+    options.add(CREATE)
+    options.add(WRITE)
+
+    fileChannel = FileChannel.open(p, options)
 
 
-  override def attach(sectorSize: Int,
-                      xferElementSize: Int,
-                      autosize: Boolean,
-                      driveType: String,
-                      pdp11Tracksize: Int,
-                      completetionDelay: Int) : StringBuilder = {
-    val sb:StringBuilder = new StringBuilder
-    
+    // Allocate the bytebuffer
+    byteBuffer = ByteBuffer.allocate(DSK_SECTSIZE)
 
 
+    attachedPath = Some(p)
+    capacity = DSK_SECTSIZE * DSK_SECT * MAX_TRACKS
+    dirty = false
 
-    sb
+    sb.append(s"$getName: Attached: ${attachedPath.get.getFileName}\n")
+    sb.append(s"$getName: Capacity: ${Utils.formatBytes(capacity,true)}")
+    // Attaching enabled the device implicitly
+    setEnable(true)
+
+    false
+  }
+
+  override def detach(sb: StringBuilder): Boolean = {
+
+    if(!isAvailable) {
+      sb.append(s"$getName: Unit is not attached.")
+      return true
+    }
+    if(dirty) writebuf()
+    fileChannel.close()
+    capacity = 0
+    byteBuffer.clear()
+
+    false
   }
 
 

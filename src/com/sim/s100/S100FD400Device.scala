@@ -3,7 +3,7 @@ package com.sim.s100
 import com.sim.cpu.{BasicMMU, Z80MMU}
 import com.sim.device._
 import com.sim.machine.AbstractMachine
-import com.sim.unsigned.UInt
+import com.sim.unsigned.{UByte, UInt}
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
@@ -120,9 +120,6 @@ class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exte
       val du = new S100FD400Unit(this)
       addUnit(du)
     }
-
-    // TODO Map our ports into the MMU
-
 
   }
 
@@ -360,6 +357,10 @@ class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exte
     true
 
   }
+
+  // Perform a port action
+  def action(action: UInt, value: UByte, isWrite: Boolean) : UByte = ???
+
 }
 
 object S100FD400Device {

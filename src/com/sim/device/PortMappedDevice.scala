@@ -16,7 +16,6 @@ import scala.collection.mutable.ArrayBuffer
 abstract class PortMappedDevice(machine: AbstractMachine, mmu: BasicMMU, val ports: List[UInt]) extends BasicDevice(machine) {
 
   override val isPortMapped: Boolean = true
-  val A: ArrayBuffer[MappedDeviceAction] = new ArrayBuffer()
 
   def handles(port: UInt): Boolean = {
     ports.contains(port)
@@ -33,11 +32,9 @@ abstract class PortMappedDevice(machine: AbstractMachine, mmu: BasicMMU, val por
     }
   }
 
-  def action(action: UInt, value: UByte, isWrite: Boolean): UByte = {
-    A.find(a => a.address == action) match {
-      case None => new UByte(0)
-      case Some(a) => a.action(value, isWrite)
-    }
-  }
+  // Perform a unit action
+  def action(action: UInt, value: UByte, isWrite: Boolean) : UByte
+
+
 
 }

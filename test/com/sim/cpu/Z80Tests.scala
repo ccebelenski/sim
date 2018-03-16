@@ -20,8 +20,8 @@ class Z80Tests {
       Z80Tests.machine.init()
       Z80Tests.z80 = Z80Tests.machine.findDevice("Z80A").get.asInstanceOf[Z80]
       Z80Tests.mmu = Z80Tests.z80.MMU
-      Z80Tests.z80.setMemorySize(UInt(0xFFFF))
-      Z80Tests.mmu.mapRAM(UInt(0x0000), UInt(0x500))
+      Z80Tests.z80.setMemorySize(UInt(0x500))
+      //Z80Tests.mmu.mapRAM(UInt(0x0000), UInt(0x500))
       Z80Tests.PC = Z80Tests.z80.registers("PC").asInstanceOf[Register16]
       val sb: StringBuilder = new StringBuilder
       Z80Tests.z80.setOption("STOPONHALT", "true", sb)

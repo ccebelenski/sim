@@ -44,8 +44,7 @@ abstract class BasicUnit(val device: BasicDevice) extends Ordered[BasicUnit] wit
   def getName: String = device.getName + unitNumber
 
 
-  // Perform a unit action
-  def action(action: UInt, value: UByte, isWrite: Boolean) : UByte
+
 
   // Action is cancelled
   def cancel(): Unit

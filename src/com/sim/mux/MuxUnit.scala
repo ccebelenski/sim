@@ -70,8 +70,6 @@ class MuxUnit(device: MuxDevice, var socket: Socket) extends BasicUnit(device: B
     else sb.append("None\n")
   }
 
-  override def action(action: UInt, value: UByte, isWrite: Boolean): UByte = {UByte(0)}
-
   override def cancel(): Unit = {}
 
   override def completeAction(): Unit = {}

@@ -12,8 +12,6 @@ class S100SIOUnit(device: S100SIODevice) extends BasicUnit(device: BasicDevice)
   }
 
 
-  override def action(action: UInt, value: UByte, isWrite: Boolean): UByte = ???
-
   override val waitTime:Long = 100000L
 
   override def cancel(): Unit = ???

@@ -8,9 +8,6 @@ class BootCommand extends Command {
   commandDescription = "Attempts to boot a specific unit."
   commandHelpText = "Boot a unit.  The unit must be bootable and be attached to bootable media."
 
-  addSubCommand(new ShowMachineCommand)
-  addSubCommand(new ShowDeviceCommand)
-
   override def process(tokenArray: Array[String]): Boolean = {
     val sb:StringBuilder = new StringBuilder
     var willBoot = false

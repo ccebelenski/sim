@@ -4,7 +4,7 @@ import java.util.ServiceLoader
 
 import com.sim._
 import com.sim.cpu.BasicCPU
-import com.sim.device.{BasicDevice, BasicUnit}
+import com.sim.device.{BasicDevice, BasicUnit, PortMappedDevice}
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
@@ -71,6 +71,11 @@ abstract class AbstractMachine extends Named{
     // TODO Name management
     device.createUnitOptions
     device.init()
+    device match {
+      case device1: PortMappedDevice => getCPU.MMU.mapPortMappedDevice(device1)
+      case _ =>
+    }
+
     devices.append(device)
   }
 

@@ -2,7 +2,7 @@ package com.sim.s100
 
 import com.sim.cpu.Z80MMU
 import com.sim.device._
-import com.sim.unsigned.UInt
+import com.sim.unsigned.{UByte, UInt}
 
 /**
   * A simulated MITS 2SIO interface card.
@@ -38,7 +38,7 @@ class S100SIODevice(machine:S100Machine, mmu: Z80MMU, ports: List[UInt]) extends
   var SIOUnit : S100SIOUnit = _
 
   override def init(): Unit = {
-    //super.init()
+    super.init()
 
     // Create a default serial console unit
     SIOUnit = new S100SIOUnit(this)//, machine.getCPU.MMU, List(UInt(0x00),UInt(0x01),UInt(0x02),UInt(0x03),UInt(0x10),UInt(0x11)))
@@ -73,6 +73,8 @@ class S100SIODevice(machine:S100Machine, mmu: Z80MMU, ports: List[UInt]) extends
   }
 
   override def optionChanged(sb: StringBuilder): Unit = ???
+
+  override def action(action: UInt, value: UByte, isWrite: Boolean): UByte = ???
 }
 
 /*

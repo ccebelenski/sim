@@ -16,9 +16,9 @@ class S100Machine extends AbstractMachine{
 
 
   override def init():Unit = {
-    // Add the CPU - Initially the only device?
+    // Add the CPU first
     // NB the system timer will be added by the machine
-    val cpu = new Z80(true,this)
+    cpu = new Z80(true,this)
     addDevice(cpu)
     val mux = new MuxDevice(this)
     addDevice(mux)

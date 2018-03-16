@@ -8,23 +8,7 @@ import scala.collection.immutable.HashMap
   * Created by christophercebelenski on 7/19/16.
   */
 object Utils {
-  /* get_uint             unsigned number
-     Inputs:
-          cptr    =       pointer to input string
-          radix   =       input radix
-          max     =       maximum acceptable value
-          *status =       pointer to error status
-     Outputs:
-          val     =       value
-  */
- /* def getUint(cptr: String, radix: Int, max: Int) : Int = {
-    val value: UInt = strtotv(cptr,radix)
 
-    if(value > max) throw new IllegalArgumentException("Maximum value exceeded")
-
-    value
-  }
-*/
   def isalnum(c: Char) : Boolean = {
     if ((c & 0x80) != 0) false else c.isLetterOrDigit
   }
@@ -92,4 +76,8 @@ object Utils {
     val pre = (if (si) "kMGTPE" else "KMGTPE").charAt(exp - 1) + (if (si) "" else "i")
     f"${bytes / Math.pow(unit, exp)}%.1f ${pre}B"
   }
+
 }
+
+
+
