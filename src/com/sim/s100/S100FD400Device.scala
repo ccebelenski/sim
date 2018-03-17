@@ -90,14 +90,13 @@ class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exte
   val NUM_OF_DSK_MASK: Int = NUM_OF_DSK - 1
 
 
-
-//  val DSK_TRACSIZE: Int = DSK_SECTSIZE * DSK_SECT
-//  val MAX_DSK_SIZE: Int = DSK_TRACSIZE * MAX_TRACKS
+  //  val DSK_TRACSIZE: Int = DSK_SECTSIZE * DSK_SECT
+  //  val MAX_DSK_SIZE: Int = DSK_TRACSIZE * MAX_TRACKS
   val BOOTROM_SIZE_DSK: Int = 256 // size of boot rom
 
   val MINI_DISK_SECT: Int = 16
   val MINI_DISK_TRACKS: Int = 35
-//  val MINI_DISK_SIZE: Int = MINI_DISK_TRACKS * MINI_DISK_SECT * DSK_SECTSIZE
+  //  val MINI_DISK_SIZE: Int = MINI_DISK_TRACKS * MINI_DISK_SECT * DSK_SECTSIZE
   val MINI_DISK_DELTA: Int = 4096 // Threshold for detecting mini disks
 
   var current_disk: Option[S100FD400Unit] = None
@@ -116,7 +115,7 @@ class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exte
 
   override def init(): Unit = {
     // Create 16 units
-    for(i <- 0 until NUM_OF_DSK) {
+    for (i <- 0 until NUM_OF_DSK) {
       val du = new S100FD400Unit(this)
       addUnit(du)
     }
@@ -162,10 +161,8 @@ class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exte
 
     }
 
-    var cd = current_disk.get
-
-    // isWrite = true, controller set/reset/enable/disable
-    if (cd.dirty) cd.writebuf()
+    if(current_disk.isDefined && current_disk.get.dirty)
+      current_disk.get.writebuf()
 
     val disknum = action & NUM_OF_DSK_MASK
     current_disk = findUnitByNumber(disknum).asInstanceOf[Option[S100FD400Unit]]
@@ -174,7 +171,8 @@ class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exte
 
 
       return 0
-    } else cd = current_disk.get // new current disk
+    }
+    val cd = current_disk.get // new current disk
 
 
     if (!cd.isAvailable) {
@@ -353,13 +351,21 @@ class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exte
     }
     machine.getCPU.PC(ALTAIR_ROM_LOW)
     sb.append(f"$getName: Boot ROM start: $ALTAIR_ROM_LOW%04x")
+    machine.getCPU.runcpu()
 
     true
 
   }
 
   // Perform a port action
-  def action(action: UInt, value: UByte, isWrite: Boolean) : UByte = ???
+  def action(action: UInt, value: UByte, isWrite: Boolean): UByte = {
+    action.intValue match {
+      case (0x08) => UByte(dsk08(value.intValue, isWrite).byteValue())
+      case (0x09) => UByte(dsk09(value.intValue, isWrite).byteValue())
+      case (0x0A) => UByte(dsk0a(value.intValue, isWrite).byteValue())
+      case _ => UByte(0)
+    }
+  }
 
 }
 

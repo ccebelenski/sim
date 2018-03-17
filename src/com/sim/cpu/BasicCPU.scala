@@ -74,9 +74,10 @@ abstract class BasicCPU(val isBanked: Boolean, override val machine: AbstractMac
   def setMemorySize(size: UInt): Unit = {
     val maxsize = if (isBanked) MMU.MAXMEMORY else MMU.MAXBANKSIZE
     var newsize = size << KBLOG2
-    if (isBanked) newsize = newsize & MMU.ADDRMASK
+    if (isBanked) newsize = newsize & ~MMU.ADDRMASK
     if (newsize < KB) newsize = KB
     if (newsize > maxsize) newsize = maxsize
+    if (newsize > size) newsize = size
     MEMORYSIZE = newsize
     awidth = MMU.MAXBANKSIZELOG2
     if (newsize > MMU.MAXBANKSIZE) awidth = awidth + MMU.MAXBANKSLOG2

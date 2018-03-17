@@ -1364,6 +1364,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
           case (0xd3) => // OUT (nn),A
             addTStates(11)
             MMU.out8(MMU.get8(PC), A)
+            PC.increment()
 
           case (0xd4) => // CALL NC, nnnn
             CALLC(!testFlag(F, FLAG_C))

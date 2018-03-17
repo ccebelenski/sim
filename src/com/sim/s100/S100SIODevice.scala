@@ -1,5 +1,6 @@
 package com.sim.s100
 
+import com.sim.Utils
 import com.sim.cpu.Z80MMU
 import com.sim.device._
 import com.sim.unsigned.{UByte, UInt}
@@ -39,7 +40,7 @@ class S100SIODevice(machine:S100Machine, mmu: Z80MMU, ports: List[UInt]) extends
 
   override def init(): Unit = {
     // Create a default serial console unit
-    SIOUnit = new S100SIOUnit(this)//, machine.getCPU.MMU, List(UInt(0x00),UInt(0x01),UInt(0x02),UInt(0x03),UInt(0x10),UInt(0x11)))
+    SIOUnit = new S100SIOUnit(this)
     addUnit(SIOUnit)
 
   }
@@ -72,7 +73,11 @@ class S100SIODevice(machine:S100Machine, mmu: Z80MMU, ports: List[UInt]) extends
 
   override def optionChanged(sb: StringBuilder): Unit = ???
 
-  override def action(action: UInt, value: UByte, isWrite: Boolean): UByte = ???
+  override def action(action: UInt, value: UByte, isWrite: Boolean): UByte = {
+    Utils.outln(s"$getName: Port: $action Value:$value isWrite: $isWrite")
+
+    UByte(0)
+  }
 }
 
 /*
