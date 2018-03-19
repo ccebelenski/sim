@@ -34,7 +34,6 @@ trait DiskUnit extends BasicUnit with UnitAttachable with SupportsOptions {
   var current_byte: Int = 0
   var current_flag:Int = 0
 
-  var sectors_per_track: Int = DSK_SECT
   var tracks: Int = MAX_TRACKS
 
 
@@ -57,13 +56,13 @@ trait DiskUnit extends BasicUnit with UnitAttachable with SupportsOptions {
       fileChannel.read(byteBuffer)
     } while (byteBuffer.hasRemaining)
 
-    Utils.outln(s"$getName: Read ${byteBuffer.toString}")
+    //Utils.outln(s"$getName: Read ${byteBuffer.toString}")
     current_byte = 0
     byteBuffer.rewind()
   }
 
   def seek(): Unit = {
-    val pos = DSK_SECTSIZE * sectors_per_track * current_track +
+    val pos = DSK_SECTSIZE * DSK_SECT * current_track +
       DSK_SECTSIZE * current_sector
     Utils.outln(s"$getName: SEEK $pos : CT: $current_track CS:$current_sector")
     fileChannel.position(pos)
@@ -186,7 +185,7 @@ trait DiskUnit extends BasicUnit with UnitAttachable with SupportsOptions {
       while (byteBuffer.hasRemaining) fileChannel.write(byteBuffer)
     }
 
-    current_byte = 0xff
+    current_byte = 0xffff
     dirty = false
 
   }

@@ -3622,7 +3622,8 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
   @inline
   private final def JPC(cond: => Boolean): Unit = {
     addTStates(10)
-    if (cond) {
+    val result: Boolean = cond
+    if (result == true) {
       PC(MMU.get16(PC))
     } else PC(PC + 2)
   }

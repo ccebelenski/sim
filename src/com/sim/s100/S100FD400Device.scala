@@ -170,7 +170,7 @@ class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exte
       current_disk.get.writebuf()
 
     val disknum = action & NUM_OF_DSK_MASK
-    Utils.outln(s"$getName: Write to x08 - Disk Num: ${disknum}")
+    Utils.outln(s"$getName: Write to x08 - Disk Num: $disknum")
 
     current_disk = findUnitByNumber(disknum).asInstanceOf[Option[S100FD400Unit]]
     if (current_disk.isEmpty) {
@@ -191,13 +191,13 @@ class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exte
     }
 
 
-    cd.current_sector = 0xff // reset internal counters
-    cd.current_byte = 0xff
+    cd.current_sector = 0xffff // reset internal counters
+    cd.current_byte = 0xffff
     if ((action & 0x80) != 0) cd.current_flag = 0 // Disable drive?
     else { // enable drive
       cd.current_flag = 0x1a // Move head true
       if (cd.current_track == 0) cd.current_flag |= 0x40 // Track 0? Set flag
-      if (cd.sectors_per_track == MINI_DISK_SECT) cd.current_flag |= 0x84 // Drive enable loads heads on minidisk
+      if (cd.DSK_SECT == MINI_DISK_SECT) cd.current_flag |= 0x84 // Drive enable loads heads on minidisk
     }
 
     0
@@ -218,14 +218,15 @@ class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exte
 
       val cd = current_disk.get
       if (cd.dirty) cd.writebuf()
-      Utils.outln(s"$getName: read sector position. ST:${cd.sector_true}")
+      Utils.outln(s"$getName: read sector position. ST:${cd.sector_true}  Flag:${cd.current_flag}")
 
       if ((cd.current_flag & 0x04) != 0) { // head loadded?}
         cd.sector_true ^= 1
         if (cd.sector_true == 0) {
           cd.current_sector += 1
-          if (cd.current_sector >= cd.sectors_per_track) cd.current_sector = 0
-          cd.current_byte = 0xff
+          Utils.outln(s"*** Current Sector now: ${cd.current_sector} max:${cd.DSK_SECT}")
+          if (cd.current_sector >= cd.DSK_SECT) cd.current_sector = 0
+          cd.current_byte = 0xffff
 
         }
         // return sector number and sector true and set 'unused' bits
@@ -247,8 +248,8 @@ class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exte
       cd.current_flag &= 0xbf // track zero now false
       if (cd.current_track > cd.tracks - 1) cd.current_track = cd.tracks - 1
       if (cd.dirty) cd.writebuf()
-      cd.current_sector = 0xff
-      cd.current_byte = 0xff
+      cd.current_sector = 0xffff
+      cd.current_byte = 0xffff
 
       Utils.outln(s"$getName: Step in.  CT: ${cd.current_track}")
     }
@@ -259,13 +260,13 @@ class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exte
         Utils.outln(s"$getName: Stuck-disk - Unnecessary step out.")
       }
       cd.current_track -= 1
-      if (cd.current_track < 0) {
+      if (cd.current_track <= 0) {
         cd.current_track = 0
         cd.current_flag |= 0x40 // Track 0 if there
       }
       if (cd.dirty) cd.writebuf()
-      cd.current_sector = 0xff
-      cd.current_byte = 0xff
+      cd.current_sector = 0xffff
+      cd.current_byte = 0xffff
 
       Utils.outln(s"$getName: Step out.  CT: ${cd.current_track}")
     }
@@ -281,13 +282,14 @@ class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exte
 
     }
 
-    if (((action & 0x08) != 0) && (cd.sectors_per_track != MINI_DISK_SECT)) {
+    if (((action & 0x08) != 0) && (cd.DSK_SECT != MINI_DISK_SECT)) {
       // Head unload (not on mini-disk)
       cd.current_flag &= 0xfb // Turn off head loaded
       cd.current_flag &= 0x7f // Turn off read data available
-      cd.current_sector = 0xff
-      cd.current_byte = 0xff
+      cd.current_sector = 0xfff
+      cd.current_byte = 0xffff
 
+      Utils.outln(s"$getName: Head unload.")
     }
 
     // interrupts and head current are ignored
@@ -319,9 +321,11 @@ class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exte
         cd.readSector()
       }
       val rtn = cd.byteBuffer.get(cd.current_byte) & 0xff
-      Utils.outln(s"$getName: Read: ${rtn.intValue()} CB:${cd.current_byte} LIM:${cd.DSK_SECTSIZE}")
+      //Utils.outln(s"$getName: Read: ${rtn.intValue()} CB:${cd.current_byte} LIM:${cd.DSK_SECTSIZE}")
+      Utils.outln(s"$getName: READ: Sector:${cd.current_sector} Track:${cd.current_track} Byte:${cd.current_byte}  Value:$rtn")
       cd.current_byte += 1
       //cd.current_flag &= 0xfe
+
       return rtn
 
     }
@@ -350,7 +354,7 @@ class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exte
     } // No such unit?
     val cd = unit.get
     val useAltairROM = getBinaryOption("ALTAIRROM") | machine.getCPU.isBanked
-    val isMiniDisk = cd.sectors_per_track == MINI_DISK_SECT
+    val isMiniDisk = if(cd.DSK_SECT == MINI_DISK_SECT) true else false
     if (useAltairROM) {
       if (isMiniDisk) {
         mmu.installROM(S100FD400Device.alt_bootrom_dsk.toArray,
@@ -430,7 +434,7 @@ object S100FD400Device {
 
   /* Altair MITS modified BOOT EPROM, fits in upper 256 byte of memory */
   val bootrom_dsk: mutable.ListBuffer[Int] = ListBuffer(
-    0xf3, 0x06, 0x80, 0x3e, 0x0e, 0xd3, 0xfe, 0x05, /* ff00-ff07 */
+    0xf3, 0x06, 0x01, 0x3e, 0x0e, 0xd3, 0xfe, 0x05, /* ff00-ff07 */
     0xc2, 0x05, 0xff, 0x3e, 0x16, 0xd3, 0xfe, 0x3e, /* ff08-ff0f */
     0x12, 0xd3, 0xfe, 0xdb, 0xfe, 0xb7, 0xca, 0x20, /* ff10-ff17 */
     0xff, 0x3e, 0x0c, 0xd3, 0xfe, 0xaf, 0xd3, 0xfe, /* ff18-ff1f */
