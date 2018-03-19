@@ -1077,11 +1077,11 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
           case (0xb6) => // OR (HL)
             addTStates(7)
             CHECK_BREAK_BYTE(HL)
-            AF(xororTable(A | MMU.get8(HL)))
+            AF(xororTable((AF >> 8) | MMU.get8(HL) & 0xff))
 
           case (0xb7) => // OR A
             addTStates(4)
-            AF(xororTable(A))
+            AF(xororTable(AF >> 8) & 0xff)
 
           case (0xb8) => // CP B
             addTStates(4)
@@ -3803,7 +3803,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
   @inline
   private final def DEC(r1: Register8): Unit = {
     r1.decrement()
-    AF((AF & ~0xfe) | decTable(r1) | SET_PV2(0x7f, r1))
+    AF((AF & ~0xfe) | decTable(r1 & 0xff) | SET_PV2(0x7f, r1))
   }
 
   @inline

@@ -39,6 +39,9 @@ class Console {
     val attach:Command = new AttachCommand
     Console.commandTree.put(attach.commandToken, attach)
 
+    val disasm:DisassembleCommand = new DisassembleCommand
+    Console.commandTree.put(disasm.commandToken, disasm)
+
     val detach:Command = new DetachCommand
     Console.commandTree.put(detach.commandToken, detach)
 

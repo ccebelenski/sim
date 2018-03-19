@@ -32,6 +32,7 @@ trait DiskUnit extends BasicUnit with UnitAttachable with SupportsOptions {
   var current_track: Int = 0
   var current_sector: Int = 0
   var current_byte: Int = 0
+  var current_flag:Int = 0
 
   var sectors_per_track: Int = DSK_SECT
   var tracks: Int = MAX_TRACKS
@@ -51,18 +52,21 @@ trait DiskUnit extends BasicUnit with UnitAttachable with SupportsOptions {
 
   def readSector(): Unit = {
     byteBuffer.clear()
-    fileChannel.position(DSK_SECTSIZE * sectors_per_track * current_track +
-      DSK_SECTSIZE * current_sector)
+    seek()
     do {
       fileChannel.read(byteBuffer)
     } while (byteBuffer.hasRemaining)
 
+    Utils.outln(s"$getName: Read ${byteBuffer.toString}")
     current_byte = 0
+    byteBuffer.rewind()
   }
 
   def seek(): Unit = {
-    fileChannel.position(DSK_SECTSIZE * sectors_per_track * current_track +
-      DSK_SECTSIZE * current_sector)
+    val pos = DSK_SECTSIZE * sectors_per_track * current_track +
+      DSK_SECTSIZE * current_sector
+    Utils.outln(s"$getName: SEEK $pos : CT: $current_track CS:$current_sector")
+    fileChannel.position(pos)
   }
 
   /**
@@ -126,12 +130,13 @@ trait DiskUnit extends BasicUnit with UnitAttachable with SupportsOptions {
       return true
     }
 
-    // TODO Check file spec, if doesn't exist then assume create a new file
+    //  if doesn't exist then assume create a new file
     val p = Paths.get(fileSpec)
     val options = new util.HashSet[OpenOption]
     options.add(SPARSE)
     options.add(CREATE)
     options.add(WRITE)
+    options.add(READ)
 
     fileChannel = FileChannel.open(p, options)
 
@@ -168,14 +173,16 @@ trait DiskUnit extends BasicUnit with UnitAttachable with SupportsOptions {
 
 
   def writebuf(): Unit = {
+    byteBuffer.position(current_byte)  // Necessary?
     var i = current_byte
     while (i < DSK_SECTSIZE) { // null-fill rest of sector if any
       byteBuffer.put(i, 0)
       i += 1
     }
+    Utils.outln(s"$getName: Writebuf - ${byteBuffer.toString}")
     if (!isWriteProtect) {
-      fileChannel.position(DSK_SECTSIZE * sectors_per_track * current_track +
-        DSK_SECTSIZE * current_sector)
+      seek()
+      byteBuffer.rewind()
       while (byteBuffer.hasRemaining) fileChannel.write(byteBuffer)
     }
 

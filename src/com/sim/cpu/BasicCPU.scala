@@ -57,7 +57,7 @@ abstract class BasicCPU(val isBanked: Boolean, override val machine: AbstractMac
   }
   @inline
   final def testFlag(reg:Register8, flag:Int) : Boolean = {
-    if((reg & flag) != 0) true else false
+    if((reg.intValue & flag) != 0) true else false
   }
   @inline
   final def testFlag(reg:Register16, flag:Int): Boolean = {
@@ -210,7 +210,7 @@ class Register8(override val nmenomic: String) extends Register(nmenomic) {
   def increment(): Unit = value = new UByte((value.byteValue + 1).toByte)
 
   @inline
-  def decrement(): Unit = value = new UByte((value.byteValue - 1).toByte)
+  def decrement(): Unit = value = UByte((value - UByte(1)).byteValue)
 
   override val aWidth = 8
 

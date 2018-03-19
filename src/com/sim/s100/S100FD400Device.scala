@@ -1,5 +1,6 @@
 package com.sim.s100
 
+import com.sim.Utils
 import com.sim.cpu.{BasicMMU, Z80MMU}
 import com.sim.device._
 import com.sim.machine.AbstractMachine
@@ -130,6 +131,7 @@ class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exte
 
   }
 
+
   /*  I/O instruction handlers, called from the CPU module when an
       IN or OUT instruction is issued.
       Each function is passed an  read/write flag. On input, the actual
@@ -146,18 +148,21 @@ class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exte
       flag bits more logical, yet meets the simulation requirement
       that they are reversed in hardware.
   */
-  def dsk08(action: Int, isWrite: Boolean): Int = {
+  def dsk08(action: Int, isWrite: Boolean): Int = { // 010
 
     // isWrite = false, return flags
     if (!isWrite) {
 
       if (current_disk.isEmpty) {
-        // TODO Log the debug action
+        // Log the debug action
+        Utils.outln(s"$getName: Status on un-attached disk.")
 
         return 0xff
       }
+      val str = f"${(~(current_disk.get.current_flag) & 0xff).toBinaryString}%8s".replaceAll(" ", "0")
+      Utils.outln(s"$getName: Status : $str")
       // Return the complement
-      return ~current_disk.get.current_flag & 0xff
+      return (~current_disk.get.current_flag) & 0xff
 
     }
 
@@ -165,10 +170,12 @@ class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exte
       current_disk.get.writebuf()
 
     val disknum = action & NUM_OF_DSK_MASK
+    Utils.outln(s"$getName: Write to x08 - Disk Num: ${disknum}")
+
     current_disk = findUnitByNumber(disknum).asInstanceOf[Option[S100FD400Unit]]
     if (current_disk.isEmpty) {
-      // TODO Illegal drive number
-
+      // Illegal drive number
+      Utils.outln(s"$getName: Illegal drive number. ($disknum)")
 
       return 0
     }
@@ -176,11 +183,13 @@ class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exte
 
 
     if (!cd.isAvailable) {
-      // TODO not available (not attached?)
+      // Not available (not attached?)
+      Utils.outln(s"$getName: Unit is not available. ($disknum)")
 
       current_disk = None
       return 0
     }
+
 
     cd.current_sector = 0xff // reset internal counters
     cd.current_byte = 0xff
@@ -194,11 +203,12 @@ class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exte
     0
   }
 
-  // Disk Drive status/functions
+  // Disk Drive status/functions  011
   def dsk09(action: Int, isWrite: Boolean): Int = {
 
     if (current_disk.isEmpty) {
-      // TODO Un-available drive selected
+      // Un-available drive selected
+      Utils.outln(s"$getName: Unavailable drive unit selected.")
 
       return 0xff // nothing we can do
     }
@@ -208,6 +218,7 @@ class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exte
 
       val cd = current_disk.get
       if (cd.dirty) cd.writebuf()
+      Utils.outln(s"$getName: read sector position. ST:${cd.sector_true}")
 
       if ((cd.current_flag & 0x04) != 0) { // head loadded?}
         cd.sector_true ^= 1
@@ -229,7 +240,8 @@ class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exte
     if ((action & 0x01) != 0) {
       // Step head in
       if (cd.current_track == (cd.tracks - 1)) {
-        // TODO unnecessary step in
+        // unnecessary step in
+        Utils.outln(s"$getName: Unnecessary step in cmd.")
       }
       cd.current_track += 1
       cd.current_flag &= 0xbf // track zero now false
@@ -238,11 +250,13 @@ class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exte
       cd.current_sector = 0xff
       cd.current_byte = 0xff
 
+      Utils.outln(s"$getName: Step in.  CT: ${cd.current_track}")
     }
     if ((action & 0x02) != 0) {
       // Step head out
       if (cd.current_track == 0) {
-        // TODO Stuck disk, unecessary step out.
+        // Stuck disk, unnecessary step out.
+        Utils.outln(s"$getName: Stuck-disk - Unnecessary step out.")
       }
       cd.current_track -= 1
       if (cd.current_track < 0) {
@@ -252,14 +266,18 @@ class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exte
       if (cd.dirty) cd.writebuf()
       cd.current_sector = 0xff
       cd.current_byte = 0xff
+
+      Utils.outln(s"$getName: Step out.  CT: ${cd.current_track}")
     }
 
     if (cd.dirty) cd.writebuf()
 
     if ((action & 0x04) != 0) {
       // head load
+      Utils.outln(s"$getName: Head load.")
       cd.current_flag |= 0x04 // turn on head loaded bit
       cd.current_flag |= 0x80 // Turn on 'read data available'
+      cd.current_flag &= 0xfe
 
     }
 
@@ -287,7 +305,8 @@ class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exte
   def dsk0a(action: Int, isWrite: Boolean): Int = {
 
     if (current_disk.isEmpty) {
-      // TODO Un-available drive selected
+      // Un-available drive selected
+      Utils.outln(s"$getName: Unavailable drive selected for I/O.")
 
       return 0 // nothing we can do
     }
@@ -296,10 +315,13 @@ class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exte
     if (!isWrite) {
       if (cd.current_byte >= cd.DSK_SECTSIZE) {
         // Physically read the sector
+        Utils.outln(s"$getName: calling readsector. CB:${cd.current_byte} LIM:${cd.DSK_SECTSIZE}")
         cd.readSector()
       }
       val rtn = cd.byteBuffer.get(cd.current_byte) & 0xff
+      Utils.outln(s"$getName: Read: ${rtn.intValue()} CB:${cd.current_byte} LIM:${cd.DSK_SECTSIZE}")
       cd.current_byte += 1
+      //cd.current_flag &= 0xfe
       return rtn
 
     }

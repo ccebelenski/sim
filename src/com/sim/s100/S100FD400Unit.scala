@@ -10,7 +10,6 @@ class S100FD400Unit(device:S100FD400Device) extends BasicUnit(device) with  Disk
   override val DSK_SECT: Int = 32 // Sectors per track
   override val MAX_TRACKS: Int = 254 // Number of tracts, original Altair has 77 only
 
-  var current_flag:Int = 0
 
   var sector_true :Int = 0
 
