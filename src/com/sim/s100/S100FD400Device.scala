@@ -125,6 +125,8 @@ class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exte
 
   override def optionChanged(sb: StringBuilder): Unit = ???
 
+  var laststat08 = 0
+
   override def createUnitOptions: Unit = {
 
     unitOptions.append(BinaryUnitOption("ALTAIRROM", "Use modified Altair boot ROM", value = true))
@@ -159,10 +161,15 @@ class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exte
 
         return 0xff
       }
-      val str = f"${(~(current_disk.get.current_flag) & 0xff).toBinaryString}%8s".replaceAll(" ", "0")
-      Utils.outln(s"$getName: Status : $str")
+
       // Return the complement
-      return (~current_disk.get.current_flag) & 0xff
+      val stat08 =  (~current_disk.get.current_flag) & 0xff
+      if(laststat08 != stat08) {
+        laststat08 = stat08
+        val str = f"${(~(current_disk.get.current_flag) & 0xff).toBinaryString}%8s".replaceAll(" ", "0")
+        Utils.outln(s"$getName: Status : $str")
+      }
+      return stat08
 
     }
 
@@ -218,19 +225,19 @@ class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exte
 
       val cd = current_disk.get
       if (cd.dirty) cd.writebuf()
-      Utils.outln(s"$getName: read sector position. ST:${cd.sector_true}  Flag:${cd.current_flag}")
+      //Utils.outln(s"$getName: read sector position. ST:${cd.sector_true}  Flag:${cd.current_flag}")
 
       if ((cd.current_flag & 0x04) != 0) { // head loadded?}
         cd.sector_true ^= 1
         if (cd.sector_true == 0) {
           cd.current_sector += 1
-          Utils.outln(s"*** Current Sector now: ${cd.current_sector} max:${cd.DSK_SECT}")
           if (cd.current_sector >= cd.DSK_SECT) cd.current_sector = 0
+          Utils.outln(s"*** CS now: ${cd.current_sector} CT:${cd.current_track} Byte:$readbytes")
           cd.current_byte = 0xffff
 
         }
         // return sector number and sector true and set 'unused' bits
-        return ((cd.current_sector << 1) & 0x3e) | 0xc0 | cd.sector_true
+        return (((cd.current_sector << 1) & 0x3e) | 0xc0 | cd.sector_true)
       } else return 0xff // Head not loaded
 
     }
@@ -240,13 +247,13 @@ class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exte
     // Drive functions
     if ((action & 0x01) != 0) {
       // Step head in
-      if (cd.current_track == (cd.tracks - 1)) {
+      if (cd.current_track == (cd.MAX_TRACKS - 1)) {
         // unnecessary step in
         Utils.outln(s"$getName: Unnecessary step in cmd.")
       }
       cd.current_track += 1
       cd.current_flag &= 0xbf // track zero now false
-      if (cd.current_track > cd.tracks - 1) cd.current_track = cd.tracks - 1
+      if (cd.current_track > cd.MAX_TRACKS - 1) cd.current_track = cd.MAX_TRACKS - 1
       if (cd.dirty) cd.writebuf()
       cd.current_sector = 0xffff
       cd.current_byte = 0xffff
@@ -260,7 +267,7 @@ class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exte
         Utils.outln(s"$getName: Stuck-disk - Unnecessary step out.")
       }
       cd.current_track -= 1
-      if (cd.current_track <= 0) {
+      if (cd.current_track < 0) {
         cd.current_track = 0
         cd.current_flag |= 0x40 // Track 0 if there
       }
@@ -303,6 +310,7 @@ class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exte
   }
 
 
+  var readbytes = 0
   // Disk Data in/out
   def dsk0a(action: Int, isWrite: Boolean): Int = {
 
@@ -317,13 +325,16 @@ class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exte
     if (!isWrite) {
       if (cd.current_byte >= cd.DSK_SECTSIZE) {
         // Physically read the sector
-        Utils.outln(s"$getName: calling readsector. CB:${cd.current_byte} LIM:${cd.DSK_SECTSIZE}")
+        Utils.outln(s"$getName: READ: Sector:${cd.current_sector} Track:${cd.current_track} Byte:${readbytes}")
+        readbytes = 0
+        //Utils.outln(s"$getName: calling readsector. CB:${cd.current_byte} LIM:${cd.DSK_SECTSIZE}")
         cd.readSector()
       }
       val rtn = cd.byteBuffer.get(cd.current_byte) & 0xff
       //Utils.outln(s"$getName: Read: ${rtn.intValue()} CB:${cd.current_byte} LIM:${cd.DSK_SECTSIZE}")
-      Utils.outln(s"$getName: READ: Sector:${cd.current_sector} Track:${cd.current_track} Byte:${cd.current_byte}  Value:$rtn")
+      //Utils.outln(s"$getName: READ: Sector:${cd.current_sector} Track:${cd.current_track} Byte:${cd.current_byte}  Value:$rtn")
       cd.current_byte += 1
+      readbytes += 1
       //cd.current_flag &= 0xfe
 
       return rtn

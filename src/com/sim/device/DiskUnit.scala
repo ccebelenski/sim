@@ -34,9 +34,6 @@ trait DiskUnit extends BasicUnit with UnitAttachable with SupportsOptions {
   var current_byte: Int = 0
   var current_flag:Int = 0
 
-  var tracks: Int = MAX_TRACKS
-
-
   var FixedCapacity: Boolean = false
   var isSequential: Boolean = false
   var isIdleEligible: Boolean = true
@@ -62,8 +59,7 @@ trait DiskUnit extends BasicUnit with UnitAttachable with SupportsOptions {
   }
 
   def seek(): Unit = {
-    val pos = DSK_SECTSIZE * DSK_SECT * current_track +
-      DSK_SECTSIZE * current_sector
+    val pos = DSK_SECTSIZE * DSK_SECT * current_track + DSK_SECTSIZE * current_sector
     Utils.outln(s"$getName: SEEK $pos : CT: $current_track CS:$current_sector")
     fileChannel.position(pos)
   }
