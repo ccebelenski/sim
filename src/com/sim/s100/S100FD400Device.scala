@@ -166,8 +166,8 @@ class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exte
       val stat08 =  (~current_disk.get.current_flag) & 0xff
       if(laststat08 != stat08) {
         laststat08 = stat08
-        val str = f"${(~(current_disk.get.current_flag) & 0xff).toBinaryString}%8s".replaceAll(" ", "0")
-        Utils.outln(s"$getName: Status : $str")
+        //val str = f"${(~(current_disk.get.current_flag) & 0xff).toBinaryString}%8s".replaceAll(" ", "0")
+        //Utils.outln(s"$getName: Status : $str")
       }
       return stat08
 
@@ -177,7 +177,7 @@ class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exte
       current_disk.get.writebuf()
 
     val disknum = action & NUM_OF_DSK_MASK
-    Utils.outln(s"$getName: Write to x08 - Disk Num: $disknum")
+    //Utils.outln(s"$getName: Write to x08 - Disk Num: $disknum")
 
     current_disk = findUnitByNumber(disknum).asInstanceOf[Option[S100FD400Unit]]
     if (current_disk.isEmpty) {
@@ -198,8 +198,8 @@ class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exte
     }
 
 
-    cd.current_sector = 0xffff // reset internal counters
-    cd.current_byte = 0xffff
+    cd.current_sector = 0xff // reset internal counters
+    cd.current_byte = 0xff
     if ((action & 0x80) != 0) cd.current_flag = 0 // Disable drive?
     else { // enable drive
       cd.current_flag = 0x1a // Move head true
@@ -232,12 +232,14 @@ class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exte
         if (cd.sector_true == 0) {
           cd.current_sector += 1
           if (cd.current_sector >= cd.DSK_SECT) cd.current_sector = 0
-          Utils.outln(s"*** CS now: ${cd.current_sector} CT:${cd.current_track} Byte:$readbytes")
-          cd.current_byte = 0xffff
+          //Utils.outln(s"*** CS now: ${cd.current_sector} CT:${cd.current_track} Byte:$readbytes")
+          cd.current_byte = 0xff
 
         }
         // return sector number and sector true and set 'unused' bits
-        return (((cd.current_sector << 1) & 0x3e) | 0xc0 | cd.sector_true)
+        // Just set to a val so it can be seen quicker in debugger.
+        val rtn = ((((cd.current_sector << 1) & 0x3e) | 0xc0 | cd.sector_true) & 0xff)
+        return rtn
       } else return 0xff // Head not loaded
 
     }
@@ -255,10 +257,10 @@ class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exte
       cd.current_flag &= 0xbf // track zero now false
       if (cd.current_track > cd.MAX_TRACKS - 1) cd.current_track = cd.MAX_TRACKS - 1
       if (cd.dirty) cd.writebuf()
-      cd.current_sector = 0xffff
-      cd.current_byte = 0xffff
+      cd.current_sector = 0xff
+      cd.current_byte = 0xff
 
-      Utils.outln(s"$getName: Step in.  CT: ${cd.current_track}")
+      //Utils.outln(s"$getName: Step in.  CT: ${cd.current_track}")
     }
     if ((action & 0x02) != 0) {
       // Step head out
@@ -272,20 +274,20 @@ class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exte
         cd.current_flag |= 0x40 // Track 0 if there
       }
       if (cd.dirty) cd.writebuf()
-      cd.current_sector = 0xffff
-      cd.current_byte = 0xffff
+      cd.current_sector = 0xff
+      cd.current_byte = 0xff
 
-      Utils.outln(s"$getName: Step out.  CT: ${cd.current_track}")
+      //Utils.outln(s"$getName: Step out.  CT: ${cd.current_track}")
     }
 
     if (cd.dirty) cd.writebuf()
 
     if ((action & 0x04) != 0) {
       // head load
-      Utils.outln(s"$getName: Head load.")
+      //Utils.outln(s"$getName: Head load.")
       cd.current_flag |= 0x04 // turn on head loaded bit
       cd.current_flag |= 0x80 // Turn on 'read data available'
-      cd.current_flag &= 0xfe
+
 
     }
 
@@ -293,8 +295,8 @@ class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exte
       // Head unload (not on mini-disk)
       cd.current_flag &= 0xfb // Turn off head loaded
       cd.current_flag &= 0x7f // Turn off read data available
-      cd.current_sector = 0xfff
-      cd.current_byte = 0xffff
+      cd.current_sector = 0xff
+      cd.current_byte = 0xff
 
       Utils.outln(s"$getName: Head unload.")
     }
@@ -325,9 +327,8 @@ class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exte
     if (!isWrite) {
       if (cd.current_byte >= cd.DSK_SECTSIZE) {
         // Physically read the sector
-        Utils.outln(s"$getName: READ: Sector:${cd.current_sector} Track:${cd.current_track} Byte:${readbytes}")
+        //Utils.outln(s"$getName: READ: Sector:${cd.current_sector} Track:${cd.current_track} Byte:${readbytes}")
         readbytes = 0
-        //Utils.outln(s"$getName: calling readsector. CB:${cd.current_byte} LIM:${cd.DSK_SECTSIZE}")
         cd.readSector()
       }
       val rtn = cd.byteBuffer.get(cd.current_byte) & 0xff

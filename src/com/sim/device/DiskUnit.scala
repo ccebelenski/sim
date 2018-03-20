@@ -174,14 +174,14 @@ trait DiskUnit extends BasicUnit with UnitAttachable with SupportsOptions {
       byteBuffer.put(i, 0)
       i += 1
     }
-    Utils.outln(s"$getName: Writebuf - ${byteBuffer.toString}")
+    //Utils.outln(s"$getName: Writebuf - ${byteBuffer.toString}")
     if (!isWriteProtect) {
       seek()
       byteBuffer.rewind()
       while (byteBuffer.hasRemaining) fileChannel.write(byteBuffer)
     }
 
-    current_byte = 0xffff
+    current_byte = 0xff
     dirty = false
 
   }

@@ -215,6 +215,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
 
         INCR(1)
         val instr: Int = MMU.get8(PC)
+        //if(PC.intValue == 0x0000) Utils.outln("*** CPU 0h ****")
         PC.increment()
 
         (instr: @switch) match {
@@ -366,7 +367,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
             AF(((AF & 1) << 15) | (AF & 0xc4) | rraTable(A))
 
           case (0x20) => // JR NZ,dd
-            if ((F & 64) != 0) { // Z flag
+            if ((F & FLAG_Z) != 0) { // Z flag
               addTStates(7)
               PC.increment()
             } else {
@@ -1363,6 +1364,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
 
           case (0xd3) => // OUT (nn),A
             addTStates(11)
+            //Utils.outln("** OUT @ " + PC)
             MMU.out8(MMU.get8(PC), A)
             PC.increment()
 
@@ -1711,6 +1713,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
 
               case (0x94) => // SUB IXH
                 addTStates(9)
+                setFlag(FLAG_C,clear = false)
                 SUBIDX(IXH)
 
               case (0x9c) => // SBC A,IXH
@@ -1719,6 +1722,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
 
               case (0x95) => // SUB IXL
                 addTStates(9)
+                setFlag(FLAG_C,clear = false)
                 SUBIDX(IXL)
 
               case (0x9d) => // SBC A,IXL
@@ -3045,6 +3049,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
 
               case (0x94) => // SUB IYH
                 addTStates(9)
+                setFlag(FLAG_C,clear = false)
                 SUBIDX(IYH)
 
               case (0x9c) => // SBC A,IYH
@@ -3053,6 +3058,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
 
               case (0x95) => // SUB IYL
                 addTStates(9)
+                setFlag(FLAG_C,clear=false)
                 SUBIDX(IYL)
 
               case (0x9d) => // SBC A,IYL
@@ -3773,10 +3779,10 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
   private final def ICP(r1: Register8): Unit = {
     val temp: UInt = r1.get8
     val acu: UInt = A.get8
-    AF(AF & ~0x28 | temp & 0x28)
+    AF((AF & ~0x28) | (temp & 0x28))
     val sum: UInt = acu - temp
     val cbits: UInt = acu ^ temp ^ sum
-    AF((AF & 0xff) | cpTable(sum & 0xff) | (temp & 0x28) | SET_PV(cbits) | cbits2Table(cbits & 0x1ff))
+    AF((AF & ~0xff) | cpTable(sum & 0xff) | (temp & 0x28) | SET_PV(cbits) | cbits2Table(cbits & 0x1ff))
   }
 
   @inline
@@ -3891,6 +3897,13 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
     POP(PC)
   }
 
+  @inline
+  private final def setFlag(flag: Int, clear: Boolean): Unit = {
+    AF(if (clear) (AF | flag) else (AF & ~flag))
+
+  }
+
+
   /*
   Macros for the IN/OUT instructions INI/INIR/IND/INDR/OUTI/OTIR/OUTD/OTDR
     Pre condition
@@ -3929,56 +3942,56 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
   }
 
 
-  override def DAsm(addr:Int, sb:StringBuilder ) : Int = {
+  override def DAsm(addr: Int, sb: StringBuilder): Int = {
 
     var pc = addr
 
-    var T:String = null
+    var T: String = null
     var J = false
     var Offset = 0
 
-    var C:Char = 0x00
+    var C: Char = 0x00
 
     val op = MMU.get8(pc).intValue
 
-      op match {
+    op match {
 
       case (0xcb) =>
-      pc += 1
-      T = Z80.MnemonicsCB(MMU.get8(pc).intValue)
-          pc += 1
+        pc += 1
+        T = Z80.MnemonicsCB(MMU.get8(pc).intValue)
+        pc += 1
 
       case (0xed) =>
         pc += 1
-      T = Z80.MnemonicsED(MMU.get8(pc).intValue)
+        T = Z80.MnemonicsED(MMU.get8(pc).intValue)
 
       case (0xdd) | (0xfd) =>
 
         C = {
           val x = MMU.get8(pc).intValue
           pc += 1
-          if(x == 0xdd) 'X' else 'Y'
+          if (x == 0xdd) 'X' else 'Y'
 
-          }
-      if (MMU.get8(pc).intValue == 0xcb) {
-        pc += 1
-        Offset = MMU.get8(pc)
-        pc += 1
-        J = true
-        T = Z80.MnemonicsXCB(MMU.get8(pc).intValue)
-        pc += 1
-      }
-      else {
-        T = Z80.MnemonicsXX(MMU.get8(pc).intValue)
-        pc += 1
-      }
+        }
+        if (MMU.get8(pc).intValue == 0xcb) {
+          pc += 1
+          Offset = MMU.get8(pc)
+          pc += 1
+          J = true
+          T = Z80.MnemonicsXCB(MMU.get8(pc).intValue)
+          pc += 1
+        }
+        else {
+          T = Z80.MnemonicsXX(MMU.get8(pc).intValue)
+          pc += 1
+        }
 
       case _ =>
         T = Z80.MnemonicsZ80(MMU.get8(pc).intValue)
-          pc += 1
+        pc += 1
     }
 
-    var R :String = if(T.contains("^")) {
+    var R: String = if (T.contains("^")) {
       val x = MMU.get8(pc).intValue
       pc += 1
       T.replace("^", f"$x%02x")
@@ -3988,18 +4001,22 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
 
     R = R.replace('%', C)
 
-    R = if(R.contains("*")) {
+    R = if (R.contains("*")) {
       val x = MMU.get8(pc).intValue
       pc += 1
       R.replace("*", f"$x%02x")
     } else if (R.contains("@")) {
-      if(J) {
+      if (J) {
         Offset = MMU.get8(pc).intValue
         pc += 1
 
       }
-      val S = {if((Offset & 0x80) != 0) "-" else "+"}
-      val j = {if((Offset & 0x80) != 0) 256 - Offset else Offset}
+      val S = {
+        if ((Offset & 0x80) != 0) "-" else "+"
+      }
+      val j = {
+        if ((Offset & 0x80) != 0) 256 - Offset else Offset
+      }
       R.replace("@", f"$S$j%02x")
     } else if (R.contains("$")) {
       Offset = MMU.get8(pc).intValue
@@ -4013,7 +4030,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
     } else if (R.contains("#")) {
       val x = MMU.get8(pc).intValue + 256 * MMU.get8(pc + 1).intValue
       pc += 2
-      R.replace("#",f"$x%04x")
+      R.replace("#", f"$x%04x")
 
     } else R
 
