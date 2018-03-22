@@ -37,7 +37,7 @@ class EM extends Command {
             else {
               val buf = new ArrayBuffer[UByte]
               for (x <- startAddr.intValue() to endAddr.intValue()) buf += cpu.MMU.get8(x)
-              HexDump.hexdump(buf.toArray, sb)
+              HexDump.hexdump(buf.toArray, startAddr.intValue(), sb)
             }
 
           }
@@ -76,7 +76,7 @@ class ER extends Command {
 
 object HexDump {
 
-  def hexdump(ubytes: Array[UByte], sb: StringBuilder) = {
+  def hexdump(ubytes: Array[UByte], startAddr: Int, sb: StringBuilder) = {
     val bytesPerClump = 4
     val clumpsPerLine = 4
     val bufferSize = bytesPerClump * clumpsPerLine
@@ -92,7 +92,7 @@ object HexDump {
         done = true
       }
       else {
-        sb.append(f"$offset%08x: ")
+        sb.append(f"${offset + startAddr}%08x: ")
 
         for (i <- 0 until bufferSize) {
           if (i < numBytesRead)
