@@ -39,14 +39,14 @@ class Z80Tests {
   def testROM(): Unit = {
 
     val image = S100FD400Device.alt_bootrom_dsk
-    mmu.mapROM(UInt(0xff00),UInt(image.size - 1),image.toArray)
+    mmu.mapROM(UInt(0xff00), UInt(image.size - 1), image.toArray)
 
     assertTrue(mmu.get8(0xff00) == 0x21)
     assertTrue(mmu.get8(0xffff) == 0x00)
     assertTrue(mmu.get8(0xff70) == 0x08)
 
     // Write to ROM (expect console output)
-    mmu.put8(0xff70,UByte(0xff.byteValue()))
+    mmu.put8(0xff70, UByte(0xff.byteValue()))
     assertTrue(mmu.get8(0xff70) == 0x08) // Verify value did not change.
 
     val sb = new StringBuilder
@@ -294,7 +294,7 @@ class Z80Tests {
     assertTrue(z80.PC.get16 == 0x0002)
     assertTrue(z80.A.get8 == 0xFF)
     //assertFalse(z80.testFlag(z80.F, z80.FLAG_Z)) // Not sure about this one.
-    assertFalse(z80.testFlag(z80.F, z80.FLAG_P))
+    assertTrue(z80.testFlag(z80.F, z80.FLAG_P))
     assertTrue(z80.testFlag(z80.F, z80.FLAG_N))
     assertTrue(z80.testFlag(z80.F, z80.FLAG_C))
 
@@ -380,6 +380,8 @@ class Z80Tests {
   @Test
   // LD A,D
   def test0x7a(): Unit = {
+
+    // NO flag affected
     z80.deposit(0x0000, 0x7A) // LD A,D
     z80.deposit(0x0001, 0x76) // HALT
 
@@ -447,17 +449,22 @@ class Z80Tests {
     z80.runcpu()
     assertTrue(z80.PC.get16 == 0x0002)
     assertTrue(z80.A.get8 == 0x00)
-    assertTrue(z80.testFlag(z80.F, z80.FLAG_Z))
+    assertFalse(z80.testFlag(z80.F, z80.FLAG_Z))
     assertTrue(z80.testFlag(z80.F, z80.FLAG_C))
 
     z80.PC(0x0000)
     z80.A(0x20)
     z80.runcpu()
-    assertTrue(z80.PC.get16 == 0x0002)
     assertTrue(z80.A.get8 == 0x20)
     assertFalse(z80.testFlag(z80.F, z80.FLAG_Z))
     assertFalse(z80.testFlag(z80.F, z80.FLAG_C))
 
+    z80.PC(0x0000)
+    z80.A(0x0A)
+    z80.runcpu()
+    assertTrue(z80.A.get8 == 0x0A)
+    assertTrue(z80.testFlag(z80.F, z80.FLAG_Z))
+    assertFalse(z80.testFlag(z80.F, z80.FLAG_C))
 
   }
 
@@ -604,7 +611,7 @@ class Z80Tests {
 
 
     assertTrue(z80.PC.get16 == 0x000B)
-
+  // TODO DAA is still not right.
 
   }
 
@@ -690,6 +697,213 @@ class Z80Tests {
     Utils.outln(sb.toString)
   }
 
+  @Test
+  def text0xe6(): Unit = {
+
+    z80.deposit(0x0000, 0xE6) // AND nn
+    z80.deposit(0x0001, 0x40) // 40h
+    z80.deposit(0x0002, 0x76) // HLT
+
+    z80.PC(0x0000)
+    z80.A(0x40)
+    z80.F(0xff) // set all flags
+
+    z80.runcpu()
+
+    assertTrue(z80.A.intValue == 0x40)
+    assertTrue((z80.F & z80.FLAG_Z) == 0)
+    assertTrue((z80.F & z80.FLAG_S) == 0)
+    assertTrue((z80.F & z80.FLAG_N) == 0) // N Flag is cleared
+    assertTrue((z80.F & z80.FLAG_P) == 0)
+    assertTrue((z80.F & z80.FLAG_H) != 0)
+    assertTrue((z80.F & z80.FLAG_C) == 0) // C flag is cleared
+
+    z80.PC(0x0000)
+    //32 + 16
+    z80.A(0x20 + 0x10)
+
+    z80.runcpu()
+
+    assertTrue(z80.A.intValue == 0x00)
+    assertTrue((z80.F & z80.FLAG_Z) != 0) // Z Flag is set.
+    assertTrue((z80.F & z80.FLAG_S) == 0)
+    assertTrue((z80.F & z80.FLAG_N) == 0)
+    assertTrue((z80.F & z80.FLAG_P) != 0)
+    assertTrue((z80.F & z80.FLAG_H) != 0)
+  }
+
+  @Test
+  def testPushPop(): Unit = {
+
+    z80.SP(0x120) // Set up a stack
+    z80.PC(0x0000)
+    z80.F(0x0000) // Flags zero'd
+
+    // PUSH DE is 0xd5
+    // POP DE is 0xd1
+    // LD DE, nnnn is 0x11 nnnn
+    z80.deposit(0x0000, 0x11) // LD DE,nnnn
+    z80.depositWord(0x0001, 0x4567)
+    z80.deposit(0x0003, 0xd5) // PUSH DE
+    z80.deposit(0x0004, 0x76)
+    z80.deposit(0x0005, 0x11) // LD DE, nnnnn
+    z80.depositWord(0x0006, 0x1234)
+    z80.deposit(0x0008, 0xd1) // POP DE
+    z80.deposit(0x0009, 0x76) // HLT
+
+    // Run first half
+    z80.runcpu()
+    // Make sure stack is where it should be
+    assertTrue(z80.SP.intValue == 0x11E)
+    assertTrue(z80.DE.intValue == 0x4567)
+
+    // Flags are unaffected
+    assertTrue(z80.F.intValue == 0x00)
+
+    // run second half
+    z80.PC(0x0005)
+    z80.runcpu()
+
+    assertTrue(z80.SP.intValue == 0x120)
+    assertTrue(z80.DE.intValue == 0x4567)
+
+    // Flags are unaffected
+    assertTrue(z80.F.intValue == 0x00)
+
+  }
+
+  @Test
+  def test0xb8(): Unit = {
+    // CP B = 0xb8
+    /*
+        Unsigned
+
+          If A == N, then Z flag is set.
+          If A != N, then Z flag is reset.
+          If A < N, then C flag is set.
+          If A >= N, then C flag is reset.
+
+        Signed
+
+          If A == N, then Z flag is set.
+          If A != N, then Z flag is reset.
+          If A < N, then S and P/V are different.
+          A >= N, then S and P/V are the same.
+        */
+    z80.deposit(0x0000, 0xb8) // CP B
+    z80.deposit(0x0001, 0x76) // HLT
+
+
+    z80.PC(0x0000)
+    z80.A(0x0A) // 10
+    z80.B(0x05)
+
+    z80.runcpu()
+    assertFalse(z80.testFlag(z80.F, z80.FLAG_Z))
+    assertFalse(z80.testFlag(z80.F, z80.FLAG_C))
+    assertTrue(z80.A.intValue == 0x0a)
+    assertTrue(z80.B.intValue == 0x05)
+
+    z80.PC(0x0000)
+    z80.A(0x0A) // 10
+    z80.B(0x0B) // 11
+    z80.runcpu()
+    assertFalse(z80.testFlag(z80.F, z80.FLAG_Z))
+    assertTrue(z80.testFlag(z80.F, z80.FLAG_C))
+    assertTrue(z80.A.intValue == 0x0a)
+    assertTrue(z80.B.intValue == 0x0B)
+
+    z80.PC(0x0000)
+    z80.B(0x0A)
+    z80.runcpu()
+    assertTrue(z80.testFlag(z80.F, z80.FLAG_Z))
+    assertFalse(z80.testFlag(z80.F, z80.FLAG_C))
+    assertTrue(z80.A.intValue == 0x0a)
+    assertTrue(z80.B.intValue == 0x0A)
+
+  }
+
+  @Test
+  def test0x1d(): Unit = {
+    // DEC E
+    z80.deposit(0x0000, 0x1D) // DEC E
+    z80.deposit(0x0001, 0x76) // HLT
+
+    z80.PC(0x0000)
+    z80.E(0x0A) // 10
+
+    z80.runcpu()
+    assertTrue(z80.E.intValue == 0x09)
+    assertFalse(z80.testFlag(z80.F, z80.FLAG_Z))
+    assertFalse(z80.testFlag(z80.F, z80.FLAG_C))
+
+    z80.PC(0x0000)
+    z80.E(0x01)
+
+    z80.runcpu()
+    assertTrue(z80.E.intValue == 0x00)
+    assertTrue(z80.testFlag(z80.F, z80.FLAG_Z))
+    assertFalse(z80.testFlag(z80.F, z80.FLAG_C))
+
+    z80.PC(0x0000)
+    z80.E(0x00)
+
+    z80.runcpu()
+    assertTrue(z80.E.intValue == 0xFF)
+    assertFalse(z80.testFlag(z80.F, z80.FLAG_Z))
+    assertFalse(z80.testFlag(z80.F, z80.FLAG_C))
+
+  }
+
+  @Test
+  def test0xc6(): Unit = {
+    // ADD A,nn
+    z80.deposit(0x0000, 0xc6) // ADD A,10
+    z80.deposit(0x0001, 0x0A) // 10
+    z80.deposit(0x0002, 0x76) // HLT
+
+    z80.PC(0x0000)
+    z80.AF(z80.FLAG_N) // zero flags, A zero, Flag N set
+    z80.runcpu()
+
+    assertTrue(z80.PC.intValue == 0x02)
+    assertTrue(z80.A.intValue == 0x0A)
+    assertFalse(z80.testFlag(z80.F,z80.FLAG_N)) // N reset
+    assertTrue(z80.F.intValue == 8) // All flags clear except unknown flag
+
+    z80.PC(0x0000)
+    z80.AF(0xFF00)
+    z80.runcpu()
+
+    assertTrue(z80.A.intValue == 0x09)
+    assertTrue(z80.testFlag(z80.F,z80.FLAG_C))
+    assertFalse(z80.testFlag(z80.F,z80.FLAG_Z))
+
+    z80.PC(0x0000)
+    z80.AF(0xF600)
+    z80.runcpu()
+
+    assertTrue(z80.A.intValue == 0x00)
+    assertTrue(z80.testFlag(z80.F,z80.FLAG_C))
+    assertTrue(z80.testFlag(z80.F,z80.FLAG_Z))
+
+  }
+
+  @Test
+  def test0xce(): Unit = {
+    // ADC A,nn
+    z80.deposit(0x0000, 0xce) // ADD A,10
+    z80.deposit(0x0001, 0x0A) // 10
+    z80.deposit(0x0002, 0x76) // HLT
+
+    z80.PC(0x0000)
+    z80.AF(z80.FLAG_N) // zero flags, A
+    z80.runcpu()
+
+    assertTrue(z80.PC.intValue == 0x02)
+    assertTrue(z80.A.intValue == 0x0A)
+
+  }
 }
 
 object Z80Tests {
