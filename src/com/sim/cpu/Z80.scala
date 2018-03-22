@@ -141,6 +141,11 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
 
   }
 
+  override def runcpu(singleStep: Boolean, startAddr: UInt): Unit = {
+    // Force the PC
+    PC(startAddr.intValue)
+    runcpu(singleStep)
+  }
 
   override def runcpu(singleStep:Boolean = false): Unit = {
 
@@ -3381,6 +3386,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
     } else {
       // Single stepped or break
       val sb = new StringBuilder
+      sb.append(f"${PC.intValue}%05X : ")
       DAsm(PC.intValue,sb)
       Utils.outln(sb.toString())
 

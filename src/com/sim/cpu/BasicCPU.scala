@@ -42,6 +42,8 @@ abstract class BasicCPU(val isBanked: Boolean, override val machine: AbstractMac
 
   def runcpu(singleStep: Boolean = false): Unit // Main CPU execution loop
 
+  def runcpu(singleStep:Boolean, startAddr: UInt)
+
   def onHalt(singleStepped: Boolean): Unit // called when CPU is about to be halted and returning to cmd line
 
   // Unit options common to all CPU's.

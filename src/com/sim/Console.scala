@@ -50,6 +50,12 @@ class Console {
     val detach:Command = new DetachCommand
     Console.commandTree.put(detach.commandToken, detach)
 
+    val go:GoCommand = new GoCommand
+    Console.commandTree.put(go.commandToken, go)
+
+    val step:StepCommand = new StepCommand
+    Console.commandTree.put(step.commandToken, step)
+
     val break = new BreakCommand
     val unbreak = new UnBreakCommand
     Console.commandTree.put(break.commandToken, break)

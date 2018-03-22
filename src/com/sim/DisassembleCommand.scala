@@ -18,12 +18,12 @@ class DisassembleCommand extends Command {
         val cpu = m.getCPU
         try {
           val start = Integer.decode(tokenArray(0))
-          val end :Int = {
-            if(tokenArray.length == 2) Integer.decode(tokenArray(1)) else -1
+          val end: Int = {
+            if (tokenArray.length == 2) Integer.decode(tokenArray(1)) else -1
           }
-          if(end == -1) cpu.DAsm(start,sb) else cpu.DAsm(start,end,sb)
+          if (end == -1) cpu.DAsm(start, sb) else cpu.DAsm(start, end, sb)
         } catch {
-          case nfe:NumberFormatException =>
+          case nfe: NumberFormatException =>
             sb.append("SIM: Illegal start or end address.")
         }
 
