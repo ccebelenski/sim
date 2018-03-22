@@ -5,8 +5,10 @@ import java.util.ServiceLoader
 import com.sim._
 import com.sim.cpu.BasicCPU
 import com.sim.device.{BasicDevice, BasicUnit, PortMappedDevice}
+import com.sim.unsigned.UInt
 
 import scala.collection.JavaConverters._
+import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
 abstract class AbstractMachine extends Named{
@@ -86,6 +88,51 @@ abstract class AbstractMachine extends Named{
   def init() : Unit
 
   def getCPU: BasicCPU
+
+  val breakpoints: mutable.HashSet[UInt] = new mutable.HashSet[UInt]()
+
+  /**
+    * Add a breakpoint address to the list of breakpoints
+    * @param address
+    */
+  def addBreak(address:UInt ) : Unit = {
+
+    breakpoints += address
+  }
+
+  /**
+    * Remove a breakpoint address from the list of breakpoints
+    * @param address
+    */
+  def removeBreak(address:UInt) : Unit = {
+
+    breakpoints -= address
+  }
+
+  /**
+    * Clear (remove all) breakpoints
+    */
+  def clearBreaks():Unit = {
+
+    breakpoints.clear()
+  }
+
+
+  /**
+    * Check if the address has a breakpoint
+    * @param address
+    * @return true if there is a breakpoint, false otherwise
+    */
+  def checkBreak(address:UInt) : Boolean = {
+
+    breakpoints(address)
+  }
+
+  def showBreaks(sb:StringBuilder):Unit = {
+    breakpoints.foreach(b => {
+      sb.append(f"${b.intValue}%08X\n")
+    })
+  }
 
 }
 

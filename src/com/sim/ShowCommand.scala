@@ -10,6 +10,7 @@ class ShowCommand extends Command {
 
   addSubCommand(new ShowMachineCommand)
   addSubCommand(new ShowDeviceCommand)
+  addSubCommand(new ShowBreakpointsCommand)
 
   override def process(tokenArray: Array[String]): Boolean = {
     if (tokenArray.length == 0) {
@@ -38,7 +39,7 @@ class ShowMachineCommand extends Command {
       case Some(m: AbstractMachine) =>
 
         m.showMachine
-   }
+    }
 
     false
   }
@@ -52,7 +53,7 @@ class ShowDeviceCommand extends Command {
 
   override def process(tokenArray: Array[String]): Boolean = {
 
-    val sb:StringBuilder = new StringBuilder
+    val sb: StringBuilder = new StringBuilder
     if (tokenArray.length == 0) {
       sb.append(s"SIM: Please specify a device.")
     } else Console.simEnvironment.simMachine match {
@@ -63,7 +64,7 @@ class ShowDeviceCommand extends Command {
           case None =>
             // Device not found, look for a unit with that name.
             m.findUnitDevice(devname) match {
-              case None =>  sb.append(s"SIM: Device $devname not present.")
+              case None => sb.append(s"SIM: Device $devname not present.")
               case Some(u) => u.showCommand(sb)
             }
 
@@ -79,6 +80,25 @@ class ShowDeviceCommand extends Command {
 
 
     Utils.outln(sb.toString)
+    false
+  }
+}
+
+class ShowBreakpointsCommand extends Command {
+  commandToken = "BREAKPOINTS"
+  commandDescription = "Show set breakpoints."
+  commandHelpText = "Show breakpoints that have been set."
+  level = 1
+
+  override def process(tokenArray: Array[String]): Boolean = {
+    val sb: StringBuilder = new StringBuilder
+
+    Console.simEnvironment.simMachine match {
+      case None => sb.append("SIM: No machine.  SET a MACHINE.")
+      case Some(m: AbstractMachine) =>
+        m.showBreaks(sb)
+    }
+    Utils.outln(sb.toString())
     false
   }
 }

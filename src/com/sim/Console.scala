@@ -13,8 +13,7 @@ class Console {
 
     Console.textTerminal = textIO.getTextTerminal
 
-
-    // Add the "top level" simulator commands - VERSION, HELP, LOAD, EXIT, SHOW, SET, ATTACH, DETACH
+    // Add the "top level" simulator commands - VERSION, HELP, LOAD, EXIT, SHOW, SET, ATTACH, DETACH, etc.
     val version:Command = new VersionCommand
     Console.commandTree.put(version.commandToken, version)
 
@@ -30,6 +29,12 @@ class Console {
     val set:Command = new SetCommand
     Console.commandTree.put(set.commandToken, set)
 
+    val em:Command = new EM
+    Console.commandTree.put(em.commandToken,em)
+
+    val er:Command = new ER
+    Console.commandTree.put(er.commandToken,er)
+
     val exit:Command = new ExitCommand
     Console.commandTree.put(exit.commandToken, exit)
 
@@ -44,6 +49,11 @@ class Console {
 
     val detach:Command = new DetachCommand
     Console.commandTree.put(detach.commandToken, detach)
+
+    val break = new BreakCommand
+    val unbreak = new UnBreakCommand
+    Console.commandTree.put(break.commandToken, break)
+    Console.commandTree.put(unbreak.commandToken, unbreak)
 
     version.process(null)
   }

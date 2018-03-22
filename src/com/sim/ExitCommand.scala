@@ -12,7 +12,7 @@ class ExitCommand  extends Command {
 
 
     val bir = TextIoFactory.getTextIO.newBooleanInputReader()
-    bir.read("Are you sure?")
+    bir.read("SIM: EXIT - Are you sure?")
 
   }
 }

@@ -17,16 +17,19 @@ abstract class BasicCPU(val isBanked: Boolean, override val machine: AbstractMac
 
   // Clock frequency, in Khz.  0 = as fast as possible
   protected var clockFrequency: Int = 0
-  protected var clockHasChanged:Boolean = true
+  protected var clockHasChanged: Boolean = true
 
   // Timer Interrupt
-  var timerInterrupt:Boolean = false
+  var timerInterrupt: Boolean = false
 
   // Keyboard Interrupt - when used.
-  var keyboardInterrupt:Boolean = false
+  var keyboardInterrupt: Boolean = false
+
+  // Address of the last break we stopped at.
+  var lastBreak: UInt = UInt(0)
 
   // Stop on a HALT
-  def stopOnHALT : Boolean = {
+  def stopOnHALT: Boolean = {
     getBinaryOption("STOPONHALT")
   }
 
@@ -37,9 +40,9 @@ abstract class BasicCPU(val isBanked: Boolean, override val machine: AbstractMac
     Utils.outln(s"$getName: Clock frequency changed to: ${clockFrequency}Khz")
   }
 
-  def runcpu(): Unit // Main CPU execution loop
+  def runcpu(singleStep: Boolean = false): Unit // Main CPU execution loop
 
-  def onHalt(): Unit // called when CPU is about to be halted and returning to cmd line
+  def onHalt(singleStepped: Boolean): Unit // called when CPU is about to be halted and returning to cmd line
 
   // Unit options common to all CPU's.
   override def createUnitOptions: Unit = {
@@ -48,20 +51,23 @@ abstract class BasicCPU(val isBanked: Boolean, override val machine: AbstractMac
   }
 
   @inline
-  final def setFlag(reg:Register8, flag:Int, clear:Boolean) : Unit = {
-    if(clear) reg(reg & ~flag) else reg(reg | flag)
+  final def setFlag(reg: Register8, flag: Int, clear: Boolean): Unit = {
+    if (clear) reg(reg & ~flag) else reg(reg | flag)
   }
+
   @inline
-  final def setFlag(reg:Register16, flag:Int, clear:Boolean) : Unit = {
-    if(clear) reg(reg & ~flag) else reg(reg | flag)
+  final def setFlag(reg: Register16, flag: Int, clear: Boolean): Unit = {
+    if (clear) reg(reg & ~flag) else reg(reg | flag)
   }
+
   @inline
-  final def testFlag(reg:Register8, flag:Int) : Boolean = {
-    if((reg.intValue & flag) != 0) true else false
+  final def testFlag(reg: Register8, flag: Int): Boolean = {
+    if ((reg.intValue & flag) != 0) true else false
   }
+
   @inline
-  final def testFlag(reg:Register16, flag:Int): Boolean = {
-    if((reg & flag) != 0) true else false
+  final def testFlag(reg: Register16, flag: Int): Boolean = {
+    if ((reg & flag) != 0) true else false
   }
 
   val registers: Map[String, Register]
@@ -83,9 +89,9 @@ abstract class BasicCPU(val isBanked: Boolean, override val machine: AbstractMac
     if (newsize > MMU.MAXBANKSIZE) awidth = awidth + MMU.MAXBANKSLOG2
 
 
-    MMU.mapRAM(UInt(0x0000), MEMORYSIZE )
+    MMU.mapRAM(UInt(0x0000), MEMORYSIZE)
 
-    Utils.outln(s"$getName: Memory size = ${Utils.formatBytes(MEMORYSIZE.toLong,true)} Banked: $isBanked")
+    Utils.outln(s"$getName: Memory size = ${Utils.formatBytes(MEMORYSIZE.toLong, false)} Banked: $isBanked")
 
   }
 
@@ -94,31 +100,40 @@ abstract class BasicCPU(val isBanked: Boolean, override val machine: AbstractMac
   def resetCPU(): Unit
 
   /* UI Routines */
-  def examine(address: Int): UByte = {
+  def examine(address: Int, sb: StringBuilder): UByte = {
     val byte = MMU.get8(address)
-    Utils.outln(f"$getName: 0x$address%04X:0x${byte.byteValue}%02X")
+    sb.append(f"$getName: 0x$address%04X:0x${byte.byteValue}%02X")
     byte
   }
 
-  def examineWord(address: Int): UShort = {
+  def examine(address: Int): UByte = {
+    MMU.get8(address)
+
+  }
+
+  def examineWord(address: Int, sb: StringBuilder): UShort = {
     val word = MMU.get16(address)
-    Utils.outln(f"$getName: 0x$address%04X:0x${word.shortValue}%04X")
+    sb.append(f"$getName: 0x$address%04X:0x${word.shortValue}%04X")
     word
   }
 
-  def examineRegister(nmemonic: String): Int = {
+  def examineWord(address: Int): UShort = {
+    MMU.get16(address)
+  }
+
+  def examineRegister(nmemonic: String, sb: StringBuilder): Int = {
     registers.get(nmemonic) match {
       case Some(r: Register8) =>
-        Utils.outln(f"$getName: $r")
+        sb.append(f"$getName: $r")
         r.get8.intValue
       case Some(r: CompositeRegister16) =>
-        Utils.outln(f"$getName: $r")
+        sb.append(f"$getName: $r")
         r.get16.intValue
       case Some(r: Register16) =>
-        Utils.outln(f"$getName: $r")
+        sb.append(f"$getName: $r")
         r.get16.intValue
       case _ =>
-        Utils.outln(s"$getName: Register $nmemonic is invalid.")
+        sb.append(s"$getName: Register $nmemonic is invalid.")
         0
     }
   }
@@ -128,7 +143,7 @@ abstract class BasicCPU(val isBanked: Boolean, override val machine: AbstractMac
 
   }
 
-  def deposit(address:Int, byte: Int) : Unit = {
+  def deposit(address: Int, byte: Int): Unit = {
     MMU.put8(address, UByte((byte & 0xff).byteValue()))
   }
 
@@ -137,12 +152,13 @@ abstract class BasicCPU(val isBanked: Boolean, override val machine: AbstractMac
     MMU.put16(address, word)
   }
 
-  def depositWord(address:Int, word:Int): Unit = {
+  def depositWord(address: Int, word: Int): Unit = {
     MMU.put16(address, UShort((word & 0xffff).shortValue))
   }
 
   def showRegisters(): String
-  def showFlags():String
+
+  def showFlags(): String
 
   def setRegister8(nmemonic: String, value: UByte): Unit = {
     registers.get(nmemonic) match {
@@ -167,23 +183,23 @@ abstract class BasicCPU(val isBanked: Boolean, override val machine: AbstractMac
   }
 
 
-  override def showCommand(stringBuilder: StringBuilder) : Unit = {
+  override def showCommand(stringBuilder: StringBuilder): Unit = {
     super.showCommand(stringBuilder)
     stringBuilder.append(s"$getName: Registers:\n" + showRegisters() + "\n")
     stringBuilder.append(s"$getName: Flags:\n" + showFlags() + "\n")
   }
 
   // Dissassembly
-  def DAsm(addr:Int, sb:StringBuilder ) : Int
-  def DAsm(addr:Int, toAddr:Int, sb:StringBuilder) : Int = {
+  def DAsm(addr: Int, sb: StringBuilder): Int
+
+  def DAsm(addr: Int, toAddr: Int, sb: StringBuilder): Int = {
     var pc = addr
     while (pc <= toAddr) {
       sb.append(f"\n$pc%08x: ")
-      pc = DAsm(pc,sb)
+      pc = DAsm(pc, sb)
     }
     pc
   }
-
 
 }
 
@@ -237,6 +253,7 @@ class Register8(override val nmenomic: String) extends Register(nmenomic) {
   def |(value: Int): Int = {
     this.value | value
   }
+
   def ^(value: Int): Int = {
     this.value ^ value
   }
@@ -267,7 +284,7 @@ class CompositeRegister16(override val nmenomic: String, val high: Register8, va
   def get8low: UByte = low.get8
 
   @inline
-  override def get16: UShort = (low.get8  | (high.get8 << 8)).toUShort
+  override def get16: UShort = (low.get8 | (high.get8 << 8)).toUShort
 
   @inline
   override def set16(value: UShort): Unit = {
@@ -309,7 +326,7 @@ class Register16(override val nmenomic: String) extends Register(nmenomic) {
   def set16(value: Register16): Unit = this.value = value.get16
 
   @inline
-  def set16(value:Int): Unit = this.value = UShort(value.shortValue())
+  def set16(value: Int): Unit = this.value = UShort(value.shortValue())
 
   @inline
   def increment(): Unit = set16(UShort((get16 + 1).shortValue()))
