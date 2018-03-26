@@ -74,9 +74,13 @@ class S100SIODevice(machine:S100Machine, mmu: Z80MMU, ports: List[UInt]) extends
   override def optionChanged(sb: StringBuilder): Unit = ???
 
   override def action(action: UInt, value: UByte, isWrite: Boolean): UByte = {
-    Utils.outln(s"$getName: Port: $action Value:$value isWrite: $isWrite")
+    val ch = value.toChar
+    Utils.outln(s"$getName: Port: $action Value:$value Char: $ch isWrite: $isWrite")
 
-    UByte(0)
+    // Port 10 is status port for console terminal
+
+    if(action == 0x10 && !isWrite) UByte(2)
+    else UByte(0)
   }
 }
 
