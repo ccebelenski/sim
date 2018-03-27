@@ -16,7 +16,12 @@ class S100SIOUnit(device: S100SIODevice) extends BasicUnit(device: BasicDevice)
 
   override def cancel(): Unit = ???
 
-  override def completeAction(): Unit = ???
+  override def completeAction(): Unit = {
+    if (inputCharacterWaiting) {
+      device.machine.getCPU.keyboardInterrupt = true
+    }
+
+  }
 
   override def showCommand(sb: StringBuilder): Unit = {
     super.showCommand(sb)

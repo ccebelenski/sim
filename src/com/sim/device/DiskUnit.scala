@@ -32,7 +32,7 @@ trait DiskUnit extends BasicUnit with UnitAttachable with SupportsOptions {
   var current_track: Int = 0
   var current_sector: Int = 0
   var current_byte: Int = 0
-  var current_flag:Int = 0
+  var current_flag: Int = 0
 
   var FixedCapacity: Boolean = false
   var isSequential: Boolean = false
@@ -60,7 +60,7 @@ trait DiskUnit extends BasicUnit with UnitAttachable with SupportsOptions {
 
   def seek(): Unit = {
     val pos = DSK_SECTSIZE * DSK_SECT * current_track + DSK_SECTSIZE * current_sector
-    Utils.outln(s"$getName: SEEK $pos : CT: $current_track CS:$current_sector")
+    //Utils.outln(s"$getName: SEEK $pos : CT: $current_track CS:$current_sector")
     fileChannel.position(pos)
   }
 
@@ -120,7 +120,7 @@ trait DiskUnit extends BasicUnit with UnitAttachable with SupportsOptions {
 
   override def attach(fileSpec: String, sb: StringBuilder): Boolean = {
 
-    if(isAvailable) {
+    if (isAvailable) {
       sb.append(s"$getName: Unit is still attached.   DETACH first.\n")
       return true
     }
@@ -145,7 +145,7 @@ trait DiskUnit extends BasicUnit with UnitAttachable with SupportsOptions {
     dirty = false
 
     sb.append(s"$getName: Attached: ${attachedPath.get.getFileName}\n")
-    sb.append(s"$getName: Capacity: ${Utils.formatBytes(capacity,true)}")
+    sb.append(s"$getName: Capacity: ${Utils.formatBytes(capacity, false)}")
     // Attaching enabled the device implicitly
     setEnable(true)
 
@@ -154,11 +154,11 @@ trait DiskUnit extends BasicUnit with UnitAttachable with SupportsOptions {
 
   override def detach(sb: StringBuilder): Boolean = {
 
-    if(!isAvailable) {
+    if (!isAvailable) {
       sb.append(s"$getName: Unit is not attached.")
       return true
     }
-    if(dirty) writebuf()
+    if (dirty) writebuf()
     fileChannel.close()
     capacity = 0
     byteBuffer.clear()
@@ -168,7 +168,7 @@ trait DiskUnit extends BasicUnit with UnitAttachable with SupportsOptions {
 
 
   def writebuf(): Unit = {
-    byteBuffer.position(current_byte)  // Necessary?
+    byteBuffer.position(current_byte) // Necessary?
     var i = current_byte
     while (i < DSK_SECTSIZE) { // null-fill rest of sector if any
       byteBuffer.put(i, 0)

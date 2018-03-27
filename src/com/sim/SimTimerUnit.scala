@@ -290,7 +290,7 @@ class SimTimerUnit(override val device: SimTimer, val isCalibrated: Boolean = fa
       SimTimer.internal_timer = this
 
       //sim_rtcn_init_unit(& SIM_INTERNAL_UNIT, (CLK_INIT * CLK_TPS) / sim_int_clk_tps, SIM_INTERNAL_CLK);
-      this.action(UInt(0),UByte(0),false)
+      this.completeAction()
       //SIM_INTERNAL_UNIT.action(& SIM_INTERNAL_UNIT); /* Force tick to activate timer */
 
 
@@ -320,18 +320,12 @@ class SimTimerUnit(override val device: SimTimer, val isCalibrated: Boolean = fa
     inst_per_sec
   }
 
-
-
-  // TODO this is a scheduled action - something else so needs work.
-  def action(action: UInt, value: UByte, isWrite: Boolean): UByte = {
-    sim_rtcn_calb(SimTimer.sim_internal_clock_tps)
-    device.machine.eventQueue.activateAfter(this, 1000000 / SimTimer.sim_internal_clock_tps)
-    UByte(0)
-  }
-
   override def cancel(): Unit = ???
 
-  override def completeAction(): Unit = ???
+  override def completeAction(): Unit = {
+    sim_rtcn_calb(SimTimer.sim_internal_clock_tps)
+    device.machine.eventQueue.activateAfter(this, 1000000 / SimTimer.sim_internal_clock_tps)
+  }
 
   override def showCommand(sb:StringBuilder): Unit = {
     super.showCommand(sb)

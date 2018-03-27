@@ -172,7 +172,7 @@ abstract class BasicMMU(val cpu: BasicCPU) {
 
   def out8(address: Int, value: UByte): Unit = {
     iotab(address & 0xff) match {
-      case None => Utils.outln(s"MMU: Write to unconnected port.  Port:${address & 0xff}")
+      case None => Utils.outln(s"MMU: Write to unconnected port.  Port:${address.toHexString}  Value: ${value.toHexString}")
       case Some(pmu) => pmu.action(UInt(address), value, isWrite = true)
     }
 
@@ -189,7 +189,7 @@ abstract class BasicMMU(val cpu: BasicCPU) {
   def in8(address: Int): UByte = {
     iotab(address & 0xff) match {
       case None => {
-        Utils.outln(s"MMU: Read from unconnected port.  Port:${address & 0xff}")
+        Utils.outln(s"MMU: Read from unconnected port.  Port:${address.toHexString}")
         UByte(0)
       }
       case Some(pmu) => pmu.action(UInt(address), UByte(0), isWrite = false)

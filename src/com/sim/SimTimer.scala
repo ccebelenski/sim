@@ -198,7 +198,7 @@ object SimTimer {
         te = System.currentTimeMillis()
         ts = te
 
-        while ((i < c)) {
+        while (i < c) {
           i += 1
           rom_loopval = rom_loopval | rom_loopval + ts ^ rom_swapb(rom_swapb(rom_loopval + ts))
         }

@@ -1,9 +1,8 @@
 package com.sim.s100
 
 import com.sim.Utils
-import com.sim.cpu.{BasicMMU, Z80MMU}
+import com.sim.cpu.Z80MMU
 import com.sim.device._
-import com.sim.machine.AbstractMachine
 import com.sim.unsigned.{UByte, UInt}
 
 import scala.collection.mutable
@@ -163,8 +162,8 @@ class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exte
       }
 
       // Return the complement
-      val stat08 =  (~current_disk.get.current_flag) & 0xff
-      if(laststat08 != stat08) {
+      val stat08 = (~current_disk.get.current_flag) & 0xff
+      if (laststat08 != stat08) {
         laststat08 = stat08
         //val str = f"${(~(current_disk.get.current_flag) & 0xff).toBinaryString}%8s".replaceAll(" ", "0")
         //Utils.outln(s"$getName: Status : $str")
@@ -173,7 +172,7 @@ class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exte
 
     }
 
-    if(current_disk.isDefined && current_disk.get.dirty)
+    if (current_disk.isDefined && current_disk.get.dirty)
       current_disk.get.writebuf()
 
     val disknum = action & NUM_OF_DSK_MASK
@@ -313,6 +312,7 @@ class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exte
 
 
   var readbytes = 0
+
   // Disk Data in/out
   def dsk0a(action: Int, isWrite: Boolean): Int = {
 
@@ -366,7 +366,7 @@ class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exte
     } // No such unit?
     val cd = unit.get
     val useAltairROM = getBinaryOption("ALTAIRROM") | machine.getCPU.isBanked
-    val isMiniDisk = if(cd.DSK_SECT == MINI_DISK_SECT) true else false
+    val isMiniDisk = if (cd.DSK_SECT == MINI_DISK_SECT) true else false
     if (useAltairROM) {
       if (isMiniDisk) {
         mmu.installROM(S100FD400Device.alt_bootrom_dsk.toArray,

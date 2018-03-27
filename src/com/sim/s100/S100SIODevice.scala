@@ -3,6 +3,7 @@ package com.sim.s100
 import com.sim.Utils
 import com.sim.cpu.Z80MMU
 import com.sim.device._
+import com.sim.mux.MuxDevice
 import com.sim.unsigned.{UByte, UInt}
 
 /**
@@ -32,6 +33,11 @@ import com.sim.unsigned.{UByte, UInt}
   */
 class S100SIODevice(machine:S100Machine, mmu: Z80MMU, ports: List[UInt]) extends PortMappedDevice(machine, mmu,ports) with MuxAware with SerialDevice {
 
+  // Flags for read/write status
+  val CAN_READ:UByte = UByte(1)
+  val CAN_WRITE:UByte = UByte(2)
+
+
   override val description :String = "MITS 2SIO interface card"
   override val name = "SIO"
 
@@ -42,6 +48,12 @@ class S100SIODevice(machine:S100Machine, mmu: Z80MMU, ports: List[UInt]) extends
     // Create a default serial console unit
     SIOUnit = new S100SIOUnit(this)
     addUnit(SIOUnit)
+
+    machine.findDevice("MUXA") match {
+      case None => Utils.outln(s"$getName: Could not register device with MUXA.")
+      case Some(x:MuxDevice) => x.registerDevice(this)
+      case _ => Utils.outln(s"$getName: Misconfig - register device with MUXA.")
+    }
 
   }
 
@@ -59,11 +71,12 @@ class S100SIODevice(machine:S100Machine, mmu: Z80MMU, ports: List[UInt]) extends
   }
 
   override def muxCharacterInterrupt(unit: MuxUnitAware, char: Int): Unit = {
-    mmu.cpu.keyboardInterrupt = false
-    SIOUnit.inputCharacter = char
-    SIOUnit.inputCharacterWaiting = true
-    machine.eventQueue.activate(SIOUnit,SIOUnit.waitTime)
-
+    if(!SIOUnit.inputCharacterWaiting) {
+      mmu.cpu.keyboardInterrupt = false
+      SIOUnit.inputCharacter = char
+      SIOUnit.inputCharacterWaiting = true
+      machine.eventQueue.activate(SIOUnit, SIOUnit.waitTime)
+    }
   }
 
   def interruptOff() : Unit = {
@@ -74,14 +87,37 @@ class S100SIODevice(machine:S100Machine, mmu: Z80MMU, ports: List[UInt]) extends
   override def optionChanged(sb: StringBuilder): Unit = ???
 
   override def action(action: UInt, value: UByte, isWrite: Boolean): UByte = {
-    val ch = value.toChar
-    Utils.outln(s"$getName: Port: $action Value:$value Char: $ch isWrite: $isWrite")
+    //    val ch = value.toChar
+    //    Utils.outln(s"$getName: Port: $action Value:$value Char: $ch isWrite: $isWrite")
 
     // Port 10 is status port for console terminal
+    if (action == 0x10) {
 
-    if(action == 0x10 && !isWrite) UByte(2)
-    else UByte(0)
+      if (!isWrite) {
+        if (SIOUnit.inputCharacterWaiting) return UByte((CAN_READ | CAN_WRITE).byteValue)
+        else return CAN_WRITE
+      }
+
+      UByte(0) // writes are ignored - nothing to reset anyway.
+
+    } else if(action == 0x11) {
+
+      if(isWrite) {
+        SIOUnit.writeChar(value)
+        UByte(0)
+      } else {
+        // read char
+        interruptOff()
+        SIOUnit.inputCharacterWaiting = false
+        UByte(SIOUnit.inputCharacter.byteValue())
+      }
+
+    } else {
+      Utils.outln(s"$getName: Misconfigured, write to port ${action.toHexString} value ${value.toHexString}")
+      UByte(0)
+    }
   }
+
 }
 
 /*

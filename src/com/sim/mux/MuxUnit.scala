@@ -49,6 +49,7 @@ class MuxUnit(device: MuxDevice, var socket: Socket) extends BasicUnit(device: B
     socket.setSoTimeout(getTimeout)
     Utils.out(s"\n\n$getName: Telnet connection from: $socketAddress\n\n")
     // Notify our registered device we are here.
+
 }
 
 
