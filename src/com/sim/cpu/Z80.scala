@@ -423,9 +423,9 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
 
             case (0x27) => // DAA
               addTStates(4)
-              var tmp1: UByte = A.get8
+              val tmp1: UByte = A
               var tmp2 = 0
-              var tmp3 = F & 1
+              val tmp3 = F & 1
               var tmp = tmp3
               if (((F & 0x10) != 0) || ((tmp1 & 0x0f) > 0x09)) tmp2 |= 0x06
               if ((tmp3 == 1) || (tmp1 > 0x9f) || ((tmp1 > 0x8f) && ((tmp1 & 0x0f) > 0x09))) {
@@ -1286,19 +1286,19 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
                     case (0x28) => // SRA
                       temp = (acu >> 1) | (acu & 0x80)
                       cbits = acu & 1
-                      AF((AF & ~0xff) | rotateShiftTable(temp) | {
+                      AF((AF & ~0xff) | rotateShiftTable(temp & 0xff) | {
                         if (cbits == 0) 0 else 1
                       })
                     case (0x30) => // SLIA
                       temp = (acu << 1) | 1
                       cbits = acu & 0x80
-                      AF((AF & ~0xff) | rotateShiftTable(temp) | {
+                      AF((AF & ~0xff) | rotateShiftTable(temp & 0xff) | {
                         if (cbits == 0) 0 else 1
                       })
                     case (0x38) => // SRL
                       temp = acu >> 1
                       cbits = acu & 1
-                      AF((AF & ~0xff) | rotateShiftTable(temp) | {
+                      AF((AF & ~0xff) | rotateShiftTable(temp & 0xff) | {
                         if (cbits == 0) 0 else 1
                       })
                     case _ =>
@@ -1382,7 +1382,6 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
 
             case (0xd3) => // OUT (nn),A
               addTStates(11)
-              //Utils.outln("** OUT @ " + PC)
               MMU.out8(MMU.get8(PC), A)
               PC.increment()
 
@@ -2308,7 +2307,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
                   }
                   AF((AF & ~0xff) | ({
                     if ((sum & 0xffff) == 0) 1 else 0
-                  } << 6) | cbits2Z80DupTable(sum >> 8))
+                  } << 6) | cbitsZ80DupTable(sum >> 8))
                   HL(sum)
 
                 case (0x6b) => // LD HL,(nnnn)

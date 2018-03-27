@@ -100,15 +100,15 @@ class S100SIODevice(machine:S100Machine, mmu: Z80MMU, ports: List[UInt]) extends
 
       if (!isWrite) {
         if (SIOUnit.inputCharacterWaiting) {
-          Utils.outln(s"$getName: CANREAD | CANWRITE")
+          //Utils.outln(s"$getName: CANREAD | CANWRITE")
           return UByte((CAN_READ | CAN_WRITE).byteValue)
         }
         else if(SIOUnit.attachedMuxUnit.isDefined) {
-          Utils.outln(s"$getName: CANWRITE")
+          //Utils.outln(s"$getName: CANWRITE")
           return CAN_WRITE
         }
         else {
-          Utils.outln(s"%getName: None")
+          //Utils.outln(s"$getName: None")
           return UByte(0)
         }
       }
