@@ -99,9 +99,18 @@ class S100SIODevice(machine:S100Machine, mmu: Z80MMU, ports: List[UInt]) extends
     if (action == 0x10) {
 
       if (!isWrite) {
-        if (SIOUnit.inputCharacterWaiting) return UByte((CAN_READ | CAN_WRITE).byteValue)
-        else if(SIOUnit.attachedMuxUnit.isDefined) return CAN_WRITE
-        else return UByte(0)
+        if (SIOUnit.inputCharacterWaiting) {
+          Utils.outln(s"$getName: CANREAD | CANWRITE")
+          return UByte((CAN_READ | CAN_WRITE).byteValue)
+        }
+        else if(SIOUnit.attachedMuxUnit.isDefined) {
+          Utils.outln(s"$getName: CANWRITE")
+          return CAN_WRITE
+        }
+        else {
+          Utils.outln(s"%getName: None")
+          return UByte(0)
+        }
       }
 
       UByte(0) // writes are ignored - nothing to reset anyway.
