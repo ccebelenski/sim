@@ -72,7 +72,7 @@ class MuxDevice(machine: AbstractMachine) extends BasicDevice(machine: AbstractM
   }
 
   /**
-    * Register a device for callback from the mux.  Existing units are not reconfigured.
+    * Register a serial device for callback from the mux.  Existing units are not reconfigured.
     *
     * @param device
     * @return true is successful, false otherwise
@@ -81,31 +81,6 @@ class MuxDevice(machine: AbstractMachine) extends BasicDevice(machine: AbstractM
     if (registeredDevice.isDefined) return false
     registeredDevice = Some(device)
 
-    // Now find any units that aren't currently registered
-    getUnits.foreach(u => {
-
-      val x = u.asInstanceOf[MuxUnit]
-      if (x.callbackDevice.isEmpty) x.registerCallbackDevice(device)
-
-    })
-    true
-  }
-
-  /**
-    * Unregister any registered devices.  Callbacks for new connections
-    * will no longer occur, but existing units will still be connected.
-    *
-    * @return
-    */
-  def unregisterDevice(): Boolean = {
-    if (registeredDevice.isEmpty) return false
-    registeredDevice = None
-    getUnits.foreach(u => {
-
-      val x = u.asInstanceOf[MuxUnit]
-      if (x.callbackDevice.isEmpty) x.unregisterCallbackDevice()
-
-    })
     true
   }
 
@@ -133,7 +108,7 @@ class MuxDevice(machine: AbstractMachine) extends BasicDevice(machine: AbstractM
     init() // re-init
   }
 
-  override def handles(value: UInt): Boolean = ???
+  override def handles(value: UInt): Boolean = false
 
 }
 
@@ -163,10 +138,8 @@ class MUXListener(val port: Int, val maxClients: Int, val device: MuxDevice) ext
           if (device.clientCount < maxClients) {
             device.clientCount += 1
             val muxUnit = new MuxUnit(device, s)
+            muxUnit.callbackDevice = device.registeredDevice
             device.addUnit(muxUnit)
-            // If we have a registered device, then inform the unix about it.
-            // This unit will handle the callbacks.
-            if (device.registeredDevice.isDefined) muxUnit.callbackDevice = device.registeredDevice
             device.executor.execute(muxUnit)
           } else {
             Utils.outln(s"\n\n${device.getName}: Max clients exceeded.")

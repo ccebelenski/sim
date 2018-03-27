@@ -16,32 +16,8 @@ trait MuxAware {
 
   // This will be called when a character is available - the processing is of course
   // device specific.
-  def muxCharacterInterrupt(unit: MuxUnitAware, char:Int) : Unit
+  def muxCharacterInterrupt(unit: MuxUnit, char:Int) : Unit
 
-  /**
-    * Register this device with the mux.  The MUX will perform callbacks.
-    * @param mux
-    */
-  def registerMUX(mux:MuxDevice) :Unit = {
-    synchronized {
-      this.registeredMuxDevice = Some(mux)
-      mux.registerDevice(this)
-    }
-  }
-
-  /**
-    * Unregister this device with the mux.  The MUX will stop performing callbacks,
-    * but any units associated will remain until they are closed.
-    *
-    */
-  def unregisterMUX() : Unit = {
-    synchronized {
-      if (registeredMuxDevice.isDefined) {
-        registeredMuxDevice.get.unregisterDevice()
-        registeredMuxDevice = None
-      }
-    }
-  }
 
   /**
     * callback from the MUX when it has a unit available.
@@ -98,12 +74,5 @@ trait MuxAware {
     * @param mux
     */
   def closeAttachedMuxUnit(mux:MuxDevice) : Unit = ???
-
-  // This is called from the mux when a character is available.
-  def muxCharacterInterrupt(u:MuxUnit) : Unit = {
-    synchronized {
-      val unit = muxToUnitMap.get(u.getName)
-    }
-  }
 
 }

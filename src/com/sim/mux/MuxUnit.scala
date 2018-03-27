@@ -29,26 +29,18 @@ class MuxUnit(device: MuxDevice, var socket: Socket) extends BasicUnit(device: B
 
   // Call this when unregistering a callback device - either we're shutting down the unit,
   // or it's being called from the Device itself to detach it, but keep the connection open.
-  def unregisterCallbackDevice() : Unit = {
+  private def unregisterCallbackDevice() : Unit = {
     if(callbackDevice.isDefined) callbackDevice.get.MUXDetachCallback(this)
     callbackDevice = None
-  }
-
-  // Call this when registering a callback device - either we're new and setting it up,
-  // or we're being called from the Device itself to establish a new Connection.  If
-  // an existing connection exists, we disconnect from that first by calling unregister.
-  def registerCallbackDevice(ma:MuxAware): Unit = {
-    unregisterCallbackDevice()
-    // Try to connect it - if we can't, then just undo it.
-    if(!callbackDevice.get.MUXAttachCallback(this)) unregisterCallbackDevice()
-    else callbackDevice = Some(ma)
-
   }
 
   override def init(): Unit = {
     socket.setSoTimeout(getTimeout)
     Utils.out(s"\n\n$getName: Telnet connection from: $socketAddress\n\n")
     // Notify our registered device we are here.
+    if(callbackDevice.isDefined) {
+      callbackDevice.get.MUXAttachCallback(this)
+    } else Utils.outln(s"$getName: Misconfiguration - No callback device for a MUX Unit.")
 
 }
 
@@ -87,7 +79,7 @@ class MuxUnit(device: MuxDevice, var socket: Socket) extends BasicUnit(device: B
       try {
 
         char = inputStream.read()
-        if(callbackDevice.isDefined) callbackDevice.get.muxCharacterInterrupt(this)
+        if(callbackDevice.isDefined) callbackDevice.get.muxCharacterInterrupt(this, char)
 
       } catch {
         case t: Throwable => {}

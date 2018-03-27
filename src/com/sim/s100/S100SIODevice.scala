@@ -3,7 +3,7 @@ package com.sim.s100
 import com.sim.Utils
 import com.sim.cpu.Z80MMU
 import com.sim.device._
-import com.sim.mux.MuxDevice
+import com.sim.mux.{MuxDevice, MuxUnit}
 import com.sim.unsigned.{UByte, UInt}
 
 /**
@@ -45,14 +45,18 @@ class S100SIODevice(machine:S100Machine, mmu: Z80MMU, ports: List[UInt]) extends
   var SIOUnit : S100SIOUnit = _
 
   override def init(): Unit = {
+
     // Create a default serial console unit
     SIOUnit = new S100SIOUnit(this)
     addUnit(SIOUnit)
 
+    // Register this device with the default MUX
     machine.findDevice("MUXA") match {
       case None => Utils.outln(s"$getName: Could not register device with MUXA.")
-      case Some(x:MuxDevice) => x.registerDevice(this)
-      case _ => Utils.outln(s"$getName: Misconfig - register device with MUXA.")
+      case Some(x:MuxDevice) =>
+        x.registerDevice(this)
+        this.registeredMuxDevice = Some(x)
+      case _ => Utils.outln(s"$getName: Misconfiguration - register device with MUXA.")
     }
 
   }
@@ -70,7 +74,8 @@ class S100SIODevice(machine:S100Machine, mmu: Z80MMU, ports: List[UInt]) extends
 
   }
 
-  override def muxCharacterInterrupt(unit: MuxUnitAware, char: Int): Unit = {
+  // Only one unit, so we take some shortcuts...
+  override def muxCharacterInterrupt(unit: MuxUnit, char: Int): Unit = {
     if(!SIOUnit.inputCharacterWaiting) {
       mmu.cpu.keyboardInterrupt = false
       SIOUnit.inputCharacter = char
@@ -95,7 +100,8 @@ class S100SIODevice(machine:S100Machine, mmu: Z80MMU, ports: List[UInt]) extends
 
       if (!isWrite) {
         if (SIOUnit.inputCharacterWaiting) return UByte((CAN_READ | CAN_WRITE).byteValue)
-        else return CAN_WRITE
+        else if(SIOUnit.attachedMuxUnit.isDefined) return CAN_WRITE
+        else return UByte(0)
       }
 
       UByte(0) // writes are ignored - nothing to reset anyway.
@@ -112,6 +118,9 @@ class S100SIODevice(machine:S100Machine, mmu: Z80MMU, ports: List[UInt]) extends
         UByte(SIOUnit.inputCharacter.byteValue())
       }
 
+    } else if (action == 0x12) {
+      if(isWrite) UByte(0) // ignore
+      else CAN_WRITE
     } else {
       Utils.outln(s"$getName: Misconfigured, write to port ${action.toHexString} value ${value.toHexString}")
       UByte(0)

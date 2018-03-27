@@ -23,7 +23,7 @@ class S100Machine extends AbstractMachine{
     cpu.setMemorySize(UInt(0xFFFF))
     val mux = new MuxDevice(this)
     addDevice(mux)
-    val sio = new S100SIODevice(this, cpu.MMU, List(UInt(0x00),UInt(0x01),UInt(0x02),UInt(0x03),UInt(0x10),UInt(0x11)))
+    val sio = new S100SIODevice(this, cpu.MMU, List(UInt(0x00),UInt(0x01),UInt(0x02),UInt(0x03),UInt(0x10),UInt(0x11), UInt(0x12)))
     addDevice(sio)
     val fd = new S100FD400Device(this, cpu.MMU, List(UInt(0x08), UInt(0x09), UInt(0x0A)))
     addDevice(fd)
