@@ -466,6 +466,11 @@ class Z80Tests {
     assertTrue(z80.testFlag(z80.F, z80.FLAG_Z))
     assertFalse(z80.testFlag(z80.F, z80.FLAG_C))
 
+    z80.deposit(0x0001, 0xFF)
+    z80.PC(0x0000)
+    z80.A(0x00)
+    z80.runcpu()
+    assertTrue(!z80.testFlag(z80.F, z80.FLAG_P))
   }
 
   @Test
@@ -902,6 +907,23 @@ class Z80Tests {
 
     assertTrue(z80.PC.intValue == 0x02)
     assertTrue(z80.A.intValue == 0x0A)
+
+  }
+
+  @Test
+  def test0x22():Unit = {
+    // LD (nnnn),HL
+    z80.deposit(0x0000, 0x22) // LD (nnnn), HL
+    z80.deposit(0x0001, 0x00)
+    z80.deposit(0x0002, 0x01) // 0100
+    z80.deposit(0x0003, 0x76) // HLT
+
+    z80.PC(0x0000)
+    z80.HL(0x1234)
+
+    z80.runcpu()
+
+    assertTrue(z80.examineWord(0x100).intValue == 0x1234)
 
   }
 }
