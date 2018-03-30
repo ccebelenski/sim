@@ -926,6 +926,21 @@ class Z80Tests {
     assertTrue(z80.examineWord(0x100).intValue == 0x1234)
 
   }
+
+  @Test
+  def test0xb7():Unit = {
+    // OR A
+    z80.deposit(0x0000, 0xb7) // OR A
+    z80.deposit(0x0001, 0x76) // HLT
+
+    z80.PC(0x0000)
+    z80.AF(0x0142)
+    z80.runcpu()
+
+    assertTrue(z80.A.intValue == 0x01) // Value should not change
+    assertTrue(z80.F.intValue == 0x00) // no flags
+
+  }
 }
 
 object Z80Tests {

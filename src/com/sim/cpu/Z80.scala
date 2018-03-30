@@ -291,7 +291,6 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
 
             case (0x0c) => // INC C
               addTStates(4)
-              C.increment()
               INC(C)
 
             case (0x0d) => // DEC C
@@ -1101,7 +1100,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
 
             case (0xb7) => // OR A
               addTStates(4)
-              AF(xororTable(AF >> 8) & 0xff)
+              AF(xororTable((AF >> 8) & 0xff))
 
             case (0xb8) => // CP B
               addTStates(4)
