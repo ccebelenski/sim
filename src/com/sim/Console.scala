@@ -61,6 +61,12 @@ class Console {
     Console.commandTree.put(break.commandToken, break)
     Console.commandTree.put(unbreak.commandToken, unbreak)
 
+    val mlog = new MLogCommand
+    val unmlog = new UnMLogCommand
+    Console.commandTree.put(mlog.commandToken, mlog)
+    Console.commandTree.put(unmlog.commandToken, unmlog)
+
+
     version.process(null)
   }
 

@@ -177,6 +177,7 @@ class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exte
 
     val disknum = action & NUM_OF_DSK_MASK
     Utils.outln(s"$getName: Write to x08 - Disk Num: $disknum")
+    Utils.outln(s"$getName: Call from: ${machine.cpu.PC.toHexString}")
 
     current_disk = findUnitByNumber(disknum).asInstanceOf[Option[S100FD400Unit]]
     if (current_disk.isEmpty) {
@@ -260,12 +261,14 @@ class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exte
       cd.current_byte = 0xff
 
       Utils.outln(s"$getName: Step in.  CT: ${cd.current_track}")
+      Utils.outln(s"$getName: Call from: ${machine.cpu.PC.toHexString}")
     }
     if ((action & 0x02) != 0) {
       // Step head out
       if (cd.current_track == 0) {
         // Stuck disk, unnecessary step out.
         Utils.outln(s"$getName: Stuck-disk - Unnecessary step out.")
+        Utils.outln(s"$getName: Call from: ${machine.cpu.PC.toHexString}")
       }
       cd.current_track -= 1
       if (cd.current_track < 0) {
@@ -277,6 +280,7 @@ class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exte
       cd.current_byte = 0xff
 
       Utils.outln(s"$getName: Step out.  CT: ${cd.current_track}")
+      Utils.outln(s"$getName: Call from: ${machine.cpu.PC.toHexString}")
     }
 
     if (cd.dirty) cd.writebuf()

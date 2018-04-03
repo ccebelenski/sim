@@ -11,6 +11,7 @@ class ShowCommand extends Command {
   addSubCommand(new ShowMachineCommand)
   addSubCommand(new ShowDeviceCommand)
   addSubCommand(new ShowBreakpointsCommand)
+  addSubCommand(new ShowMLogsCommand)
 
   override def process(tokenArray: Array[String]): Boolean = {
     if (tokenArray.length == 0) {
@@ -97,6 +98,25 @@ class ShowBreakpointsCommand extends Command {
       case None => sb.append("SIM: No machine.  SET a MACHINE.")
       case Some(m: AbstractMachine) =>
         m.showBreaks(sb)
+    }
+    Utils.outln(sb.toString())
+    false
+  }
+}
+
+class ShowMLogsCommand extends Command {
+  commandToken = "MLOGS"
+  commandDescription = "Show set memory logpoints."
+  commandHelpText = "Show memory logpoints that have been set."
+  level = 1
+
+  override def process(tokenArray: Array[String]): Boolean = {
+    val sb: StringBuilder = new StringBuilder
+
+    Console.simEnvironment.simMachine match {
+      case None => sb.append("SIM: No machine.  SET a MACHINE.")
+      case Some(m: AbstractMachine) =>
+        m.showMemLogs(sb)
     }
     Utils.outln(sb.toString())
     false

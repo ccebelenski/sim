@@ -203,6 +203,23 @@ abstract class BasicCPU(val isBanked: Boolean, override val machine: AbstractMac
     pc
   }
 
+  @inline
+  // Memory log points.
+  final def CHECK_LOG_BYTE(reg: Register16): Unit =  CHECK_LOG_BYTE(reg.get16)
+
+  @inline // TODO Implement memory break points.
+  final def CHECK_LOG_WORD(reg: Register16): Unit = CHECK_LOG_WORD(reg.get16)
+
+  @inline
+  final def CHECK_LOG_BYTE(v: Int): Unit = {
+    if(machine.checkMemLog(UInt(v)) )Utils.outln(s"$getName: Memory Log Addr: ${v.toHexString} Value: ${MMU.get8(v).toHexString}")
+  }
+
+  @inline
+  final def CHECK_LOG_WORD(addr: Int): Unit = {
+    if(machine.checkMemLog(UInt(addr))) Utils.outln(s"$getName: Memory Log Addr: ${addr.toHexString} Value: ${MMU.get16(addr).toHexString}")
+  }
+
 }
 
 abstract class Register(val nmenomic: String) {

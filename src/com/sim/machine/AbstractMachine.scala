@@ -91,6 +91,8 @@ abstract class AbstractMachine extends Named{
 
   val breakpoints: mutable.HashSet[UInt] = new mutable.HashSet[UInt]()
 
+  val memlogs: mutable.HashSet[UInt] = new mutable.HashSet[UInt]()
+
   /**
     * Add a breakpoint address to the list of breakpoints
     * @param address
@@ -134,6 +136,26 @@ abstract class AbstractMachine extends Named{
     })
   }
 
+  def addMemLog(address:UInt) : Unit = {
+    memlogs += address
+  }
+
+  def clearMemLog():Unit = {
+    memlogs.clear()
+  }
+
+  def remoteMemLog(address:UInt) : Unit = {
+    memlogs -= address
+  }
+
+  def checkMemLog(address:UInt) : Boolean = {
+    memlogs(address)
+  }
+  def showMemLogs(sb:StringBuilder):Unit = {
+    memlogs.foreach(b => {
+      sb.append(f"${b.intValue}%08X\n")
+    })
+  }
 }
 
 object AbstractMachine {
