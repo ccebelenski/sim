@@ -67,7 +67,7 @@ class S100SIMDevice(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) extend
    */
 
   private def simh_out(byte: UByte): UByte = {
-    Utils.outln(s"Write 0xfe - $byte")
+    //Utils.outln(s"Write 0xfe - $byte")
     byte.toInt match {
 
       case (0) =>
@@ -82,13 +82,17 @@ class S100SIMDevice(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) extend
         // Stop timer Interrupts
         // TODO
 
+      case (27) =>
+        // SimH Sleep
+        Thread.sleep(0,500)
+
       case _ => {}
     }
     UByte(0x00)
   }
 
   private def simh_in(byte: UByte): UByte = {
-    Utils.outln(s"Read 0xfe - $byte")
+    //Utils.outln(s"Read 0xfe - $byte")
 
     UByte(0x00)
   }

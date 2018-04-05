@@ -80,13 +80,13 @@ class S100SIODevice(machine:S100Machine, mmu: Z80MMU, ports: List[UInt]) extends
       mmu.cpu.keyboardInterrupt = false
       SIOUnit.inputCharacter = char
       SIOUnit.inputCharacterWaiting = true
-      machine.eventQueue.activate(SIOUnit, SIOUnit.waitTime)
+      //machine.eventQueue.activate(SIOUnit, SIOUnit.waitTime)
     }
   }
 
   def interruptOff() : Unit = {
     mmu.cpu.keyboardInterrupt = false
-    machine.eventQueue.cancel(SIOUnit)
+    //machine.eventQueue.cancel(SIOUnit)
   }
 
   override def optionChanged(sb: StringBuilder): Unit = ???

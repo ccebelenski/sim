@@ -1,6 +1,5 @@
 package com.sim.s100
 
-import com.sim.Utils
 import com.sim.cpu.Z80MMU
 import com.sim.device._
 import com.sim.unsigned.{UByte, UInt}
@@ -156,7 +155,7 @@ class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exte
 
       if (current_disk.isEmpty) {
         // Log the debug action
-        Utils.outln(s"$getName: Status on un-attached disk.")
+        //Utils.outln(s"$getName: Status on un-attached disk.")
 
         return 0xff
       }
@@ -176,13 +175,13 @@ class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exte
       current_disk.get.writebuf()
 
     val disknum = action & NUM_OF_DSK_MASK
-    Utils.outln(s"$getName: Write to x08 - Disk Num: $disknum")
-    Utils.outln(s"$getName: Call from: ${machine.cpu.PC.toHexString}")
+    //Utils.outln(s"$getName: Write to x08 - Disk Num: $disknum")
+    //Utils.outln(s"$getName: Call from: ${machine.cpu.PC.toHexString}")
 
     current_disk = findUnitByNumber(disknum).asInstanceOf[Option[S100FD400Unit]]
     if (current_disk.isEmpty) {
       // Illegal drive number
-      Utils.outln(s"$getName: Illegal drive number. ($disknum)")
+      //Utils.outln(s"$getName: Illegal drive number. ($disknum)")
 
       return 0
     }
@@ -191,7 +190,7 @@ class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exte
 
     if (!cd.isAvailable) {
       // Not available (not attached?)
-      Utils.outln(s"$getName: Unit is not available. ($disknum)")
+      //Utils.outln(s"$getName: Unit is not available. ($disknum)")
 
       current_disk = None
       return 0
@@ -215,7 +214,7 @@ class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exte
 
     if (current_disk.isEmpty) {
       // Un-available drive selected
-      Utils.outln(s"$getName: Unavailable drive unit selected.")
+      //Utils.outln(s"$getName: Unavailable drive unit selected.")
 
       return 0xff // nothing we can do
     }
@@ -251,7 +250,7 @@ class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exte
       // Step head in
       if (cd.current_track == (cd.MAX_TRACKS - 1)) {
         // unnecessary step in
-        Utils.outln(s"$getName: Unnecessary step in cmd.")
+        //Utils.outln(s"$getName: Unnecessary step in cmd.")
       }
       cd.current_track += 1
       cd.current_flag &= 0xbf // track zero now false
@@ -260,15 +259,15 @@ class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exte
       cd.current_sector = 0xff
       cd.current_byte = 0xff
 
-      Utils.outln(s"$getName: Step in.  CT: ${cd.current_track}")
-      Utils.outln(s"$getName: Call from: ${machine.cpu.PC.toHexString}")
+      //Utils.outln(s"$getName: Step in.  CT: ${cd.current_track}")
+      //Utils.outln(s"$getName: Call from: ${machine.cpu.PC.toHexString}")
     }
     if ((action & 0x02) != 0) {
       // Step head out
       if (cd.current_track == 0) {
         // Stuck disk, unnecessary step out.
-        Utils.outln(s"$getName: Stuck-disk - Unnecessary step out.")
-        Utils.outln(s"$getName: Call from: ${machine.cpu.PC.toHexString}")
+        //Utils.outln(s"$getName: Stuck-disk - Unnecessary step out.")
+        //Utils.outln(s"$getName: Call from: ${machine.cpu.PC.toHexString}")
       }
       cd.current_track -= 1
       if (cd.current_track < 0) {
@@ -279,8 +278,8 @@ class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exte
       cd.current_sector = 0xff
       cd.current_byte = 0xff
 
-      Utils.outln(s"$getName: Step out.  CT: ${cd.current_track}")
-      Utils.outln(s"$getName: Call from: ${machine.cpu.PC.toHexString}")
+      //Utils.outln(s"$getName: Step out.  CT: ${cd.current_track}")
+      //Utils.outln(s"$getName: Call from: ${machine.cpu.PC.toHexString}")
     }
 
     if (cd.dirty) cd.writebuf()
@@ -301,7 +300,7 @@ class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exte
       cd.current_sector = 0xff
       cd.current_byte = 0xff
 
-      Utils.outln(s"$getName: Head unload.")
+      //Utils.outln(s"$getName: Head unload.")
     }
 
     // interrupts and head current are ignored
@@ -322,7 +321,7 @@ class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exte
 
     if (current_disk.isEmpty) {
       // Un-available drive selected
-      Utils.outln(s"$getName: Unavailable drive selected for I/O.")
+      //Utils.outln(s"$getName: Unavailable drive selected for I/O.")
 
       return 0 // nothing we can do
     }

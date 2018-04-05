@@ -1133,11 +1133,11 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
               addTStates(7)
               CHECK_LOG_BYTE(HL)
               val temp: UByte = MMU.get8(HL)
+              AF((AF & ~0x28) | (temp & 0x28))
               val acu: UByte = A.get8
-              AF(AF & ~0x28 | temp & 0x28)
               val sum: UInt = acu - temp
               val cbits: UInt = acu ^ temp ^ sum
-              AF((AF & 0xff) | cpTable(sum & 0xff) | (temp & 0x28) | SET_PV(cbits) | cbits2Table(cbits & 0x1ff))
+              AF((AF & ~0xff) | cpTable(sum & 0xff) | (temp & 0x28) | SET_PV(cbits) | cbits2Table(cbits & 0x1ff))
 
             case (0xbf) => // CP A
               addTStates(4)
@@ -2274,7 +2274,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
                   val sum: Int = HL - HL - {
                     if (testFlag(F, FLAG_C)) 1 else 0
                   }
-                  AF((AF & 0xff) | ({
+                  AF((AF & ~0xff) | ({
                     if ((sum & 0xffff) == 0) 1 else 0
                   } << 6) | cbits2Z80DupTable((sum >> 8) & 0x1ff))
                   HL(sum)
@@ -3773,7 +3773,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
   @inline
   private final def SBC(r1: Register16, r2: Register16): Unit = {
     val sum: Int = r1 - r2 - (if (testFlag(F, FLAG_C)) UInt(1) else UInt(0))
-    AF((AF & 0xff) | ((sum >> 8) & 0xa8) | ({
+    AF((AF & ~0xff) | ((sum >> 8) & 0xa8) | ({
       if ((sum & 0xffff) == 0) 1 else 0
     } << 6) |
       cbits2Z80Table(((HL ^ BC ^ sum) >> 8) & 0x1ff))
