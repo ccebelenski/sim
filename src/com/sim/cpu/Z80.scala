@@ -515,16 +515,16 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
             case (0x34) => // INC (HL)
               addTStates(11)
               CHECK_LOG_BYTE(HL)
-              val temp = MMU.get8(HL) + 1
-              MMU.put8(HL, UByte(temp.byteValue()))
-              AF((AF & ~0xfe) | incTable(temp) | SET_PV2(0x80, temp))
+              val temp :UByte = UByte((MMU.get8(HL) + UByte(1)).byteValue)
+              MMU.put8(HL, temp.intValue)
+              AF((AF & ~0xfe) | incTable(temp) | SET_PV2(0x80, temp.intValue))
 
             case (0x35) => // DEC (HL)
               addTStates(11)
               CHECK_LOG_BYTE(HL)
-              val temp = MMU.get8(HL) - 1
-              MMU.put8(HL, UByte(temp.byteValue()))
-              AF((AF & ~0xfe) | decTable(temp) | SET_PV2(0x7f, temp))
+              val temp : UByte = UByte((MMU.get8(HL) - UByte(1)).byteValue)
+              MMU.put8(HL, temp.intValue)
+              AF((AF & ~0xfe) | decTable(temp) | SET_PV2(0x7f, temp.intValue))
 
             case (0x36) => // LD (HL),nn
               addTStates(10)
@@ -2271,13 +2271,13 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
 
                 case (0x62) => // SBC HL,HL
                   addTStates(15)
-                  val sum: Int = HL - HL - {
-                    if (testFlag(F, FLAG_C)) 1 else 0
-                  }
+                  val sum: UInt = UInt(HL - HL - {
+                    if (testFlag(F, FLAG_C)) UInt(1) else UInt(0)
+                  })
                   AF((AF & ~0xff) | ({
                     if ((sum & 0xffff) == 0) 1 else 0
                   } << 6) | cbits2Z80DupTable((sum >> 8) & 0x1ff))
-                  HL(sum)
+                  HL(sum & 0xffff)
 
                 case (0x63) => // LD (nnnn),HL
                   addTStates(20)
@@ -2305,13 +2305,13 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
 
                 case (0x6a) => // ADC HL,HL
                   addTStates(15)
-                  val sum: Int = HL + HL - {
-                    if (testFlag(F, FLAG_C)) 1 else 0
-                  }
+                  val sum: UInt = UInt(HL + HL + {
+                    if (testFlag(F, FLAG_C)) UInt(1) else UInt(0)
+                  })
                   AF((AF & ~0xff) | ({
                     if ((sum & 0xffff) == 0) 1 else 0
-                  } << 6) | cbitsZ80DupTable(sum >> 8))
-                  HL(sum)
+                  } << 6) | cbitsZ80DupTable(sum.intValue >> 8))
+                  HL(sum.intValue)
 
                 case (0x6b) => // LD HL,(nnnn)
                   addTStates(20)
