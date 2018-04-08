@@ -1359,7 +1359,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
                 if (testFlag(F, FLAG_C)) UByte(1) else UByte(0)
               }
               val cbits: UInt = acu ^ temp ^ sum
-              AF(addTable(sum & 0xff) | cbitsTable(cbits & 0x1ff) | SET_PV(cbits))
+              AF(addTable(sum & 0x1ff) | cbitsTable(cbits & 0x1ff) | SET_PV(cbits))
 
             case (0xcf) => // RST 8
               addTStates(11)
@@ -1703,7 +1703,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
                   val temp: UByte = MMU.get8(adr)
                   val acu: UByte = A
                   val sum: UInt = acu + temp
-                  AF((addTable(sum & 0xff) | cbitsZ80Table((acu ^ temp ^ sum) & 0x1ff)).intValue)
+                  AF((addTable(sum & 0x1ff) | cbitsZ80Table((acu ^ temp ^ sum) & 0x1ff)).intValue)
 
                 case (0x8c) => // ADC A,IXH
                   addTStates(9)
@@ -1722,7 +1722,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
                   val sum: UInt = acu + temp + {
                     if (testFlag(F, FLAG_C)) UByte(1) else UByte(0)
                   }
-                  AF((addTable(sum & 0xff) | cbitsZ80Table((acu ^ temp ^ sum) & 0x1ff)).intValue)
+                  AF((addTable(sum & 0x1ff) | cbitsZ80Table((acu ^ temp ^ sum) & 0x1ff)).intValue)
 
                 case (0x96) => // SUB (IX+dd)
                   addTStates(19)
@@ -1761,7 +1761,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
                   val sum: UInt = acu - temp - {
                     if (testFlag(F, FLAG_C)) UByte(1) else UByte(0)
                   }
-                  AF((addTable(sum & 0xff) | cbits2Z80Table((acu ^ temp ^ sum) & 0x1ff)).intValue)
+                  AF((addTable(sum & 0x1ff) | cbits2Z80Table((acu ^ temp ^ sum) & 0x1ff)).intValue)
 
                 case (0xa4) => // AND IXH
                   addTStates(9)
@@ -2816,9 +2816,9 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
 
                 case (0x29) => // ADD IY,IY
                   addTStates(15)
-                  val sum: Int = IY + IY
-                  AF((AF & ~0x3b) | cbitsDup16Table(sum >> 8))
-                  IY(sum)
+                  val sum: UInt = IY.get16 + IY.get16
+                  AF((AF & ~0x3b) | cbitsDup16Table(sum.intValue >> 8))
+                  IY(sum & 0xffff)
 
                 case (0x2a) => // LD IY,(nnnn)
                   addTStates(20)
@@ -2853,9 +2853,9 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
                 case (0x36) => // LD (IY+dd),nn
                 case (0x39) => // ADD IY,SP
                   addTStates(15)
-                  val sum: Int = IY + SP
+                  val sum: UInt = IY.get16 + SP.get16
                   AF((AF & ~0x3b) | ((sum >> 8) & 0x28) | cbitsTable((IY ^ SP ^ sum) >> 8))
-                  IY(sum)
+                  IY(sum & 0xffff)
 
                 case (0x44) => // LD B,IYH
                   addTStates(9)
@@ -3006,18 +3006,11 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
 
                 case (0x84) => // ADD A,IYH
                   addTStates(9)
-                  val tmp: Int = IYH
-                  val acu: Int = A
-                  val sum: Int = acu + tmp
-                  AF((addTable(sum) | cbitsZ80Table(acu ^ tmp ^ sum)).intValue)
-
+                  ADDIDX(A,IYH)
 
                 case (0x85) => // ADD A,IYL
                   addTStates(9)
-                  val tmp: Int = IYL
-                  val acu: Int = A
-                  val sum: Int = acu + tmp
-                  AF((addTable(sum) | cbitsZ80Table(acu ^ tmp ^ sum)).intValue)
+                  ADDIDX(A,IYL)
 
 
                 case (0x86) => // ADD A,(IY+dd)
@@ -3025,41 +3018,31 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
                   val adr: Int = IY + MMU.get8(PC)
                   PC.increment()
                   CHECK_LOG_BYTE(adr)
-                  val temp: Int = MMU.get8(adr)
-                  val acu: Int = A
-                  val sum: Int = acu + temp
-                  AF((addTable(sum) | cbitsZ80Table(acu ^ temp ^ sum)).intValue)
+                  val temp: UByte = MMU.get8(adr)
+                  val acu: UByte = A
+                  val sum: UInt = acu + temp
+                  AF((addTable(sum & 0x1ff) | cbitsZ80Table((acu ^ temp ^ sum) & 0x1ff)).intValue)
 
 
                 case (0x8c) => // ADC A,IYH
                   addTStates(9)
-                  val tmp: Int = IYH
-                  val acu: Int = A
-                  val sum: Int = acu + tmp + {
-                    if (testFlag(F, FLAG_C)) 1 else 0
-                  }
-                  AF((addTable(sum) | cbitsZ80Table(acu ^ tmp ^ sum)).intValue)
+                 ADCIDX(A,IYH)
 
                 case (0x8d) => // ADC A,IYL
                   addTStates(9)
-                  val tmp: Int = IYL
-                  val acu: Int = A
-                  val sum: Int = acu + tmp + {
-                    if (testFlag(F, FLAG_C)) 1 else 0
-                  }
-                  AF((addTable(sum) | cbitsZ80Table(acu ^ tmp ^ sum)).intValue)
+                  ADCIDX(A,IYL)
 
                 case (0x8e) => // ADC A,(IY+dd)
                   addTStates(19)
                   val adr: Int = IY + MMU.get8(PC)
                   PC.increment()
                   CHECK_LOG_BYTE(adr)
-                  val temp: Int = MMU.get8(adr)
-                  val acu: Int = A
-                  val sum: Int = acu + temp + {
-                    if (testFlag(F, FLAG_C)) 1 else 0
+                  val temp: UByte = MMU.get8(adr)
+                  val acu: UByte = A
+                  val sum: UInt = acu + temp + {
+                    if (testFlag(F, FLAG_C)) UInt(1) else UInt(0)
                   }
-                  AF((addTable(sum) | cbitsZ80Table(acu ^ temp ^ sum)).intValue)
+                  AF((addTable(sum & 0x1ff) | cbitsZ80Table((acu ^ temp ^ sum) & 0x1ff)).intValue)
 
                 case (0x96) => // SUB (IY+dd)
                   addTStates(19)
@@ -3069,7 +3052,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
                   val temp: UByte = MMU.get8(adr)
                   val acu: UByte = A
                   val sum: UInt = acu - temp
-                  AF((addTable(sum & 0xff) | cbits2Z80Table((acu ^ temp ^ sum) & 0x1ff)).intValue)
+                  AF((addTable(sum & 0x1ff) | cbits2Z80Table((acu ^ temp ^ sum) & 0x1ff)).intValue)
 
                 case (0x94) => // SUB IYH
                   addTStates(9)
@@ -3141,17 +3124,17 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
 
                 case (0xbc) => // CP IYH
                   addTStates(9)
-                  val temp: UInt = IYH.toUInt
+                  val temp: UByte = IYH.get8
                   AF((AF & ~0x28) | (temp & 0x28))
-                  val acu: UInt = A.toUInt
+                  val acu: UByte = A
                   val sum: UInt = acu - temp
                   AF((AF & ~0xff) | cpTable(sum & 0xff) | (temp & 0x28) | cbits2Z80Table((acu ^ temp ^ sum) & 0x1ff))
 
                 case (0xbd) => // CP IYL
                   addTStates(9)
-                  val temp: UInt = IYL.toUInt
+                  val temp: UByte = IYL
                   AF((AF & ~0x28) | (temp & 0x28))
-                  val acu: UInt = A.toUInt
+                  val acu: UByte = A
                   val sum: UInt = acu - temp
                   AF((AF & ~0xff) | cpTable(sum & 0xff) | (temp & 0x28) | cbits2Z80Table((acu ^ temp ^ sum) & 0x1ff))
 
@@ -3161,9 +3144,9 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
                   val adr: Int = IY + MMU.get8(PC)
                   PC.increment()
                   CHECK_LOG_BYTE(adr)
-                  val temp: UInt = MMU.get8(adr)
+                  val temp: UByte = MMU.get8(adr)
                   AF((AF & ~0x28) | (temp & 0x28))
-                  val acu: UInt = A.toUInt
+                  val acu: UByte = A
                   val sum: UInt = acu - temp
                   AF((AF & ~0xff) | cpTable(sum & 0xff) | (temp & 0x28) | cbits2Z80Table((acu ^ temp ^ sum) & 0x1ff))
 
@@ -3171,9 +3154,9 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
                 case (0xcb) => // ******************************************************** FD CB Prefix
                   val adr: Int = IY + MMU.get8(PC)
                   PC.increment()
-                  var acu: Int = 0
+                  var acu: UByte = UByte(0)
                   var cbits: Int = 0
-                  var tmp: Int = 0
+                  var tmp: UInt = UInt(0)
                   val op: Int = MMU.get8(PC)
                   (op & 7) match {
                     case 0 =>
@@ -3208,7 +3191,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
                     case (0x00) => // shift/rotate
                       (op & 0x38) match {
                         case (0x00) => // RLC
-                          tmp = (acu << 1) | (acu >> 7)
+                          tmp = UInt((acu.intValue << 1) | (acu.intValue >> 7))
                           cbits = tmp & 1
                           AF((AF & ~0xff) | rotateShiftTable(tmp & 0xff) | {
                             if (cbits == 0) 0 else 1
@@ -3223,7 +3206,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
 
                         case (0x10) => // RL
                           tmp = (acu << 1) | {
-                            if (testFlag(F, FLAG_C)) 1 else 0
+                            if (testFlag(F, FLAG_C)) UInt(1) else UInt(0)
                           }
                           cbits = acu & 0x80
                           AF((AF & ~0xff) | rotateShiftTable(tmp & 0xff) | {
@@ -3232,7 +3215,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
 
                         case (0x18) => // RR
                           tmp = (acu >> 1) | ({
-                            if (testFlag(F, FLAG_C)) 1 else 0
+                            if (testFlag(F, FLAG_C)) UInt(1) else UInt(0)
                           } << 7)
                           cbits = acu & 1
                           AF((AF & ~0xff) | rotateShiftTable(tmp & 0xff) | {
@@ -3247,14 +3230,14 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
                           })
 
                         case (0x28) => // SRA
-                          tmp = (acu >> 1) | (acu & 0x80)
+                          tmp = UInt((acu >> 1) | (acu & 0x80))
                           cbits = acu & 1
                           AF((AF & ~0xff) | rotateShiftTable(tmp & 0xff) | {
                             if (cbits == 0) 0 else 1
                           })
 
                         case (0x30) => // SLIA
-                          tmp = (acu << 1) | 1
+                          tmp = (acu << 1) | UInt(1)
                           cbits = acu & 0x80
                           AF((AF & ~0xff) | rotateShiftTable(tmp & 0xff) | {
                             if (cbits == 0) 0 else 1
@@ -3287,32 +3270,32 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
 
                     case (0x80) => // RES
                       addTStates(23)
-                      tmp = acu & ~(1 << ((op >> 3) & 7))
+                      tmp = UInt(acu & ~(1 << ((op >> 3) & 7)))
 
                     case (0xc0) => // SET
                       addTStates(23)
-                      tmp = acu | (1 << ((op >> 3) & 7))
+                      tmp = UInt(acu | (1 << ((op >> 3) & 7)))
 
                     case _ =>
                   }
                   (op & 7) match {
                     case 0 =>
-                      B(tmp)
+                      B(tmp & 0xff)
                     case 1 =>
-                      C(tmp)
+                      C(tmp & 0xff)
                     case 2 =>
-                      D(tmp)
+                      D(tmp & 0xff)
                     case 3 =>
-                      E(tmp)
+                      E(tmp & 0xff)
                     case 4 =>
-                      H(tmp)
+                      H(tmp & 0xff)
                     case 5 =>
-                      L(tmp)
+                      L(tmp & 0xff)
                     case 6 =>
                       MMU.put8(adr, UByte(tmp.byteValue()))
 
                     case 7 =>
-                      A(tmp)
+                      A(tmp & 0xff)
 
                     case _ =>
                   }
@@ -3676,7 +3659,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
     val tmp: UByte = r2
     val acu: UByte = r1
     val sum: UInt = acu + tmp
-    AF((addTable(sum & 0xff) | cbitsZ80Table((acu ^ tmp ^ sum) & 0x1ff)).intValue)
+    AF((addTable(sum & 0x1ff) | cbitsZ80Table((acu ^ tmp ^ sum) & 0x1ff)).intValue)
   }
 
   @inline
@@ -3693,7 +3676,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
     val acu: UByte = r1
     val sum: UInt = acu + temp
     val cbits: UInt = acu ^ temp ^ sum
-    AF(addTable(sum & 0xff) | cbitsTable(cbits & 0x1ff) | SET_PV(cbits))
+    AF(addTable(sum & 0x1ff) | cbitsTable(cbits & 0x1ff) | SET_PV(cbits))
   }
 
   @inline
@@ -3701,7 +3684,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
     val acu: UByte = r1.get8
     val sum: UInt = acu + temp
     val cbits: UInt = acu ^ temp ^ sum
-    AF(addTable(sum & 0xff) | cbitsTable(cbits & 0x1ff) | SET_PV(cbits))
+    AF(addTable(sum & 0x1ff) | cbitsTable(cbits & 0x1ff) | SET_PV(cbits))
   }
 
   @inline
@@ -3712,7 +3695,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
       if (testFlag(F, FLAG_C)) UByte(1) else UByte(0)
     }
     val cbits: UInt = acu ^ temp ^ sum
-    AF(addTable(sum & 0xff) | cbitsTable(cbits & 0x1ff) | SET_PV(cbits))
+    AF(addTable(sum & 0x1ff) | cbitsTable(cbits & 0x1ff) | SET_PV(cbits))
   }
 
   @inline
