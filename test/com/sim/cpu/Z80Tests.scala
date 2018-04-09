@@ -201,7 +201,7 @@ class Z80Tests {
     assertTrue(z80.HL.get16 == 0x0000)
     assertTrue((z80.F.get8 & 128) != 0) // Check S flag preserved
     assertTrue((z80.F.get8 & 2) == 0) // Check N cleared (add)
-    assertTrue((z80.F.get8 & 1) == 0) // Carry flag cleared
+    assertTrue((z80.F.get8 & 1) == 1) // Carry flag Set
 
   }
 
@@ -293,8 +293,8 @@ class Z80Tests {
     z80.runcpu()
     assertTrue(z80.PC.get16 == 0x0002)
     assertTrue(z80.A.get8 == 0xFF)
-    //assertFalse(z80.testFlag(z80.F, z80.FLAG_Z)) // Not sure about this one.
-    assertTrue(z80.testFlag(z80.F, z80.FLAG_P))
+    assertFalse(z80.testFlag(z80.F, z80.FLAG_Z)) // Not sure about this one.
+    assertFalse(z80.testFlag(z80.F, z80.FLAG_P))
     assertTrue(z80.testFlag(z80.F, z80.FLAG_N))
     assertTrue(z80.testFlag(z80.F, z80.FLAG_C))
 
@@ -616,7 +616,7 @@ class Z80Tests {
 
 
     assertTrue(z80.PC.get16 == 0x000B)
-  // TODO DAA is still not right.
+    // TODO DAA is still not right.
 
   }
 
@@ -626,23 +626,23 @@ class Z80Tests {
     var loc = 0x0000
     z80.PC(loc)
 
-    z80.deposit(loc, 0x03); // inc BC
+    z80.deposit(loc, 0x03) // inc BC
     loc += 1
-    z80.deposit(loc, 0x03); // inc BC
+    z80.deposit(loc, 0x03) // inc BC
     loc += 1
-    z80.deposit(loc, 0xED); // ldir
+    z80.deposit(loc, 0xED) // ldir
     loc += 1
-    z80.deposit(loc, 0xB0); //
+    z80.deposit(loc, 0xB0) //
     loc += 1
-    z80.deposit(loc, 0x03); // inc BC
+    z80.deposit(loc, 0x03) // inc BC
     loc += 1
-    z80.deposit(loc, 0x03); // inc BC
+    z80.deposit(loc, 0x03) // inc BC
     loc += 1
-    z80.deposit(loc, 0xED); // lddr
+    z80.deposit(loc, 0xED) // lddr
     loc += 1
-    z80.deposit(loc, 0xB8); //
+    z80.deposit(loc, 0xB8) //
     loc += 1
-    z80.deposit(loc, 0x76); // halt
+    z80.deposit(loc, 0x76) // halt
 
     z80.runcpu()
 
@@ -873,7 +873,7 @@ class Z80Tests {
 
     assertTrue(z80.PC.intValue == 0x02)
     assertTrue(z80.A.intValue == 0x0A)
-    assertFalse(z80.testFlag(z80.F,z80.FLAG_N)) // N reset
+    assertFalse(z80.testFlag(z80.F, z80.FLAG_N)) // N reset
     assertTrue(z80.F.intValue == 8) // All flags clear except unknown flag
 
     z80.PC(0x0000)
@@ -881,16 +881,16 @@ class Z80Tests {
     z80.runcpu()
 
     assertTrue(z80.A.intValue == 0x09)
-    assertTrue(z80.testFlag(z80.F,z80.FLAG_C))
-    assertFalse(z80.testFlag(z80.F,z80.FLAG_Z))
+    assertTrue(z80.testFlag(z80.F, z80.FLAG_C))
+    assertFalse(z80.testFlag(z80.F, z80.FLAG_Z))
 
     z80.PC(0x0000)
     z80.AF(0xF600)
     z80.runcpu()
 
     assertTrue(z80.A.intValue == 0x00)
-    assertTrue(z80.testFlag(z80.F,z80.FLAG_C))
-    assertTrue(z80.testFlag(z80.F,z80.FLAG_Z))
+    assertTrue(z80.testFlag(z80.F, z80.FLAG_C))
+    assertTrue(z80.testFlag(z80.F, z80.FLAG_Z))
 
   }
 
@@ -911,7 +911,7 @@ class Z80Tests {
   }
 
   @Test
-  def test0x22():Unit = {
+  def test0x22(): Unit = {
     // LD (nnnn),HL
     z80.deposit(0x0000, 0x22) // LD (nnnn), HL
     z80.deposit(0x0001, 0x00)
@@ -928,7 +928,7 @@ class Z80Tests {
   }
 
   @Test
-  def test0xb7():Unit = {
+  def test0xb7(): Unit = {
     // OR A
     z80.deposit(0x0000, 0xb7) // OR A
     z80.deposit(0x0001, 0x76) // HLT
@@ -941,6 +941,1188 @@ class Z80Tests {
     assertTrue(z80.F.intValue == 0x00) // no flags
 
   }
+
+  @Test
+  def testGeneralInstructions(): Unit = {
+    var addr = 0xC000
+    // EX AF AF
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x01) // LD BC
+
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x12) //
+
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x34)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xC5) // PUSH BC
+
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xF1) // POP AF
+
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x08)
+    z80.deposit(addr, 0x76) // HALT
+
+    z80.resetCPU()
+    z80.PC(0xc0000)
+    z80.runcpu()
+    assertEquals(0x00, z80.A.get8.intValue)
+    assertEquals(0x00, z80.F.get8.intValue)
+    assertEquals(0x34, z80.AP.get8.intValue)
+    assertEquals(0x12, z80.FP.get8.intValue)
+/*
+
+    // DJNZ
+    addr = 0xD000
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x01) // LD BC
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x00)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x04)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x0C) // INC C
+
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x10) // DJNZ
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xFD) // -2
+
+    z80.deposit(addr, 0x76)
+    z80.resetCPU
+    z80.PC(0xd000)
+    z80.runcpu()
+    assertEquals(0x0004, z80.BC.get16.intValue)
+*/
+    // JR NZ
+    addr = 0xC000
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x20)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x01) // 1
+
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x3C) // INC A
+
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x3D) // DEC A
+
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x3C)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xC0) // RET NZ
+
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x20)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x01)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x3C)
+    z80.deposit(addr, 0x76)
+    z80.resetCPU
+    z80.PC(0xc000)
+    z80.runcpu()
+    assertEquals(0x01, z80.A.get8.intValue)
+
+
+    // JR NC
+    addr = 0xC000
+    z80.resetCPU()
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x37) // SCF
+
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x30) // JR NC
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x02) // 2
+
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xEE) // XOR 0xFF
+
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xFF)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x30) // JR NC
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x00) // 0
+
+    z80.deposit(addr, 0x76)
+    z80.resetCPU
+    z80.PC(0xc000)
+    z80.runcpu()
+    assertEquals(0xFF, z80.A.get8.intValue)
+
+
+    // JR C
+    addr = 0xD000
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x38)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x02)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xEE)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xFF)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x37)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x38)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x00)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x0D) // DEC C
+
+    z80.deposit(addr, 0x76)
+    z80.resetCPU
+    z80.PC(0xd000)
+    z80.runcpu()
+    assertEquals(0xFF, z80.A.get8.intValue)
+    addr = 0xC000
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x3C)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xCD) // CALL
+
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x00)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xD0)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x01)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x34)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x12)
+    z80.deposit(addr, 0x76)
+    addr = 0xD000
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xC0)
+    z80.deposit(addr, 0x76)
+    z80.resetCPU
+    z80.PC(0xc000)
+    z80.runcpu()
+
+    assertEquals(0x1234, z80.BC.get16.intValue)
+    // CALL Z
+    addr = 0xC000
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x3E) // LD A
+
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xFF)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xCC)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x00)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xD0)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x3C)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xCC)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x00)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xD0)
+    z80.deposit(addr, 0x76)
+    addr = 0xD000
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x3C)
+    z80.deposit(addr, 0xC9) // RET
+
+    z80.resetCPU
+    z80.PC(0xc000)
+    z80.runcpu()
+
+    assertEquals(0x01, z80.A.get8.intValue)
+
+/*
+    // RET NC / JP NC / CALL NC
+    addr = 0xC000
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x37)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xD4) // CALL NC
+
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x00)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xD0)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xD2) // JP NC
+
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x00)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xD0)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x3F) // CCF
+
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xD4)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x00)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xD0)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x3E)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xFF)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x3C)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x3C)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xD2)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x00)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xE0)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x3E)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x88)
+    z80.deposit(addr, 0x76)
+    addr = 0xD000
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x3C)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xD0) // RET NC
+
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x3E)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x77)
+    z80.deposit(addr, 0x76)
+    addr = 0xE000
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x3C)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xD0)
+    z80.deposit(addr, 0x76)
+    z80.resetCPU
+    z80.PC(0xc000)
+    z80.runcpu()
+
+    assertEquals(0x02, z80.A.get8)
+    */
+    // RET C / JP C
+    addr = 0xC000
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x37)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xD0)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xD0)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x00)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xD0)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xCD)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x00)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xD0)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xDA) // JP C
+
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x00)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xE0)
+    z80.deposit(addr, 0x76)
+    addr = 0xD000
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xD8) // RET C
+
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x3E)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x77)
+    z80.deposit(addr, 0x76)
+    addr = 0xE000
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x3E)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x88)
+    z80.deposit(addr, 0x76)
+    z80.resetCPU
+    z80.PC(0xc000)
+    z80.runcpu()
+
+    assertEquals(0x88, z80.A.get8.intValue)
+    // EXX / EX (SP),HL
+    addr = 0xC000
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x03) // INC BC
+
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x13) // INC DE
+
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x13)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x23) // INC HL
+
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x23)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x23)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xD9) // EXX
+
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x11) // LD DE
+
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x34)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x12)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xD5) // PUSH DE
+
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xE3)
+    z80.deposit(addr, 0x76)
+    z80.resetCPU()
+    z80.PC(0xc000)
+    z80.runcpu()
+
+    assertEquals(0x0001, z80.BCP.get16.intValue)
+    assertEquals(0x0002, z80.DEP.get16.intValue)
+    assertEquals(0x0003, z80.HP.get8.intValue)
+    assertEquals(0x1234, z80.HL.get16.intValue)
+    // IN A
+    addr = 0xC000
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x3E)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x12)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xD3) // OUT A
+
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x34)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xDB)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x77)
+    z80.deposit(addr, 0x76)
+    z80.resetCPU
+    z80.PC(0xc000)
+    z80.runcpu()
+
+    assertEquals(0x12, z80.A)
+    // RET PO / JP PO / CALL PO
+    addr = 0xC000
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x3E)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x7F)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x3C)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xE4) // CALL PO
+
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x00)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xD0)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xE0) // RET PO
+
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xE2) // JP PO
+
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x00)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xD0)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x3D)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x3D)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xE4)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x00)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xD0)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x3E)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xFF)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x3C)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x3C)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xE2)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x00)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xE0)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x3E)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x88)
+    z80.deposit(addr, 0x76)
+    addr = 0xD000
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x3C)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xE0)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x3E)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x77)
+    z80.deposit(addr, 0x76)
+    addr = 0xE000
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x3C)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xE0)
+    z80.deposit(addr, 0x76)
+    z80.resetCPU
+    z80.PC(0xc000)
+    z80.runcpu()
+
+    assertEquals(0x02, z80.A)
+    // RET PE / JP PE / CALL PE
+    addr = 0xC000
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x3E)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x7F)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x3C)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xEC) // CALL PE
+
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x00)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xD0)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x3E)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x7F)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x3C)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xEA) // JP PE
+
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x00)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xE0)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x3E)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x88)
+    z80.deposit(addr, 0x76)
+    addr = 0xD000
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x3C)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x3C)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xE0) // RET PE
+
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x3E)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x77)
+    z80.deposit(addr, 0x76)
+    addr = 0xE000
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x3E)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x00)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x3C)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xE8)
+    z80.deposit(addr, 0x76)
+    z80.resetCPU
+    z80.PC(0xc000)
+    z80.runcpu()
+
+    assertEquals(0x01, z80.A.get8)
+    // JMP (HL)
+    addr = 0xC000
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x3E)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x33)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x21) // LD HL
+
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x00)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xE0)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xE9)
+    z80.deposit(addr, 0xD0)
+    addr = 0xE000
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x3E)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x77)
+    z80.deposit(addr, 0xD0)
+    z80.resetCPU
+    z80.PC(0xc000)
+    z80.runcpu()
+
+    assertEquals(0x77, z80.A)
+    // LD SP,HL
+    addr = 0xC000
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x21)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x34)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x12)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xF9)
+    z80.deposit(addr, 0xD0)
+    z80.resetCPU
+    z80.PC(0xc000)
+    z80.runcpu()
+
+    assertEquals(0x1236, z80.SP)
+    // RET NS / JP NS / CALL NS
+    addr = 0xC000
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x3E)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x80)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x3C)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xF4) // CALL NS
+
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x00)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xD0)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xF2) // JP NS
+
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x00)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xD0)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x3E)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x08)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x3C)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xF4)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x00)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xD0)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x3E)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x43)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x3C)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xF2)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x00)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xE0)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x3E)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x88)
+    z80.deposit(addr, 0x76)
+    addr = 0xD000
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x3C)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x3C)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xF0) // RET NS
+
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x3E)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x77)
+    z80.deposit(addr, 0x76)
+    addr = 0xE000
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x3E)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x07F)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x3C)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xF0)
+    z80.deposit(addr, 0x76)
+    z80.resetCPU
+    z80.PC(0xc000)
+    z80.runcpu()
+
+    assertEquals(0x80, z80.A)
+    // RET S / JP S / CALL S
+    addr = 0xC000
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x3E)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x7F)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x3C)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xFC) // CALL S
+
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x00)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xD0)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x3E)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xAA)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x3C)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xFA) // JP S
+
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x00)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xE0)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x3E)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x88)
+    z80.deposit(addr, 0x76)
+    addr = 0xD000
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x3C)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x3C)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xF8) // RET S
+
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x3E)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x77)
+    z80.deposit(addr, 0x76)
+    addr = 0xE000
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x3E)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x11)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x3C)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0xF8)
+    z80.deposit(addr, 0x76)
+    z80.resetCPU
+    z80.PC(0xc000)
+    z80.runcpu()
+
+    assertEquals(0x12, z80.A.get8)
+  }
+
+
+  //@Test
+  def testBasicCPU(): Unit = {
+
+    z80.resetCPU()
+    // A very simple I/O routine to simulate NAS-SYS character output call
+    z80.deposit(0x30, 0xd3)
+    z80.deposit(0x31, 0x00)
+    z80.deposit(0x32, 0xc9)
+
+    val utils = new TestUtils
+    utils.readHexDumpFile("nastest.hex",z80)
+    z80.PC(0x1000)
+
+    z80.runcpu()
+
+  }
+
+
 }
 
 object Z80Tests {

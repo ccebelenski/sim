@@ -149,6 +149,10 @@ abstract class BasicCPU(val isBanked: Boolean, override val machine: AbstractMac
     MMU.put8(address, UByte((byte & 0xff).byteValue()))
   }
 
+  // For testing?
+  def deposit(address: java.lang.Integer, byte: java.lang.Integer) : Unit = {
+    deposit(address.toInt,byte.toInt)
+  }
 
   def depositWord(address: Int, word: UShort): Unit = {
     MMU.put16(address, word)
