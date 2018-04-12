@@ -2306,13 +2306,13 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
 
                 case (0x6a) => // ADC HL,HL
                   addTStates(15)
-                  val sum: UInt = UInt(HL + HL + {
+                  val sum: UInt = UInt(HL.get16.intValue + HL.get16.intValue + {
                     if (testFlag(F, FLAG_C)) UInt(1) else UInt(0)
                   })
                   AF((AF & ~0xff) | ({
                     if ((sum & 0xffff) == 0) 1 else 0
-                  } << 6) | cbitsZ80DupTable(sum.intValue >> 8))
-                  HL(sum.intValue)
+                  } << 6) | cbitsZ80DupTable((sum.intValue >> 8) & 0x1ff))
+                  HL(sum.intValue & 0xffff)
 
                 case (0x6b) => // LD HL,(nnnn)
                   addTStates(20)
@@ -3704,9 +3704,9 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
     val sum: UInt = r1.get16 + r2.get16 + {
       if (testFlag(F, FLAG_C)) UInt(1) else UInt(0)
     }
-    AF((AF & ~0xff) | ((sum >> 8) & 0xa8) | ({
-      if ((sum & 0xffff) == 0) 1 else 0
-    } << 6) | cbitsZ80Table((HL ^ BC ^ sum) >> 8))
+    AF((AF & ~0xff) | ((sum.intValue >> 8) & 0xa8) | ({
+      if ((sum.intValue & 0xffff) == 0) 1 else 0
+    } << 6) | cbitsZ80Table(((HL ^ BC ^ sum.intValue) >> 8) & 0x1ff))
     r1(sum & 0xffff)
   }
 
@@ -3758,9 +3758,9 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
   private final def SBC(r1: Register16, r2: Register16): Unit = {
     val sum: UInt = r1.get16 - r2.get16 - (if (testFlag(F, FLAG_C)) UInt(1) else UInt(0))
     AF((AF & ~0xff) | ((sum >> 8) & 0xa8) | ({
-      if ((sum & 0xffff) == 0) 1 else 0
+      if ((sum & 0xffff) == 0) UInt(1) else UInt(0)
     } << 6) |
-      cbits2Z80Table(((HL ^ BC ^ sum) >> 8) & 0x1ff))
+      cbits2Z80Table(((r1 ^ r2 ^ sum) >> 8) & 0x1ff))
 
     r1(sum & 0xffff)
   }
