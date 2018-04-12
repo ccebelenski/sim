@@ -83,7 +83,7 @@ class S100SIMDevice(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) extend
         // TODO
 
       case (27) =>
-        // SimH Sleep
+        // SimH Sleep - Don't bother, system resolution is rarely good enough for nano times.
         Thread.sleep(0,500)
 
       case _ => {}
