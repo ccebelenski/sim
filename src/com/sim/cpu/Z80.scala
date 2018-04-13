@@ -1821,7 +1821,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
                   val op: Int = MMU.get8(PC)
                   var acu: UByte = UByte(0)
                   var temp: UByte = UByte(0)
-                  var cbits: Int = 0
+                  var cbits: UInt = UInt(0)
 
                   (op & 7) match {
                     case 0 =>
@@ -1868,14 +1868,14 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
                       (op & 0x38) match {
                         case (0x00) => // RLC
                           temp = UByte(((acu << 1) | (acu >> 7)).byteValue)
-                          cbits = temp & 1
+                          cbits = UInt(temp & 1)
                           AF((AF & ~0xff) | rotateShiftTable(temp) | {
                             if (cbits == 0) 0 else 1
                           })
 
                         case (0x08) => // RRC
                           temp = UByte(((acu >> 1) | (acu << 7)).byteValue)
-                          cbits = temp & 0x80
+                          cbits = UInt(temp & 0x80)
                           AF((AF & ~0xff) | rotateShiftTable(temp) | {
                             if (cbits == 0) 0 else 1
                           })
@@ -1884,7 +1884,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
                           temp = UByte(((acu >> 1) | {
                             if (testFlag(F, FLAG_C)) 1 else 0
                           }).byteValue())
-                          cbits = acu & 0x80
+                          cbits = UInt(acu & 0x80)
                           AF((AF & ~0xff) | rotateShiftTable(temp) | {
                             if (cbits == 0) 0 else 1
                           })
@@ -1893,35 +1893,35 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
                           temp = UByte(((acu >> 1) | ({
                             if (testFlag(F, FLAG_C)) 1 else 0
                           } << 7)).byteValue())
-                          cbits = acu & 1
+                          cbits = UInt(acu & 1)
                           AF((AF & ~0xff) | rotateShiftTable(temp) | {
                             if (cbits == 0) 0 else 1
                           })
 
                         case (0x20) => // SLA
                           temp = UByte((acu << 1).byteValue)
-                          cbits = acu & 0x80
+                          cbits = UInt(acu & 0x80)
                           AF((AF & ~0xff) | rotateShiftTable(temp) | {
                             if (cbits == 0) 0 else 1
                           })
 
                         case (0x28) => // SRA
                           temp = UByte(((acu >> 1) | (acu & 0x80)).byteValue())
-                          cbits = acu & 1
+                          cbits = UInt(acu & 1)
                           AF((AF & ~0xff) | rotateShiftTable(temp) | {
                             if (cbits == 0) 0 else 1
                           })
 
                         case (0x30) => // SLIA
                           temp = UByte(((acu << 1) | 1).byteValue)
-                          cbits = acu & 0x80
+                          cbits = UInt(acu & 0x80)
                           AF((AF & ~0xff) | rotateShiftTable(temp) | {
                             if (cbits == 0) 0 else 1
                           })
 
                         case (0x38) => // SRL
                           temp = UByte((acu >> 1).byteValue)
-                          cbits = acu & 1
+                          cbits = UInt(acu & 1)
                           AF((AF & ~0xff) | rotateShiftTable(temp) | {
                             if (cbits == 0) 0 else 1
                           })
