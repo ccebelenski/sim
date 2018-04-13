@@ -1208,7 +1208,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
               val adr: Int = HL.get16
               val op: Int = MMU.get8(PC)
               var acu: Int = 0
-              var cbits: Int = 0
+              var cbits: UInt = UInt(0)
               var temp: Int = 0
               tStateModifier = false
 
@@ -1255,13 +1255,13 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
                   (op & 0x38) match {
                     case (0x00) => //RLC
                       temp = (acu << 1) | (acu >> 7)
-                      cbits = temp & 1
+                      cbits = UInt(temp & 1)
                       AF((AF & ~0xff) | rotateShiftTable(temp & 0xff) | {
                         if (cbits == 0) 0 else 1
                       })
                     case (0x08) => // RRC
                       temp = (acu >> 1) | (acu << 7)
-                      cbits = temp & 0x80
+                      cbits = UInt(temp & 0x80)
                       AF((AF & ~0xff) | rotateShiftTable(temp & 0xff) | {
                         if (cbits == 0) 0 else 1
                       })
@@ -1269,7 +1269,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
                       temp = (acu >> 1) | {
                         if (testFlag(F, FLAG_C)) 1 else 0
                       }
-                      cbits = acu & 0x80
+                      cbits = UInt(acu & 0x80)
                       AF((AF & ~0xff) | rotateShiftTable(temp & 0xff) | {
                         if (cbits == 0) 0 else 1
                       })
@@ -1277,31 +1277,31 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
                       temp = (acu >> 1) | ({
                         if (testFlag(F, FLAG_C)) 1 else 0
                       } << 7)
-                      cbits = acu & 1
+                      cbits = UInt(acu & 1)
                       AF((AF & ~0xff) | rotateShiftTable(temp & 0xff) | {
                         if (cbits == 0) 0 else 1
                       })
                     case (0x20) => // SLA
                       temp = acu << 1
-                      cbits = acu & 0x80
+                      cbits = UInt(acu & 0x80)
                       AF((AF & ~0xff) | rotateShiftTable(temp & 0xff) | {
                         if (cbits == 0) 0 else 1
                       })
                     case (0x28) => // SRA
                       temp = (acu >> 1) | (acu & 0x80)
-                      cbits = acu & 1
+                      cbits = UInt(acu & 1)
                       AF((AF & ~0xff) | rotateShiftTable(temp & 0xff) | {
                         if (cbits == 0) 0 else 1
                       })
                     case (0x30) => // SLIA
                       temp = (acu << 1) | 1
-                      cbits = acu & 0x80
+                      cbits = UInt(acu & 0x80)
                       AF((AF & ~0xff) | rotateShiftTable(temp & 0xff) | {
                         if (cbits == 0) 0 else 1
                       })
                     case (0x38) => // SRL
                       temp = acu >> 1
-                      cbits = acu & 1
+                      cbits = UInt(acu & 1)
                       AF((AF & ~0xff) | rotateShiftTable(temp & 0xff) | {
                         if (cbits == 0) 0 else 1
                       })
