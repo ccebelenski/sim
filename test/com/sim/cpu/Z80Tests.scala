@@ -523,6 +523,50 @@ class Z80Tests {
 
   }
 
+  @Test
+  // RLC B
+  def test0xcb0x00():Unit = {
+    z80.deposit(address = 0x0000, 0xcb) // CB prefix
+    z80.deposit(0x0001, 0x00) // RLC B
+    z80.deposit(address = 0x0002, 0x76) // HALT
+
+    z80.resetCPU()
+    z80.PC(0x0000)
+    z80.B(0x01)
+    z80.runcpu()
+
+    assertEquals(0x02, z80.B.get8.intValue)
+    assertFalse(z80.testFlag(z80.F, z80.FLAG_Z))
+    assertFalse(z80.testFlag(z80.F, z80.FLAG_C))
+    assertFalse(z80.testFlag(z80.F, z80.FLAG_N))
+    assertFalse(z80.testFlag(z80.F, z80.FLAG_H))
+    assertFalse(z80.testFlag(z80.F, z80.FLAG_S))
+
+    z80.resetCPU()
+    z80.PC(0x0000)
+    z80.B(0x81)
+    z80.runcpu()
+
+    assertEquals(0x03, z80.B.get8.intValue)
+    assertFalse(z80.testFlag(z80.F, z80.FLAG_Z))
+    assertTrue(z80.testFlag(z80.F, z80.FLAG_C))
+    assertFalse(z80.testFlag(z80.F, z80.FLAG_N))
+    assertFalse(z80.testFlag(z80.F, z80.FLAG_H))
+    assertFalse(z80.testFlag(z80.F, z80.FLAG_S))
+
+    z80.resetCPU()
+    z80.PC(0x0000)
+    z80.B(0x00)
+    z80.runcpu()
+
+    assertEquals(0x00, z80.B.get8.intValue)
+    assertTrue(z80.testFlag(z80.F, z80.FLAG_Z))
+    assertFalse(z80.testFlag(z80.F, z80.FLAG_C))
+    assertFalse(z80.testFlag(z80.F, z80.FLAG_N))
+    assertFalse(z80.testFlag(z80.F, z80.FLAG_H))
+    assertFalse(z80.testFlag(z80.F, z80.FLAG_S))
+
+  }
 
   @Test
   // ADC HL, BC
