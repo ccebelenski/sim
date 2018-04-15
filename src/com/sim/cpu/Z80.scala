@@ -2235,13 +2235,13 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
             temp = UByte(((acu << 1) | (acu >> 7)).byteValue)
             cbits = UInt(temp & 1)
             AF((AF & ~0xff) | rotateShiftTable(temp & 0xff) | {
-              if (cbits == 0) 0 else 1
+              if (cbits == 0) UInt(0) else UInt(1)
             })
           case (0x08) => // RRC
             temp = UByte(((acu >> 1) | (acu << 7)).byteValue)
             cbits = UInt(temp & 0x80)
             AF((AF & ~0xff) | rotateShiftTable(temp & 0xff) | {
-              if (cbits == 0) 0 else 1
+              if (cbits == 0) UInt(0) else UInt(1)
             })
           case (0x10) => // RL
             temp = UByte(((acu >> 1) | {
@@ -2249,7 +2249,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
             }).byteValue)
             cbits = UInt(acu & 0x80)
             AF((AF & ~0xff) | rotateShiftTable(temp & 0xff) | {
-              if (cbits == 0) 0 else 1
+              if (cbits == 0) UInt(0) else UInt(1)
             })
           case (0x18) => // RR
             temp = UByte(((acu >> 1) | ({
@@ -2257,31 +2257,31 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
             } << 7)).byteValue)
             cbits = UInt(acu & 1)
             AF((AF & ~0xff) | rotateShiftTable(temp & 0xff) | {
-              if (cbits == 0) 0 else 1
+              if (cbits == 0) UInt(0) else UInt(1)
             })
           case (0x20) => // SLA
             temp = UByte((acu << 1).byteValue)
             cbits = UInt(acu & 0x80)
             AF((AF & ~0xff) | rotateShiftTable(temp & 0xff) | {
-              if (cbits == 0) 0 else 1
+              if (cbits == 0) UInt(0) else UInt(1)
             })
           case (0x28) => // SRA
             temp = UByte(((acu >> 1) | (acu & 0x80)).byteValue())
             cbits = UInt(acu & 1)
             AF((AF & ~0xff) | rotateShiftTable(temp & 0xff) | {
-              if (cbits == 0) 0 else 1
+              if (cbits == 0) UInt(0) else UInt(1)
             })
           case (0x30) => // SLIA
             temp = UByte(((acu << 1) | UByte(1)).byteValue)
             cbits = UInt(acu & 0x80)
             AF((AF & ~0xff) | rotateShiftTable(temp & 0xff) | {
-              if (cbits == 0) 0 else 1
+              if (cbits == 0) UInt(0) else UInt(1)
             })
           case (0x38) => // SRL
             temp = UByte((acu >> 1).byteValue)
             cbits = UInt(acu & 1)
             AF((AF & ~0xff) | rotateShiftTable(temp & 0xff) | {
-              if (cbits == 0) 0 else 1
+              if (cbits == 0) UInt(0) else UInt(1)
             })
           case _ =>
         }
@@ -3777,23 +3777,23 @@ PF The parity of (((HL) + ((C - 1) & 255)) & 7) xor B)                      */
           case (0x00) => // RLC
             temp = UByte(((acu << 1) | (acu >> 7)).byteValue)
             cbits = UInt(temp & 1)
-            AF((AF & ~0xff) | rotateShiftTable(temp) | {
+            AF((AF & ~0xff) | rotateShiftTable(temp & 0xff) | {
               if (cbits == 0) UInt(0) else UInt(1)
             })
 
           case (0x08) => // RRC
             temp = UByte(((acu >> 1) | (acu << 7)).byteValue)
             cbits = UInt(temp & 0x80)
-            AF((AF & ~0xff) | rotateShiftTable(temp) | {
+            AF((AF & ~0xff) | rotateShiftTable(temp & 0xff) | {
               if (cbits == 0) UInt(0) else UInt(1)
             })
 
           case (0x10) => // RL
-            temp = UByte(((acu >> 1) | {
+            temp = UByte(((acu << 1) | {
               if (testFlag(F, FLAG_C)) UInt(1) else UInt(0)
             }).byteValue())
             cbits = UInt(acu & 0x80)
-            AF((AF & ~0xff) | rotateShiftTable(temp) | {
+            AF((AF & ~0xff) | rotateShiftTable(temp & 0xff) | {
               if (cbits == 0) UInt(0) else UInt(1)
             })
 
@@ -3802,35 +3802,35 @@ PF The parity of (((HL) + ((C - 1) & 255)) & 7) xor B)                      */
               if (testFlag(F, FLAG_C)) UInt(1) else UInt(0)
             } << 7)).byteValue())
             cbits = UInt(acu & 1)
-            AF((AF & ~0xff) | rotateShiftTable(temp) | {
+            AF((AF & ~0xff) | rotateShiftTable(temp & 0xff) | {
               if (cbits == 0) UInt(0) else UInt(1)
             })
 
           case (0x20) => // SLA
             temp = UByte((acu << 1).byteValue)
             cbits = UInt(acu & 0x80)
-            AF((AF & ~0xff) | rotateShiftTable(temp) | {
+            AF((AF & ~0xff) | rotateShiftTable(temp & 0xff) | {
               if (cbits == 0) UInt(0) else UInt(1)
             })
 
           case (0x28) => // SRA
             temp = UByte(((acu >> 1) | (acu & 0x80)).byteValue())
             cbits = UInt(acu & 1)
-            AF((AF & ~0xff) | rotateShiftTable(temp) | {
+            AF((AF & ~0xff) | rotateShiftTable(temp & 0xff) | {
               if (cbits == 0) UInt(0) else UInt(1)
             })
 
           case (0x30) => // SLIA
             temp = UByte(((acu << 1) | 1).byteValue)
             cbits = UInt(acu & 0x80)
-            AF((AF & ~0xff) | rotateShiftTable(temp) | {
+            AF((AF & ~0xff) | rotateShiftTable(temp & 0xff) | {
               if (cbits == 0) UInt(0) else UInt(1)
             })
 
           case (0x38) => // SRL
             temp = UByte((acu >> 1).byteValue)
             cbits = UInt(acu & 1)
-            AF((AF & ~0xff) | rotateShiftTable(temp) | {
+            AF((AF & ~0xff) | rotateShiftTable(temp & 0xff) | {
               if (cbits == 0) UInt(0) else UInt(1)
             })
 
@@ -3933,14 +3933,14 @@ PF The parity of (((HL) + ((C - 1) & 255)) & 7) xor B)                      */
             tmp = UInt((acu.intValue << 1) | (acu.intValue >> 7))
             cbits = UInt(tmp & 1)
             AF((AF & ~0xff) | rotateShiftTable(tmp & 0xff) | {
-              if (cbits == 0) 0 else 1
+              if (cbits == 0) UInt(0) else UInt(1)
             })
 
           case (0x08) => // RRC
             tmp = (acu >> 1) | (acu << 7)
             cbits = UInt(tmp & 0x80)
             AF((AF & ~0xff) | rotateShiftTable(tmp & 0xff) | {
-              if (cbits == 0) 0 else 1
+              if (cbits == 0) UInt(0) else UInt(1)
             })
 
           case (0x10) => // RL
@@ -3949,7 +3949,7 @@ PF The parity of (((HL) + ((C - 1) & 255)) & 7) xor B)                      */
             }
             cbits = UInt(acu & 0x80)
             AF((AF & ~0xff) | rotateShiftTable(tmp & 0xff) | {
-              if (cbits == 0) 0 else 1
+              if (cbits == 0) UInt(0) else UInt(1)
             })
 
           case (0x18) => // RR
@@ -3958,7 +3958,7 @@ PF The parity of (((HL) + ((C - 1) & 255)) & 7) xor B)                      */
             } << 7)
             cbits = UInt(acu & 1)
             AF((AF & ~0xff) | rotateShiftTable(tmp & 0xff) | {
-              if (cbits == 0) 0 else 1
+              if (cbits == 0) UInt(0) else UInt(1)
             })
 
           case (0x20) => // SLA
@@ -3972,21 +3972,21 @@ PF The parity of (((HL) + ((C - 1) & 255)) & 7) xor B)                      */
             tmp = UInt((acu >> 1) | (acu & 0x80))
             cbits = UInt(acu & 1)
             AF((AF & ~0xff) | rotateShiftTable(tmp & 0xff) | {
-              if (cbits == 0) 0 else 1
+              if (cbits == 0) UInt(0) else UInt(1)
             })
 
           case (0x30) => // SLIA
             tmp = (acu << 1) | UInt(1)
             cbits = UInt(acu & 0x80)
             AF((AF & ~0xff) | rotateShiftTable(tmp & 0xff) | {
-              if (cbits == 0) 0 else 1
+              if (cbits == 0) UInt(0) else UInt(1)
             })
 
           case (0x38) => // SRL
             tmp = acu >> 1
             cbits = UInt(acu & 1)
             AF((AF & ~0xff) | rotateShiftTable(tmp & 0xff) | {
-              if (cbits == 0) 0 else 1
+              if (cbits == 0) UInt(0) else UInt(1)
             })
 
           case _ =>

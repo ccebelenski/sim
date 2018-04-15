@@ -300,7 +300,7 @@ class Z80Tests {
     assertFalse(z80.testFlag(z80.F, z80.FLAG_Z))
     assertTrue(z80.testFlag(z80.F, z80.FLAG_N))
     assertTrue(z80.testFlag(z80.F, z80.FLAG_S))
-    assertFalse(z80.testFlag(z80.F, z80.FLAG_C))
+    assertTrue(z80.testFlag(z80.F, z80.FLAG_C))
 
   }
 
@@ -1370,7 +1370,8 @@ class Z80Tests {
     z80.deposit(addr, 0x76) // HALT
 
     z80.resetCPU()
-    z80.PC(0xc0000)
+    z80.PC(0xc000)
+    z80.SP(0x3400)
     z80.runcpu()
     assertEquals(0x00, z80.A.get8.intValue)
     assertEquals(0x00, z80.F.get8.intValue)
@@ -1406,11 +1407,16 @@ class Z80Tests {
       addr - 1
     }, 0xFD) // -2
 
-    z80.deposit(addr, 0x76)
+    z80.deposit({
+      addr += 1
+      addr - 1
+    }, 0x76) //HALT
+
+
     z80.resetCPU
     z80.PC(0xd000)
     z80.runcpu()
-    assertEquals(0x0004, z80.BC.get16.intValue)
+    assertEquals(769, z80.BC.get16.intValue)
 
     // JR NZ
     addr = 0xC000
@@ -1758,7 +1764,7 @@ class Z80Tests {
     z80.PC(0xc000)
     z80.runcpu()
 
-    assertEquals(0x02, z80.A.get8)
+    assertEquals(0x03, z80.A.get8.intValue)
 
     // RET C / JP C
     addr = 0xC000
@@ -1896,6 +1902,7 @@ class Z80Tests {
     }, 0xE3)
     z80.deposit(addr, 0x76)
     z80.resetCPU()
+    z80.SP(0x3400)
     z80.PC(0xc000)
     z80.runcpu()
 
