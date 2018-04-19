@@ -1787,7 +1787,8 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
     val tmp: UByte = r2.get8
     val acu: UByte = r1.get8
     val sum: UInt = acu + tmp
-    AF(addTable(sum & 0x1ff) | cbitsZ80Table((acu ^ tmp ^ sum) & 0x1ff) & 0xffff)
+    val cbits : UInt = acu ^ tmp ^ sum
+    AF(addTable(sum & 0x1ff) | cbitsZ80Table(cbits & 0x1ff) & 0xffff)
   }
 
   @inline
@@ -1850,7 +1851,8 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
     val sum: UInt = acu + temp + {
       if (testFlag(F, FLAG_C)) UInt(1) else UInt(0)
     }
-    AF(addTable(sum & 0x1ff) | cbitsZ80Table((acu ^ temp ^ sum) & 0x1ff) & 0xffff)
+    val cbits :UInt = acu ^ temp ^ sum
+    AF(addTable(sum & 0x1ff) | cbitsZ80Table(cbits & 0x1ff) & 0xffff)
   }
 
   @inline
@@ -1913,7 +1915,8 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
     val sum: UInt = acu - temp - {
       if (testFlag(F, FLAG_C)) UInt(1) else UInt(0)
     }
-    AF(addTable(sum & 0xff) | cbits2Z80Table((acu ^ temp ^ sum) & 0x1ff).intValue)
+    val cbits :UInt = acu ^ temp ^ sum
+    AF(addTable(sum & 0xff) | cbits2Z80Table(cbits & 0x1ff) & 0xffff)
   }
 
   @inline
@@ -2004,7 +2007,8 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
     AF((AF & ~0x28) | (temp & 0x28))
     val acu: UByte = A.get8
     val sum: UInt = acu - temp
-    AF((AF & ~0xff) | cpTable(sum & 0xff) | (temp & 0x28) | cbits2Z80Table((acu ^ temp ^ sum) & 0x1ff))
+    val cbits:UInt = acu ^ temp ^ sum
+    AF((AF & ~0xff) | cpTable(sum & 0xff) | (temp & 0x28) | cbits2Z80Table( cbits & 0x1ff))
   }
 
   @inline
@@ -2016,7 +2020,8 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
     AF((AF & ~0x28) | (temp & 0x28))
     val acu: UByte = A.get8
     val sum: UInt = acu - temp
-    AF((AF & ~0xff) | cpTable(sum & 0xff) | (temp & 0x28) | cbits2Z80Table((acu ^ temp ^ sum) & 0x1ff))
+    val cbits:UInt = acu ^ temp ^ sum
+    AF((AF & ~0xff) | cpTable(sum & 0xff) | (temp & 0x28) | cbits2Z80Table(cbits & 0x1ff))
   }
 
   @inline
@@ -2040,7 +2045,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
 
   @inline
   private final def setFlag(flag: Int, clear: Boolean): Unit = {
-    AF(if (clear) (AF | flag) else (AF & ~flag))
+    AF(if (!clear) (AF | flag) else (AF & ~flag))
 
   }
 
@@ -2610,7 +2615,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
 
       case (0x94) => // SUB IXH
         addTStates(9)
-        setFlag(FLAG_C, clear = false)
+        setFlag(FLAG_C, clear = true)
         SUBIDX(IXH)
 
       case (0x9c) => // SBC A,IXH
@@ -2619,7 +2624,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
 
       case (0x95) => // SUB IXL
         addTStates(9)
-        setFlag(FLAG_C, clear = false)
+        setFlag(FLAG_C, clear = true)
         SUBIDX(IXL)
 
       case (0x9d) => // SBC A,IXL
@@ -2699,9 +2704,9 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
       case (0xe3) => // EX (SP),IX
         addTStates(23)
         CHECK_LOG_WORD(SP)
-        val tmp: Int = IX.get16
+        val tmp: UInt = IX.get16
         POP(IX)
-        PUSH(tmp)
+        PUSH(tmp.intValue)
 
       case (0xe5) => // PUSH IX
         addTStates(15)
@@ -3058,11 +3063,13 @@ PF The parity of ((((HL) + L) & 7) xor B)                                       
       case (0xa8) => // LDD
         addTStates(16)
         // CHECK_BREAK_TWO_BYTES HL,DE
-        var acu: UInt = MMU.get8(HL)
+        CHECK_LOG_BYTE(HL)
+        CHECK_LOG_BYTE(DE)
+        var acu: UByte = MMU.get8(HL)
         HL.decrement()
-        MMU.put8(DE, acu.intValue)
+        MMU.put8(DE, acu)
         DE.decrement()
-        acu = acu + A.get8
+        acu = UByte((acu + A.get8).byteValue)
         AF((AF & ~0x3e) | (acu & 8) | ((acu & 2) << 4) | {
           BC.decrement()
           if ((BC & 0xffff) != 0) 1 else 0
@@ -3083,7 +3090,7 @@ PF The parity of ((((HL) + L) & 7) xor B)                                       
             (((sum - ((cbits & 16) >> 4)) & 2) << 4) | (cbits & 16) |
             ((sum - ((cbits >> 4) & 1)) & 8) | {
             BC.decrement()
-            if ((BC & 0xffff) != 0) UInt(1) else UInt(0)
+            if ((BC.get16 & 0xffff) != 0) UInt(1) else UInt(0)
           } << 2 | 2
         )
         if ((sum & 15) == 8 && (cbits & 16) != 0) AF(AF & ~8)
@@ -3098,8 +3105,8 @@ PF The parity of (((HL) + ((C - 1) & 255)) & 7) xor B)                      */
       case (0xaa) => // IND
         addTStates(16)
         CHECK_LOG_BYTE(HL)
-        val acu: UInt = MMU.in8(C)
-        MMU.put8(HL, acu.intValue)
+        val acu: UByte = MMU.in8(C)
+        MMU.put8(HL, acu)
         HL.decrement()
         val temp: Int = B.get8
         BC(BC.get16 - 0x100)
@@ -3118,49 +3125,49 @@ PF The parity of (((HL) + ((C - 1) & 255)) & 7) xor B)                      */
       case (0xb0) => // LDIR
         addTStates(-5)
         // use local variable - quicker
-        var bc: Int = BC
+        //var bc: Int = BC
         var acu: Int = 0
-        if (bc == 0) bc = 0x10000
+        if (BC.get16 == 0) BC(0x10000)
         do {
           addTStates(21)
           INCR(2)
           // CHECK_BREAK_TWO_BYTES(HL,DE)
+          CHECK_LOG_BYTE(HL)
+          CHECK_LOG_BYTE(DE)
           acu = MMU.get8(HL)
           HL.increment()
           MMU.put8(DE, acu)
           DE.increment()
         } while ( {
-          bc -= 1
-          bc != 0
+          BC.decrement()
+          BC.get16 != 0
         })
         acu += A
-        BC(0) // BC will be zero
         AF((AF & ~0x3e) | (acu & 8) | ((acu & 2) << 4))
 
       case (0xb1) => // CPIR
         addTStates(-5)
         val acu: UByte = A.get8
-        var bc: UInt = BC.get16
         var temp: UInt = UInt(0)
         var sum: UInt = UInt(0)
         var op: Int = 0
 
-        if (bc == 0) bc = UInt(0x10000)
+        if (BC.get16 == 0) BC(0x10000)
         do {
           addTStates(21)
           INCR(1)
           CHECK_LOG_BYTE(HL)
           temp = MMU.get8(HL)
           HL.increment()
-          bc -= UInt(1)
+          BC.decrement()
           op = {
-            if (bc != 0) 1 else 0
+            if (BC.get16 != 0) 1 else 0
           }
           sum = acu - temp
 
-        } while (bc != 0 && sum != 0)
+        } while (op != 0 && sum != 0)
         val cbits :UInt  = acu ^ temp ^ sum
-        BC(0)
+
         val nc = {
           if ((sum & 0xff) == 0) UInt(1) else UInt(0)
         }
@@ -3173,7 +3180,7 @@ PF The parity of (((HL) + ((C - 1) & 255)) & 7) xor B)                      */
       case (0xb2) => // INIR
         addTStates(-5)
         var temp: Int = {
-          if (B.intValue == 0) 0x100 else B
+          if (B.intValue == 0) 0x100 else B.get8
         }
         var acu: Int = 0
         do {
@@ -3188,7 +3195,7 @@ PF The parity of (((HL) + ((C - 1) & 255)) & 7) xor B)                      */
           temp -= 1
           temp != 0
         })
-        temp = B
+        temp = B.get8
         B(0)
         INOUTFLAGS_ZERO((C + 1) & 0xff, acu, temp)
 
@@ -3215,21 +3222,21 @@ PF The parity of (((HL) + ((C - 1) & 255)) & 7) xor B)                      */
 
       case (0xb8) => // LDDR
         addTStates(-5)
-        var count: Int = BC
         var acu: Int = 0
-        if (count == 0) count = 0x10000
-        BC(0)
+        if (BC.get16 == 0) BC(0x10000)
         do {
           addTStates(21)
           INCR(2)
           // CHECK_BREAK_TWO_BYTES(HL,DE)
+          CHECK_LOG_BYTE(HL)
+          CHECK_LOG_BYTE(DE)
           acu = MMU.get8(HL)
           HL.decrement()
           MMU.put8(DE, acu)
           DE.decrement()
         } while ( {
-          count -= 1
-          count != 0
+          BC.decrement()
+          BC.get16 != 0
         })
         acu += A.get8
         AF((AF & ~0x3e) | (acu & 8) | ((acu & 2) << 4))
@@ -3237,27 +3244,24 @@ PF The parity of (((HL) + ((C - 1) & 255)) & 7) xor B)                      */
       case (0xb9) => // CPDR
         addTStates(-5)
         val acu: UByte = A.get8
-        var bc: UInt = BC.get16
         var temp: UByte = UByte(0)
         var sum: UInt = UInt(0)
-        var op: Int = 0
 
-        if (bc == 0) bc = UInt(0x10000)
+        if (BC.get16 == 0) BC(0x10000)
         do {
           addTStates(21)
           INCR(1)
           CHECK_LOG_BYTE(HL)
           temp = MMU.get8(HL)
           HL.decrement()
-          bc -= UInt(1)
-          op = {
-            if (bc != 0) 1 else 0
+          BC.decrement()
+          val op = {
+            if (BC.get16 != 0) 1 else 0
           }
           sum = acu - temp
 
-        } while (bc != 0 && sum != 0)
+        } while (op != 0 && sum != 0)
         val cbits: UInt = acu ^ temp ^ sum
-        BC(0)
         val nc = {
           if ((sum & 0xff) == 0) 1 else 0
         }
@@ -3605,7 +3609,7 @@ PF The parity of (((HL) + ((C - 1) & 255)) & 7) xor B)                      */
 
       case (0x94) => // SUB IYH
         addTStates(9)
-        setFlag(FLAG_C, clear = false)
+        setFlag(FLAG_C, clear = true)
         SUBIDX(IYH)
 
       case (0x9c) => // SBC A,IYH
@@ -3614,7 +3618,7 @@ PF The parity of (((HL) + ((C - 1) & 255)) & 7) xor B)                      */
 
       case (0x95) => // SUB IYL
         addTStates(9)
-        setFlag(FLAG_C, clear = false)
+        setFlag(FLAG_C, clear = true)
         SUBIDX(IYL)
 
       case (0x9d) => // SBC A,IYL

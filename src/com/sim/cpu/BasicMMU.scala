@@ -48,7 +48,7 @@ abstract class BasicMMU(val cpu: BasicCPU) {
       val as = new MemoryAddressSpace(UInt(addr), UInt(addr) + PAGESIZE - UInt(1))
       val entry = MMU_ENTRY(memory = Some(as))
       mtab(page) = Some(entry)
-      Utils.outln(f"MMU: Mapped RAM memory space.  Page: 0x$page%04X, Addr: 0x$addr%04X - 0x${as.highAddress.intValue}%04X")
+      //Utils.outln(f"MMU: Mapped RAM memory space.  Page: 0x$page%04X, Addr: 0x$addr%04X - 0x${as.highAddress.intValue}%04X")
     }
 
   }
@@ -66,7 +66,7 @@ abstract class BasicMMU(val cpu: BasicCPU) {
 
       val entry = MMU_ENTRY(memory = Some(as))
       mtab(page) = Some(entry)
-      Utils.outln(f"MMU: Mapped ROM memory space.  Page: 0x$page%04X, Addr: 0x$addr%04X - 0x${as.highAddress.intValue}%04X")
+      //Utils.outln(f"MMU: Mapped ROM memory space.  Page: 0x$page%04X, Addr: 0x$addr%04X - 0x${as.highAddress.intValue}%04X")
     }
 
 
