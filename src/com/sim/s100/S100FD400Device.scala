@@ -88,6 +88,8 @@ class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exte
   val NUM_OF_DSK: Int = 16
   val NUM_OF_DSK_MASK: Int = NUM_OF_DSK - 1
 
+  // 8 inch or minidisk.  0 = 8 inch, 1 = minidisk
+  var DRIVE_TYPE:Int = 0
 
   //  val DSK_TRACSIZE: Int = DSK_SECTSIZE * DSK_SECT
   //  val MAX_DSK_SIZE: Int = DSK_TRACSIZE * MAX_TRACKS
@@ -226,7 +228,7 @@ class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exte
       if (cd.dirty) cd.writebuf()
       //Utils.outln(s"$getName: read sector position. ST:${cd.sector_true}  Flag:${cd.current_flag}")
 
-      if ((cd.current_flag & 0x04) != 0) { // head loadded?}
+      if ((cd.current_flag & 0x04) != 0) { // head loaded?}
         cd.sector_true ^= 1
         if (cd.sector_true == 0) {
           cd.current_sector += 1

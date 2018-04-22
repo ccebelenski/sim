@@ -24,9 +24,9 @@ trait DiskUnit extends BasicUnit with UnitAttachable with SupportsOptions {
   var byteBuffer: ByteBuffer = _
 
   // These should be overridden
-  val MAX_TRACKS: Int = 0
-  val DSK_SECT = 0
-  val DSK_SECTSIZE = 0
+  def MAX_TRACKS: Int
+  def DSK_SECT :Int
+  def DSK_SECTSIZE :Int
 
   // Unit specific information
   var current_track: Int = 0
@@ -126,14 +126,18 @@ trait DiskUnit extends BasicUnit with UnitAttachable with SupportsOptions {
     }
 
     //  if doesn't exist then assume create a new file
-    val p = Paths.get(fileSpec)
+    val p :Path = Paths.get(fileSpec)
     val options = new util.HashSet[OpenOption]
     options.add(SPARSE)
     options.add(CREATE)
     options.add(WRITE)
     options.add(READ)
 
+    // Optionally set up some drive parameters basic on the file.
+    setDriveAttributes(p)
+
     fileChannel = FileChannel.open(p, options)
+
 
 
     // Allocate the bytebuffer
@@ -151,6 +155,9 @@ trait DiskUnit extends BasicUnit with UnitAttachable with SupportsOptions {
 
     false
   }
+
+  // Override this to set drive attributes during attach()
+  def setDriveAttributes(path:Path) : Unit = {}
 
   override def detach(sb: StringBuilder): Boolean = {
 

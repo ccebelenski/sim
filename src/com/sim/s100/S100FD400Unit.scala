@@ -1,23 +1,36 @@
 package com.sim.s100
 
+import java.nio.file.{Files, Path}
 import com.sim.device.{BasicUnit, DiskUnit}
-import com.sim.unsigned.{UByte, UInt}
-
 
 class S100FD400Unit(device:S100FD400Device) extends BasicUnit(device) with  DiskUnit {
 
-  override val DSK_SECTSIZE: Int = 137 // Size of sector
-  override val DSK_SECT: Int = 32 // Sectors per track
-  override val MAX_TRACKS: Int = 254 // Number of tracts, original Altair has 77 only
-
+  val D8_DSK_SECTSIZE: Int = 137 // Size of sector
+  val D8_DSK_SECT: Int = 32 // Sectors per track
+  val D8_MAX_TRACKS: Int = 254 // Number of tracts, original Altair has 77 only (254)
+  val D5_DSK_SECSIZE:Int = 137 // Minidisk sector size
+  val D5_DSK_SECT: Int = 16 // Minidisk sectors per track
+  val D5_MAX_TRACKS:Int = 35
 
   var sector_true :Int = 0
 
+  override def MAX_TRACKS: Int = if(device.DRIVE_TYPE != 0) D5_MAX_TRACKS else D8_MAX_TRACKS
+
+  override def DSK_SECT: Int = if(device.DRIVE_TYPE !=0) D5_DSK_SECT else D8_DSK_SECT
+
+  override def DSK_SECTSIZE: Int = if(device.DRIVE_TYPE !=0) D5_DSK_SECSIZE else D8_DSK_SECTSIZE
 
   override def writebuf(): Unit = {
     super.writebuf()
     current_flag &= 0xfe
 
+  }
+
+  // If the file is too big, assume it's a normal (8 inch) disk image.
+  // TODO Handle explict option setting.
+  override def setDriveAttributes(p:Path) : Unit = {
+    val size = Files.size(p)
+    if(size > (D5_DSK_SECSIZE * D5_DSK_SECT * D5_MAX_TRACKS)) device.DRIVE_TYPE = 0 else device.DRIVE_TYPE = 1
   }
 
   override val waitTime: Long =0 // TODO
