@@ -84,6 +84,11 @@ class S100SIODevice(machine:S100Machine, mmu: Z80MMU, ports: List[UInt]) extends
     }
   }
 
+  // Returns true when the interrupt flag for keyboard is not set.
+  override def checkDeviceReady: Boolean = {
+    !mmu.cpu.keyboardInterrupt
+  }
+
   def interruptOff() : Unit = {
     mmu.cpu.keyboardInterrupt = false
     //machine.eventQueue.cancel(SIOUnit)

@@ -70,7 +70,7 @@ class MuxUnit(device: MuxDevice, var socket: Socket) extends BasicUnit(device: B
   def writeChar(char: Int): Unit = {
     if (socket.isConnected) {
       outputStream.write(char)
-      outputStream.flush()
+      //outputStream.flush()
     }
   }
 
@@ -79,7 +79,12 @@ class MuxUnit(device: MuxDevice, var socket: Socket) extends BasicUnit(device: B
       try {
 
         char = inputStream.read()
-        if(callbackDevice.isDefined) callbackDevice.get.muxCharacterInterrupt(this, char)
+        if(callbackDevice.isDefined) {
+          while(!callbackDevice.get.checkDeviceReady) {
+            Thread.sleep(50)
+          }
+          callbackDevice.get.muxCharacterInterrupt(this, char)
+        }
 
       } catch {
         case t: Throwable => {}

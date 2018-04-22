@@ -19,6 +19,9 @@ trait MuxAware {
   def muxCharacterInterrupt(unit: MuxUnit, char:Int) : Unit
 
 
+  // Returns true when the device is ready to accept another character
+  def checkDeviceReady: Boolean
+
   /**
     * callback from the MUX when it has a unit available.
     * Returns true if successful, other false (no units free)
