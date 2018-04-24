@@ -30,6 +30,10 @@ class S100Machine extends AbstractMachine{
 
     val sim = new S100SIMDevice(this, cpu.MMU, List(UInt(0xfe)))
     addDevice(sim)
+
+    val hdsk = new S100HDSKDevice(this, cpu.MMU, List(UInt(0xfd)))
+    addDevice(hdsk)
+
   }
 
 

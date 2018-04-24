@@ -111,8 +111,7 @@ class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exte
   /* LD a,80h | <unitno>                          */
   private def UNIT_NO_OFFSET_2 = 0xb4
 
-  /* start address of regular Altair ROM          */
-  private def ALTAIR_ROM_LOW = 0xff00
+
 
   override def init(): Unit = {
     // Create 16 units
@@ -375,7 +374,7 @@ class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exte
     if (useAltairROM) {
       if (isMiniDisk) {
         mmu.installROM(S100FD400Device.alt_bootrom_dsk.toArray,
-          S100FD400Device.alt_bootrom_dsk.size, UInt(ALTAIR_ROM_LOW))
+          S100FD400Device.alt_bootrom_dsk.size, UInt(S100FD400Device.ALTAIR_ROM_LOW))
       } else {
         // check whether we are really modifying an LD A,<> instruction
         if (S100FD400Device.bootrom_dsk(UNIT_NO_OFFSET_1 - 1) == LDA_INSTRUCTION &&
@@ -389,11 +388,11 @@ class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exte
         }
         // install modified ROM
         mmu.installROM(S100FD400Device.bootrom_dsk.toArray,
-          S100FD400Device.bootrom_dsk.size, UInt(ALTAIR_ROM_LOW))
+          S100FD400Device.bootrom_dsk.size, UInt(S100FD400Device.ALTAIR_ROM_LOW))
       }
     }
-    machine.getCPU.PC(ALTAIR_ROM_LOW)
-    sb.append(f"$getName: Boot ROM start: $ALTAIR_ROM_LOW%04x")
+    machine.getCPU.PC(S100FD400Device.ALTAIR_ROM_LOW)
+    sb.append(f"$getName: Boot ROM start: ${S100FD400Device.ALTAIR_ROM_LOW}%04x")
     machine.getCPU.runcpu()
 
     true
@@ -484,4 +483,7 @@ object S100FD400Device {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, /* fff0-fff7 */
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, /* fff8-ffff */
   )
+
+  /* start address of regular Altair ROM          */
+  val ALTAIR_ROM_LOW = 0xff00
 }
