@@ -193,6 +193,10 @@ trait DiskUnit extends BasicUnit with UnitAttachable with SupportsOptions {
 
   }
 
+  final def isIMD(p:Path):Boolean = {
+    if(p.endsWith(".IMD") || p.endsWith(".imd")) true else false
+  }
+
 }
 
 
