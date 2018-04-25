@@ -109,10 +109,6 @@ abstract class S100HDiskParamsBase {
     16, 1, 18, 3, 20, 5, 22, 7,
     24, 9, 26, 11, 28, 13, 30, 15)
 
-  def verifyDiskInfo():Unit = {
-    if()
-  }
-
 }
 
 // Note in the following CKS = 0 for fixed media which are not supposed to be

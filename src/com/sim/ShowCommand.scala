@@ -1,6 +1,13 @@
 package com.sim
 
+import java.lang.management.{GarbageCollectorMXBean, ManagementFactory, MemoryType}
+import java.text.SimpleDateFormat
+import java.time.Instant
+import java.util.Date
+
 import com.sim.machine.AbstractMachine
+
+import scala.collection.JavaConverters._
 
 class ShowCommand extends Command {
 
@@ -12,6 +19,7 @@ class ShowCommand extends Command {
   addSubCommand(new ShowDeviceCommand)
   addSubCommand(new ShowBreakpointsCommand)
   addSubCommand(new ShowMLogsCommand)
+  addSubCommand(new ShowJVMCommand)
 
   override def process(tokenArray: Array[String]): Boolean = {
     if (tokenArray.length == 0) {
@@ -119,6 +127,53 @@ class ShowMLogsCommand extends Command {
         m.showMemLogs(sb)
     }
     Utils.outln(sb.toString())
+    false
+  }
+}
+
+class ShowJVMCommand extends Command {
+  commandToken = "JVM"
+  commandDescription = "Show JVM stats."
+  commandHelpText = "Show some JVM related information for debugging and monitoring purposes."
+
+  override def process(tokenArray: Array[String]): Boolean = {
+    val sb: StringBuilder = new StringBuilder
+    val runtime = Runtime.getRuntime
+    level = 1
+
+    // Clean up stuff first - this should be the only place we do this.
+    //runtime.gc()
+
+    val processorCount = runtime.availableProcessors()
+    val freeMemory = runtime.freeMemory()
+    val totalMemory = runtime.totalMemory()
+    val maxMemory = runtime.maxMemory()
+
+    var totalGarbageCollections = 0L
+    var garbageCollectionTime = 0L
+
+    ManagementFactory.getGarbageCollectorMXBeans.asScala.foreach(x => {
+      totalGarbageCollections += x.getCollectionCount
+      garbageCollectionTime += x.getCollectionTime
+    })
+
+    val jvmUpTime = ManagementFactory.getRuntimeMXBean.getUptime
+    val jvmStartTime = ManagementFactory.getRuntimeMXBean.getStartTime
+    val jvmVersion = ManagementFactory.getRuntimeMXBean.getVmVersion
+    val jvmVendor = ManagementFactory.getRuntimeMXBean.getVmVendor
+    val jvmName = ManagementFactory.getRuntimeMXBean.getVmName
+
+    sb.append(s"$jvmName $jvmVersion ($jvmVendor)\n")
+    sb.append(s"Up: ${Instant.ofEpochMilli(jvmStartTime).toString} - running for ${new SimpleDateFormat("mm:ss:SSS").format(new Date(jvmUpTime))}\n")
+    sb.append(s"\nMemory stats:\n\tTotal:\t${Utils.formatBytes(totalMemory,false)}\n\tFree:\t${Utils.formatBytes(freeMemory,false)}\n\tMax:\t${Utils.formatBytes(maxMemory,false)}\n\n")
+    sb.append(s"CPU and garbage collection stats:\n\tCPU:\t\t$processorCount\n\tGCs:\t\t$totalGarbageCollections\n\tGC Time:\t$garbageCollectionTime\n\n")
+
+    sb.append(s"Memory pool stats:\n")
+    ManagementFactory.getMemoryPoolMXBeans().asScala.filter(_.getType == MemoryType.HEAP).foreach(x => {
+      sb.append(s"\t${x.getName}:\n\t\t${x.getUsage}\n")
+    })
+
+    Utils.out(sb.toString())
     false
   }
 }

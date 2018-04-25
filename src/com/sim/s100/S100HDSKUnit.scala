@@ -16,7 +16,9 @@ class S100HDSKUnit(device:S100HDSKDevice) extends BasicUnit(device) with  DiskUn
 
   override def completeAction(): Unit = ???
 
-  override def init(): Unit = ???
+  override def init(): Unit = {
+    // TODO
+  }
 
   override def MAX_TRACKS: Int = ???
 

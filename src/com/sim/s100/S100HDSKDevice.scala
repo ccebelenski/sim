@@ -97,15 +97,6 @@ class S100HDSKDevice(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exten
     unit.HDSK_FORMAT_TYPE = S100HDSKDevice.dpb.find(_.capac == unit.capacity)
   }
 
-  override def init(): Unit = {
-    // Create 16 units
-    for (i <- 0 until S100HDSKDevice.HDSK_NUMBER) {
-      val du = new S100HDSKUnit(this)
-      addUnit(du)
-    }
-
-  }
-
 }
 
 object S100HDSKDevice {
