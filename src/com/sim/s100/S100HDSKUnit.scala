@@ -30,12 +30,6 @@ class S100HDSKUnit(device:S100HDSKDevice) extends BasicUnit(device) with  DiskUn
     // TODO
   }
 
-  override def MAX_TRACKS: Int = ???
-
-  override def DSK_SECT: Int = ???
-
-  override def DSK_SECTSIZE: Int = ???
-
   override def optionChanged(sb: StringBuilder): Unit = ???
 
 
@@ -66,33 +60,45 @@ class S100HDSKUnit(device:S100HDSKDevice) extends BasicUnit(device) with  DiskUn
 
     fileChannel = FileChannel.open(p, options)
 
-    capacity = fileChannel.size()
+    capacity = fileChannel.size().intValue()
     if(capacity == 0) capacity = HDSK_CAPACITY
 
-    assignFormat()
+    // Assign format based on size
+    HDSK_FORMAT_TYPE = S100HDSKDevice.dpb.find(_.capac == capacity)
 
 
     HDSK_FORMAT_TYPE match {
       case None =>
         // No disk parameter block found
         HDSK_FORMAT_TYPE = Some(S100HDSKDevice(0))
-        sb.append(s"$getName: WARNING: Unsupported disk capacity, assuming HDSK type with capacity ${Utils.formatBytes(capacity,false)}")
+        sb.append(s"$getName: WARNING: Unsupported disk capacity, assuming HDSK type with capacity ${Utils.formatBytes(capacity,false)}\n")
+        // TODO force writelock
+        // Check whether capacity corresponds to setting of tracks, sectors per track and sector size
+        if(capacity != MAX_TRACKS * DSK_SECT * DSK_SECTSIZE ) {
+          sb.append(s"$getName: WARNING: Fixing geometry.\n")
+          if(DSK_SECT == 0) DSK_SECT = 32
+          if(DSK_SECTSIZE == 0) DSK_SECTSIZE = 128
+        }
       case Some(ft) =>
+        // Disk parameter block found
+        DSK_SECT = HDSK_FORMAT_TYPE.get.spt >> HDSK_FORMAT_TYPE.get.psh
+        DSK_SECTSIZE = 128 << HDSK_FORMAT_TYPE.get.psh
 
     }
 
-
+    // Number of tracks is smallest number to accomodate capacity
+    MAX_TRACKS = (capacity + DSK_SECT * DSK_SECTSIZE - 1) / (DSK_SECT * DSK_SECTSIZE)
+    assert(((MAX_TRACKS -1) * (DSK_SECT * DSK_SECTSIZE) < capacity) && (capacity <= (MAX_TRACKS * DSK_SECT * DSK_SECTSIZE)))
 
     // Allocate the bytebuffer
     byteBuffer = ByteBuffer.allocate(DSK_SECTSIZE)
 
-
     attachedPath = Some(p)
-//    capacity = DSK_SECTSIZE * DSK_SECT * MAX_TRACKS
     dirty = false
 
     sb.append(s"$getName: Attached: ${attachedPath.get.getFileName}\n")
-    sb.append(s"$getName: Capacity: ${Utils.formatBytes(capacity, false)}")
+    sb.append(s"$getName: Capacity: ${Utils.formatBytes(capacity, false)}\n")
+    sb.append(s"$getName: Geometry: ${HDSK_FORMAT_TYPE.get.desc}\n")
     // Attaching enabled the device implicitly
     setEnable(true)
 
@@ -107,5 +113,10 @@ class S100HDSKUnit(device:S100HDSKDevice) extends BasicUnit(device) with  DiskUn
     ret
   }
 
-  private def assignFormat():Unit = {}
+  // TODO set geometry command
+  def set_geom():Unit = {}
+
+  // TODO show geometry command
+  def show_geom(sb:StringBuilder) : Unit = {}
+
 }

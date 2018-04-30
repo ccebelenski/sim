@@ -1,5 +1,6 @@
 package com.sim.s100
 
+import com.sim.Utils
 import com.sim.cpu.Z80MMU
 import com.sim.device.{Bootable, PortMappedDiskDevice, SupportsOptions}
 import com.sim.unsigned.{UByte, UInt}
@@ -25,6 +26,80 @@ class S100HDSKDevice(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exten
 
   override def optionChanged(sb: StringBuilder): Unit = ???
 
+
+
+  /*  The hard disk port is 0xfd. It understands the following commands.
+      1.  Reset
+          ld  b,32
+          ld  a,HDSK_RESET
+      l:  out (0fdh),a
+          dec b
+          jp  nz,l
+      2.  Read / write
+          ; parameter block
+          cmd:        db  HDSK_READ or HDSK_WRITE
+          hd:         db  0   ; 0 .. 7, defines hard disk to be used
+          sector:     db  0   ; 0 .. 31, defines sector
+          track:      dw  0   ; 0 .. 2047, defines track
+          dma:        dw  0   ; defines where result is placed in memory
+          ; routine to execute
+          ld  b,7             ; size of parameter block
+          ld  hl,cmd          ; start address of parameter block
+      l:  ld  a,(hl)          ; get byte of parameter block
+          out (0fdh),a        ; send it to port
+          inc hl              ; point to next byte
+          dec b               ; decrement counter
+          jp  nz,l            ; again, if not done
+          in  a,(0fdh)        ; get result code
+      3.  Retrieve Disk Parameters from controller (Howard M. Harte)
+          Reads a 19-byte parameter block from the disk controller.
+          This parameter block is in CP/M DPB format for the first 17 bytes,
+          and the last two bytes are the lsb/msb of the disk's physical
+          sector size.
+          ; routine to execute
+          ld   a,hdskParam    ; hdskParam = 4
+          out  (hdskPort),a   ; Send 'get parameters' command, hdskPort = 0fdh
+          ld   a,(diskno)
+          out  (hdskPort),a   ; Send selected HDSK number
+          ld   b,17
+      1:  in   a,(hdskPort)   ; Read 17-bytes of DPB
+          ld   (hl), a
+          inc  hl
+          djnz 1
+          in   a,(hdskPort)   ; Read LSB of disk's physical sector size.
+          ld   (hsecsiz), a
+          in   a,(hdskPort)   ; Read MSB of disk's physical sector size.
+          ld   (hsecsiz+1), a
+  */
+  var current_disk: Option[S100HDSKUnit] = None
+  var selectedDMA : Int = 0
+
+  private def hdsk_checkParameters() : Boolean = {
+    if(current_disk.isEmpty) current_disk = findUnitByNumber(0).asInstanceOf[Option[S100HDSKUnit]]
+    val cd = current_disk.get
+    if(!cd.isAvailable) {
+      Utils.outln(s"$getName: Unit is not available.")
+      return false
+    }
+    if(cd.current_sector < 0 || cd.current_sector >= cd.DSK_SECT) {
+      Utils.outln(s"$getName: Constraint violation 0 <= Sector=${cd.current_sector} < ${cd.DSK_SECT}, will use sector 0 instead.")
+      cd.current_sector = 0
+    }
+    if(cd.current_track <0 || cd.current_track >= cd.MAX_TRACKS) {
+      Utils.outln(s"$getName: Constraint violation 0 <= Track=${cd.current_track} < ${cd.MAX_TRACKS}, will use sector 0 instead.")
+      cd.current_track= 0
+
+    }
+
+    true
+  }
+
+  private def doSeek():Unit = {
+    val cd = current_disk.get
+    val geom = cd.HDSK_FORMAT_TYPE.get
+    val hostSector = if(geom.skew.isEmpty) cd.current_sector else geom.skew.get(cd.current_sector)
+
+  }
   override def action(action: UInt, value: UByte, isWrite: Boolean): UByte = ???
 
   val HDSK_BOOT_ADDRESS: Int = 0x5c00
