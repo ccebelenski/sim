@@ -24,9 +24,9 @@ trait DiskUnit extends BasicUnit with UnitAttachable with SupportsOptions {
   var byteBuffer: ByteBuffer = _
 
   // These should be overridden
-  def MAX_TRACKS: Int
-  def DSK_SECT :Int
-  def DSK_SECTSIZE :Int
+  var MAX_TRACKS: Int = 0
+  var DSK_SECT :Int = 0
+  var DSK_SECTSIZE :Int = 0
 
   // Unit specific information
   var current_track: Int = 0
@@ -39,7 +39,7 @@ trait DiskUnit extends BasicUnit with UnitAttachable with SupportsOptions {
   var isIdleEligible: Boolean = true
 
   // Capacity
-  var capacity: Long = 0L
+  var capacity: Int = 0
 
   // I/O Start time
   var ioStartTime: Long = 0L

@@ -14,11 +14,11 @@ class S100FD400Unit(device:S100FD400Device) extends BasicUnit(device) with  Disk
 
   var sector_true :Int = 0
 
-  override def MAX_TRACKS: Int = if(device.DRIVE_TYPE != 0) D5_MAX_TRACKS else D8_MAX_TRACKS
+  MAX_TRACKS = if(device.DRIVE_TYPE != 0) D5_MAX_TRACKS else D8_MAX_TRACKS
 
-  override def DSK_SECT: Int = if(device.DRIVE_TYPE !=0) D5_DSK_SECT else D8_DSK_SECT
+  DSK_SECT = if(device.DRIVE_TYPE !=0) D5_DSK_SECT else D8_DSK_SECT
 
-  override def DSK_SECTSIZE: Int = if(device.DRIVE_TYPE !=0) D5_DSK_SECSIZE else D8_DSK_SECTSIZE
+  DSK_SECTSIZE = if(device.DRIVE_TYPE !=0) D5_DSK_SECSIZE else D8_DSK_SECTSIZE
 
   override def writebuf(): Unit = {
     super.writebuf()

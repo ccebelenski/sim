@@ -30,12 +30,6 @@ class S100HDSKUnit(device:S100HDSKDevice) extends BasicUnit(device) with  DiskUn
     // TODO
   }
 
-  override def MAX_TRACKS: Int = ???
-
-  override def DSK_SECT: Int = ???
-
-  override def DSK_SECTSIZE: Int = ???
-
   override def optionChanged(sb: StringBuilder): Unit = ???
 
 
@@ -66,7 +60,7 @@ class S100HDSKUnit(device:S100HDSKDevice) extends BasicUnit(device) with  DiskUn
 
     fileChannel = FileChannel.open(p, options)
 
-    capacity = fileChannel.size()
+    //capacity = fileChannel.size()
     if(capacity == 0) capacity = HDSK_CAPACITY
 
     assignFormat()
