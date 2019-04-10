@@ -75,7 +75,7 @@ class S100HDSKUnit(device:S100HDSKDevice) extends BasicUnit(device) with  DiskUn
     HDSK_FORMAT_TYPE match {
       case None =>
         // No disk parameter block found
-        HDSK_FORMAT_TYPE = Some(S100HDSKDevice(0))
+        //HDSK_FORMAT_TYPE = Some(device)
         sb.append(s"$getName: WARNING: Unsupported disk capacity, assuming HDSK type with capacity ${Utils.formatBytes(capacity,false)}")
       case Some(ft) =>
 
