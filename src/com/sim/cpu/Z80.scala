@@ -3054,7 +3054,7 @@ PF The parity of ((((HL) + L) & 7) xor B)                                       
         addTStates(16)
         CHECK_LOG_BYTE(HL)
         val acu: UInt = MMU.get8(HL)
-        MMU.out8(C, UByte(acu.byteValue()))
+        MMU.out8(C, UByte(acu.byteValue))
         HL.increment()
         val temp: UByte = B.get8
         BC(BC - 0x100)
@@ -3795,7 +3795,7 @@ PF The parity of (((HL) + ((C - 1) & 255)) & 7) xor B)                      */
           case (0x10) => // RL
             temp = UByte(((acu << 1) | {
               if (testFlag(F, FLAG_C)) UInt(1) else UInt(0)
-            }).byteValue())
+            }).byteValue)
             cbits = UInt(acu & 0x80)
             AF((AF & ~0xff) | rotateShiftTable(temp & 0xff) | {
               if (cbits == 0) UInt(0) else UInt(1)
@@ -3804,7 +3804,7 @@ PF The parity of (((HL) + ((C - 1) & 255)) & 7) xor B)                      */
           case (0x18) => // RR
             temp = UByte(((acu >> 1) | ({
               if (testFlag(F, FLAG_C)) UInt(1) else UInt(0)
-            } << 7)).byteValue())
+            } << 7)).byteValue)
             cbits = UInt(acu & 1)
             AF((AF & ~0xff) | rotateShiftTable(temp & 0xff) | {
               if (cbits == 0) UInt(0) else UInt(1)
@@ -4035,7 +4035,7 @@ PF The parity of (((HL) + ((C - 1) & 255)) & 7) xor B)                      */
       case 5 =>
         L(tmp & 0xff)
       case 6 =>
-        MMU.put8(adr, UByte(tmp.byteValue()))
+        MMU.put8(adr, UByte(tmp.byteValue))
 
       case 7 =>
         A(tmp & 0xff)

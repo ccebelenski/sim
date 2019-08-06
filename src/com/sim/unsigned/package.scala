@@ -230,7 +230,9 @@ package object unsigned {
     def toDouble(x: UByte): Double = x.toDouble
   }
 
-  implicit object UByteIsIntegral extends UByteIsIntegral with UByteOrdering
+  implicit object UByteIsIntegral extends UByteIsIntegral with UByteOrdering {
+    override def parseString(str: String): Option[UByte] = ???
+  }
 
   trait UShortIsIntegral extends Integral[UShort] {
     def plus(x: UShort, y: UShort): UShort = (x + y).toUShort
@@ -256,7 +258,9 @@ package object unsigned {
     def toDouble(x: UShort): Double = x.toDouble
   }
 
-  implicit object UShortIsIntegral extends UShortIsIntegral with UShortOrdering
+  implicit object UShortIsIntegral extends UShortIsIntegral with UShortOrdering {
+    override def parseString(str: String): Option[UShort] = ???
+  }
 
   trait UIntIsIntegral extends Integral[UInt] {
     def plus(x: UInt, y: UInt): UInt = x + y
@@ -282,7 +286,9 @@ package object unsigned {
     def toDouble(x: UInt): Double = x.toDouble
   }
 
-  implicit object UIntIsIntegral extends UIntIsIntegral with UIntOrdering
+  implicit object UIntIsIntegral extends UIntIsIntegral with UIntOrdering {
+    override def parseString(str: String): Option[UInt] = ???
+  }
 
   trait ULongIsIntegral extends Integral[ULong] {
     def plus(x: ULong, y: ULong): ULong = x + y
@@ -308,7 +314,9 @@ package object unsigned {
     def toDouble(x: ULong): Double = x.toDouble
   }
 
-  implicit object ULongIsIntegral extends ULongIsIntegral with ULongOrdering
+  implicit object ULongIsIntegral extends ULongIsIntegral with ULongOrdering {
+    override def parseString(str: String): Option[ULong] = ???
+  }
 
   class RicherUInt(rep: Int) {
     def bitCount: Int = Integer.bitCount(rep)

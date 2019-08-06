@@ -1,5 +1,4 @@
 # Created by .ignore support plugin (hsz.mobi)
-.idea/workspace.xml
+.idea/
 out/
-.idea/codeStyles/
-.idea/hydra.xml
+target/

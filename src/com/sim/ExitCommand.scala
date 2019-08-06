@@ -1,6 +1,6 @@
 package com.sim
 
-import org.beryx.textio.{BooleanInputReader, TextIoFactory}
+import org.beryx.textio.TextIoFactory
 
 class ExitCommand  extends Command {
 
