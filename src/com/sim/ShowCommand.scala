@@ -7,7 +7,8 @@ import java.util.Date
 
 import com.sim.machine.AbstractMachine
 
-import scala.collection.JavaConverters._
+//import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 class ShowCommand extends Command {
 

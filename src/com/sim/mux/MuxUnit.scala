@@ -87,8 +87,8 @@ class MuxUnit(device: MuxDevice, var socket: Socket) extends BasicUnit(device: B
         }
 
       } catch {
-        case t: Throwable => {}
-        case i:InterruptedException => {}
+        case t: Throwable =>
+        //case i:InterruptedException =>
       }
       finally {
         if(socket.isClosed || char == -1 || Thread.interrupted()) {

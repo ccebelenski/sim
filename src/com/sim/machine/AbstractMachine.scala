@@ -7,7 +7,8 @@ import com.sim.cpu.BasicCPU
 import com.sim.device.{BasicDevice, BasicUnit, PortMappedDevice}
 import com.sim.unsigned.UInt
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
+//import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 

@@ -159,9 +159,9 @@ case class ULong(override val longValue: Long) extends AnyVal with Unsigned[ULon
     if (true) return {
       if (d < 0) {
         if (this < x)
-          ULong(0l)
+          ULong(0L)
         else
-          ULong(1l)
+          ULong(1L)
       }
       else {
         val q = ((n >>> 1) / d) << 1
@@ -179,7 +179,7 @@ case class ULong(override val longValue: Long) extends AnyVal with Unsigned[ULon
     val b = a / d
     val q0 = b << 1
     val r = n - q0 * d
-    val q = q0 + (if (ULong(r) >= x) 1l else 0l)
+    val q = q0 + (if (ULong(r) >= x) 1L else 0L)
     ULong(q.toLong)
   }
 

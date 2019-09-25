@@ -7,6 +7,7 @@ import java.nio.file.{Files, OpenOption, Path, Paths}
 import java.util
 
 import com.sim.Utils
+import com.sim.unsigned.UByte
 import org.slf4j.{Logger, LoggerFactory}
 
 /**
@@ -177,8 +178,9 @@ trait DiskUnit extends BasicUnit with UnitAttachable with SupportsOptions {
   def writebuf(): Unit = {
     byteBuffer.position(current_byte) // Necessary?
     var i = current_byte
+    val fillval = UByte(0).byteValue
     while (i < DSK_SECTSIZE) { // null-fill rest of sector if any
-      byteBuffer.put(i, 0)
+      byteBuffer.put(i, fillval)
       i += 1
     }
     //Utils.outln(s"$getName: Writebuf - ${byteBuffer.toString}")

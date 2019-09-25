@@ -2,6 +2,7 @@ package com.sim.memory
 
 import com.sim.{Console, Utils}
 import com.sim.unsigned.{UByte, UInt}
+import scala.language.existentials
 
 class MemoryAddressSpace(lowAddress: UInt, highAddress: UInt) extends AddressSpace(lowAddress, highAddress) {
 

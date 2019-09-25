@@ -70,7 +70,7 @@ abstract class BasicDevice(val machine:AbstractMachine) extends Named with Suppo
   }
 
   def getUnits: Iterator[BasicUnit] = synchronized {
-    units.toIterator
+    units.iterator//toIterator
   }
 
   // General enable function - devices can implement their own for device specific things

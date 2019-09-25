@@ -71,9 +71,10 @@ object Utils {
 
   def formatBytes(bytes:Long, si:Boolean) : String = {
     val unit = if (si) 1000 else 1024
-    if (bytes < unit) return bytes + " B"
+    if (bytes < unit) return s"${bytes}B"// bytes + " B"
     val exp = (Math.log(bytes) / Math.log(unit)).toInt
-    val pre = (if (si) "kMGTPE" else "KMGTPE").charAt(exp - 1) + (if (si) "" else "i")
+    val pre = s"${(if (si) "kMGTPE" else "KMGTPE").charAt(exp - 1)}${if (si) "" else "i"}"
+//    val pre = (if (si) "kMGTPE" else "KMGTPE").charAt(exp - 1) + (if (si) "" else "i")
     f"${bytes / Math.pow(unit, exp)}%.1f ${pre}B"
   }
 

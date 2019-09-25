@@ -236,27 +236,27 @@ trait SmallUInt[U <: Unsigned[U, UInt, Int]] extends Any with Unsigned[U, UInt, 
 
   def <<(x: Int)(implicit d: DummyImplicit) = UInt(intRep << x)
 
-  def <<(x: Long)(implicit d: DummyImplicit) = UInt(intRep << x)
+  def <<(x: Long)(implicit d: DummyImplicit) = UInt(intRep << x.intValue)
 
   def <<(x: UInt) = UInt(intRep << (x.toInt & 0x1f))
 
-  def <<(x: ULong) = UInt(intRep << (x.toLong & 0x1f))
+  def <<(x: ULong) = UInt(intRep << (x.toLong & 0x1f).intValue)
 
   def >>(x: Int)(implicit d: DummyImplicit) = UInt(intRep >>> x)
 
-  def >>(x: Long)(implicit d: DummyImplicit) = UInt(intRep >>> x)
+  def >>(x: Long)(implicit d: DummyImplicit) = UInt(intRep >>> x.intValue)
 
   def >>(x: UInt) = UInt(intRep >>> (x.toInt & 0x1f))
 
-  def >>(x: ULong) = UInt(intRep >>> (x.toLong & 0x1f))
+  def >>(x: ULong) = UInt(intRep >>> (x.toLong & 0x1f).intValue)
 
   def >>>(x: Int)(implicit d: DummyImplicit) = UInt(intRep >>> x)
 
-  def >>>(x: Long)(implicit d: DummyImplicit) = UInt(intRep >>> x)
+  def >>>(x: Long)(implicit d: DummyImplicit) = UInt(intRep >>> x.intValue)
 
   def >>>(x: UInt) = UInt(intRep >>> (x.toInt & 0x1f))
 
-  def >>>(x: ULong) = UInt(intRep >>> (x.toLong & 0x1f))
+  def >>>(x: ULong) = UInt(intRep >>> (x.toLong & 0x1f).intValue)
 
   override def toString: String = (intRep & 0xffffffffL).toString
 

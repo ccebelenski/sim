@@ -9,8 +9,8 @@ import com.sim.unsigned.UInt
 abstract class BasicBus(val busSize:UInt) extends Named{
 
 
-  def addRegion(region:BusRegion)
-  def removeRegion(region:BusRegion)
+  def addRegion(region:BusRegion) : Unit
+  def removeRegion(region:BusRegion) : Unit
 
   def toString():String
 

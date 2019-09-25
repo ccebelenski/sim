@@ -1,7 +1,7 @@
 package com.sim
 
 import java.util.Properties
-
+import scala.language.existentials
 /**
   * Created by christophercebelenski on 7/1/16.
   */

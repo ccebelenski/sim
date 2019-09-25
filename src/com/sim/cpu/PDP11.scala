@@ -122,4 +122,6 @@ class PDP11(isBanked: Boolean, override val machine: AbstractMachine) extends Ba
   override def handles(value: UInt): Boolean = ???
 
   override def optionChanged(sb: StringBuilder): Unit = ???
+
+  override val registers: Map[String, Register] = ???
 }
