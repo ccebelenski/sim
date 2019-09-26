@@ -32,6 +32,26 @@ class PDP11MMU(cpu: PDP11) extends BasicMMU(cpu) {
   var reg_mods: Int = 0 /* reg deltas */
   def calc_MMR1(val1 :Int ) = (if(reg_mods != 0) (((val1) << 8) | reg_mods) else (val1))
 
+
+
+  /* Virtual address */
+
+  val VA_DF    =       0x1fff                         /* displacement */
+  val VA_BN      =     0x1fc0                         /* block number */
+  val VA_V_APF    =    13                              /* offset to APF */
+  val VA_V_DS     =    16                              /* offset to space */
+  val VA_V_MODE   =    17                              /* offset to mode */
+  val VA_DS     =      (UInt(1) << VA_V_DS)                 /* data space flag */
+
+  /* I/O access modes */
+
+  val READ       =     0
+  val READC      =     1                               /* read console */
+  val WRITE      =     2
+  val WRITEC     =     3                               /* write console */
+  val WRITEB     =     4
+  
+  
   /* Effective address calculations
      Inputs:
           spec    =       specifier <5:0>
@@ -81,7 +101,7 @@ class PDP11MMU(cpu: PDP11) extends BasicMMU(cpu) {
     var reg = spec & 0x7                                        /* register number */
     var ds = if(reg == 7) isenable else dsenable                    /* dspace if not PC */
 
-    match ((spec >> 3) : @switch) {                                    /* decode spec<5:3> */
+    ((spec >> 3) : @switch) match {                                    /* decode spec<5:3> */
 
       case 1 =>                                             /* (R) */
       return UInt(cpu.R(reg) | ds)
@@ -105,33 +125,37 @@ class PDP11MMU(cpu: PDP11) extends BasicMMU(cpu) {
       return (adr | UInt(dsenable))
 
       case 4 =>                                            /* -(R) */
-        adr = R[reg] = (R[reg] - 2) & 0xffff;
+        //adr = R[reg] = (R[reg] - 2) & 0xffff;
+        adr = UInt((cpu.R(reg) - UInt(2)) & 0xffff)
+        cpu.R(reg).set16(adr.intValue)
       reg_mods = calc_MMR1 (0xf0 | reg);
       if (update_MM && (reg != 7))
         MMR1.set16(reg_mods)
-      if ((reg == 6) && (cm == MD_KER) && (adr < (STKLIM + STKL_Y)))
-        set_stack_trap (adr);
+      if ((reg == 6) && (cpu.cm == cpu.MD_KER) && (adr.intValue < (cpu.STKLIM + cpu.STKL_Y)))
+        cpu.set_stack_trap (adr);
       return UInt(adr | ds)
 
       case 5 =>                                             /* @-(R) */
-        adr = R[reg] = (R[reg] - 2) & 0xffff;
+        //adr = R[reg] = (R[reg] - 2) & 0xffff;
+        adr = UInt((cpu.R(reg) - UInt(2)) & 0xffff)
+        cpu.R(reg).set16(adr.intValue)
       reg_mods = calc_MMR1 (0xf0 | reg);
       if (update_MM && (reg != 7))
         MMR1 = reg_mods;
-      if ((reg == 6) && (cm == MD_KER) && (adr < (STKLIM + STKL_Y)))
-        set_stack_trap (adr);
+      if ((reg == 6) && (cpu.cm == cpu.MD_KER) && (adr.intValue < (cpu.STKLIM + cpu.STKL_Y)))
+        cpu.set_stack_trap (adr);
       adr = ReadW (adr | ds);
       return (adr | dsenable);
 
       case 6 =>                                            /* d(r) */
         adr = ReadW (cpu.PC | isenable);
       cpu.PC ((cpu.PC + 2) & 0xffff)
-      return (((R[reg] + adr) & 0xffff) | dsenable);
+      return (((cpu.R(reg) + adr) & 0xffff) | dsenable);
 
       case 7 =>                                            /* @d(R) */
         adr = ReadW (cpu.PC | isenable);
-      cpu.PC ( (cpu.PC + 2) & 0xffff)
-      adr = ReadW (((R[reg] + adr) & 0xffff) | dsenable);
+      cpu.PC.set16 ( (cpu.PC + 2) & 0xffff)
+      adr = ReadW (((cpu.R(reg) + adr) & 0xffff) | dsenable);
       return (adr | dsenable)
     }                                               /* end switch */
   }
@@ -140,28 +164,29 @@ class PDP11MMU(cpu: PDP11) extends BasicMMU(cpu) {
 
   def GeteaB (spec :UInt) : UInt =
   {
-    var adr, delta
-
     val reg = spec & 0x7                                        /* reg number */
     val ds = if(reg == 7) isenable else dsenable                    /* dspace if not PC */
-    match (spec >> 3 : @switch) {                                    /* decode spec<5:3> */
+    (spec >> 3 : @switch) match {                                    /* decode spec<5:3> */
 
       case 1=>                                             /* (R) */
       return UInt(cpu.R(reg) | ds)
 
       case 2=>                                                    /* (R)+ */
-        delta = 1 + (reg >= 6);                         /* 2 if R6, PC */
-      R[reg] = ((adr = R[reg]) + delta) & 0xffff;
+        val delta = 1 + {if(reg >= 6) -1 else 0}                         /* 2 if R6, PC */
+        val adr = UInt((cpu.R(reg) + delta) & 0xffff)
+      cpu.R(reg).set16(adr.intValue)
       reg_mods = calc_MMR1 ((delta << 3) | reg);
       if (update_MM && (reg != 7))
         MMR1 = reg_mods;
       return (adr | ds);
 
-      case 3=>                                             /* @(R)+ */
-        R[reg] = ((adr = R[reg]) + 2) & 0xffff;
-      reg_mods = calc_MMR1 (0x10 | reg);
+      /* @(R)+ */
+      case 3=>
+        var adr:UInt = UInt((cpu.R(reg) + UInt(2)) & 0xffff)
+        cpu.R(reg).set16(adr.intValue)
+        reg_mods = calc_MMR1 (0x10 | reg);
       if (update_MM && (reg != 7))
-        MMR1 = reg_mods;
+        MMR1.set16(reg_mods)
       adr = ReadW (adr | ds);
       return (adr | dsenable);
 
@@ -172,7 +197,7 @@ class PDP11MMU(cpu: PDP11) extends BasicMMU(cpu) {
       if (update_MM && (reg != 7))
         MMR1 = reg_mods;
       if ((reg == 6) && (cm == MD_KER) && (adr < (STKLIM + STKL_Y)))
-        set_stack_trap (adr);
+        cpu.set_stack_trap (adr)
       return (adr | ds);
 
       case 5=>                                             /* @-(R) */
@@ -180,8 +205,8 @@ class PDP11MMU(cpu: PDP11) extends BasicMMU(cpu) {
       reg_mods = calc_MMR1 (0xf0 | reg);
       if (update_MM && (reg != 7))
         MMR1 = reg_mods;
-      if ((reg == 6) && (cm == MD_KER) && (adr < (STKLIM + STKL_Y)))
-        set_stack_trap (adr);
+      if ((reg == 6) && (cm == cpu.MD_KER) && (adr < (cpu.STKLIM + cpu.STKL_Y)))
+        cpu.set_stack_trap (adr)
       adr = ReadW (adr | ds);
       return (adr | dsenable);
 
@@ -209,7 +234,7 @@ class PDP11MMU(cpu: PDP11) extends BasicMMU(cpu) {
   {
     int32 pa, data;
 
-    if ((va & 1) && CPUT (HAS_ODD)) {                       /* odd address? */
+    if ((va & 1) && cpu.CPUT (cpu.HAS_ODD)) {                       /* odd address? */
       setCPUERR (CPUE_ODD);
       ABORT (TRAP_ODD);
     }
@@ -234,16 +259,16 @@ class PDP11MMU(cpu: PDP11) extends BasicMMU(cpu) {
 
   def ReadW (va : UInt) : UInt =
   {
-    int32 pa;
 
-    if ((va & 1) && CPUT (HAS_ODD)) {                       /* odd address? */
-      setCPUERR (CPUE_ODD);
-      ABORT (TRAP_ODD);
+
+    if ((va & 1) && cpu.CPUT (cpu.HAS_ODD)) {                       /* odd address? */
+      setCPUERR (cpu.CPUE_ODD);
+      ABORT (cpu.TRAP_ODD);
     }
-    pa = relocR (va);                                       /* relocate */
+    val pa = relocR (va);                                       /* relocate */
     if (BPT_SUMM_RD &&
-      (sim_brk_test (va & 0xffff, BPT_RDVIR) ||
-        sim_brk_test (pa, BPT_RDPHY)))                     /* read breakpoint? */
+      (cpu.sim_brk_test (va & 0xffff, BPT_RDVIR) ||
+        cpu.sim_brk_test (pa, BPT_RDPHY)))                     /* read breakpoint? */
       ABORT (ABRT_BKPT);                                  /* stop simulation */
     return PReadW (pa);
   }
@@ -254,8 +279,8 @@ class PDP11MMU(cpu: PDP11) extends BasicMMU(cpu) {
 
     pa = relocR (va);                                       /* relocate */
     if (BPT_SUMM_RD &&
-      (sim_brk_test (va & 0xffff, BPT_RDVIR) ||
-        sim_brk_test (pa, BPT_RDPHY)))                     /* read breakpoint? */
+      (cpu.sim_brk_test (va & 0xffff, BPT_RDVIR) ||
+        cpu.sim_brk_test (pa, BPT_RDPHY)))                     /* read breakpoint? */
       ABORT (ABRT_BKPT);                                  /* stop simulation */
     return PReadB (pa);
   }
@@ -293,7 +318,7 @@ class PDP11MMU(cpu: PDP11) extends BasicMMU(cpu) {
     return PReadW (last_pa);
   }
 
-  int32 ReadMB (int32 va)
+  def ReadMB (va : UInt ) : UInt =
   {
     last_pa = relocW (va);                                  /* reloc, wrt chk */
     if (BPT_SUMM_RW &&
@@ -303,13 +328,13 @@ class PDP11MMU(cpu: PDP11) extends BasicMMU(cpu) {
     return PReadB (last_pa);
   }
 
-  int32 PReadW (int32 pa)
+  def PReadW (pa : UInt ) : UInt =
   {
     int32 data;
 
     if (ADDR_IS_MEM (pa))                                   /* memory address? */
       return RdMemW (pa);
-    if (pa < IOPAGEBASE) {                                  /* not I/O address? */
+    if (pa < cpu.IOPAGEBASE) {                                  /* not I/O address? */
       setCPUERR (CPUE_NXM);
       ABORT (TRAP_NXM);
     }
@@ -320,13 +345,13 @@ class PDP11MMU(cpu: PDP11) extends BasicMMU(cpu) {
     return data;
   }
 
-  int32 PReadB (int32 pa)
+  def PReadB (pa : UInt ) : UInt =
   {
     int32 data;
 
     if (ADDR_IS_MEM (pa))                                   /* memory address? */
       return RdMemB (pa);
-    if (pa < IOPAGEBASE) {                                  /* not I/O address? */
+    if (pa < cpu.IOPAGEBASE) {                                  /* not I/O address? */
       setCPUERR (CPUE_NXM);
       ABORT (TRAP_NXM);
     }
@@ -345,7 +370,7 @@ class PDP11MMU(cpu: PDP11) extends BasicMMU(cpu) {
      Outputs: none
   */
 
-  void WriteW (int32 data, int32 va)
+  def WriteW (data : UInt, va : UInt) : Unit =
   {
     int32 pa;
 
@@ -361,13 +386,13 @@ class PDP11MMU(cpu: PDP11) extends BasicMMU(cpu) {
     PWriteW (data, pa);
   }
 
-  void WriteB (int32 data, int32 va)
+  def WriteB ( data : UInt , va : UInt ) : Unit =
   {
     int32 pa;
 
     pa = relocW (va);                                       /* relocate */
     if (BPT_SUMM_WR &&
-      (sim_brk_test (va & 0177777, BPT_WRVIR) ||
+      (sim_brk_test (va & 0xffff, BPT_WRVIR) ||
         sim_brk_test (pa, BPT_WRPHY)))                     /* write breakpoint? */
       ABORT (ABRT_BKPT);                                  /* stop simulation */
     PWriteB (data, pa);
@@ -376,7 +401,7 @@ class PDP11MMU(cpu: PDP11) extends BasicMMU(cpu) {
   /* Write word with breakpoint check: if a data breakpoint is encountered,
      set reason accordingly but don't do an ABORT.  This is used when we want
      to break after doing the operation, used for interrupt processing.  */
-  void WriteCW (int32 data, int32 va)
+  def WriteCW (data : UInt, va : UInt ) : Unit =
   {
     int32 pa;
 
@@ -386,13 +411,13 @@ class PDP11MMU(cpu: PDP11) extends BasicMMU(cpu) {
     }
     pa = relocW (va);                                       /* relocate */
     if (BPT_SUMM_WR &&
-      (sim_brk_test (va & 0177777, BPT_WRVIR) ||
+      (sim_brk_test (va & 0xffff, BPT_WRVIR) ||
         sim_brk_test (pa, BPT_WRPHY)))                     /* write breakpoint? */
       reason = STOP_IBKPT;                                /* report that */
     PWriteW (data, pa);
   }
 
-  void PWriteW (int32 data, int32 pa)
+  def PWriteW (data:UInt,pa:UInt):Unit=
   {
     if (ADDR_IS_MEM (pa)) {                                 /* memory address? */
       WrMemW (pa, data);
@@ -409,7 +434,7 @@ class PDP11MMU(cpu: PDP11) extends BasicMMU(cpu) {
     return;
   }
 
-  void PWriteB (int32 data, int32 pa)
+  def PWriteB (data:UInt, pa:UInt):Unit=
   {
     if (ADDR_IS_MEM (pa)) {                                 /* memory address? */
       WrMemB (pa, data);
@@ -440,7 +465,7 @@ class PDP11MMU(cpu: PDP11) extends BasicMMU(cpu) {
      - Aborts must update MMR0<15:13,6:1> if updating is enabled
   */
 
-  int32 relocR (int32 va)
+  def relocR ( va:UInt):UInt=
   {
     int32 apridx, apr, pa;
 
@@ -513,10 +538,10 @@ class PDP11MMU(cpu: PDP11) extends BasicMMU(cpu) {
 
   def PLF_test (va : UInt, apr : UInt ) : Boolean =
   {
-    int32 dbn = va & VA_BN;                                 /* extr block num */
-    int32 plf = (apr & PDR_PLF) >> 2;                       /* extr page length */
+    val dbn = va & VA_BN;                                 /* extr block num */
+    val plf = (apr & PDR_PLF) >> 2;                       /* extr page length */
 
-    return ((apr & PDR_ED)? (dbn < plf): (dbn > plf));      /* pg lnt error? */
+    if((apr.intValue & PDR_ED)!=0) (dbn < plf) else (dbn > plf)      /* pg lnt error? */
   }
 
   def reloc_abort (err : UInt , apridx : UInt ) : Unit =
@@ -586,9 +611,9 @@ class PDP11MMU(cpu: PDP11) extends BasicMMU(cpu) {
 
     var err = 0;                                                /* init status */
     val apr = APRFILE[apridx];                                  /* get APR */
-    switch (apr & PDR_ACF) {                                /* case on ACF */
+    (apr & PDR_ACF : @switch) match {                                /* case on ACF */
 
-      case 4: case 5:                                     /* trap write */
+      case (4 | 5) =>                                     /* trap write */
       if (CPUT (HAS_MMTR)) {                          /* traps implemented? */
         APRFILE[apridx] = APRFILE[apridx] | PDR_A;  /* set A */
         if (MMR0 & MMR0_TENB) {                     /* traps enabled? */
@@ -599,15 +624,14 @@ class PDP11MMU(cpu: PDP11) extends BasicMMU(cpu) {
         }
         return;                                     /* continue op */
       }                                           /* not impl, abort NR */
-      case 0: case 3: case 7:                             /* non-resident */
+      case (0| 3| 7)=>                             /* non-resident */
         err = MMR0_NR;                                  /* MMR0 status */
-      break;                                          /* go test PLF, abort */
 
-      case 1: case 2:                                     /* read only */
+      case (1| 2) =>                                     /* read only */
         err = MMR0_RO;                                  /* MMR0 status */
-      break;
 
-      case 6:                                             /* read/write */
+
+      case 6 =>                                             /* read/write */
       return;                                         /* continue */
     }                                               /* end switch */
     if (PLF_test (va, apr))                                 /* pg lnt error? */
@@ -625,7 +649,7 @@ class PDP11MMU(cpu: PDP11) extends BasicMMU(cpu) {
      On aborts, this routine returns MAXMEMSIZE
   */
 
-  int32 relocC (int32 va, int32 sw)
+  def relocC (va : UInt, sw : UInt ) : UInt =
   {
     int32 mode, dbn, plf, apridx, apr, pa;
 
@@ -670,42 +694,47 @@ class PDP11MMU(cpu: PDP11) extends BasicMMU(cpu) {
      MMR3 17772516        read/write, certain bits unimplemented
   */
 
-  def MMR012_rd (data : UInt, pa : UInt, access  : UInt ) :Unit =
+  def MMR012_rd (data : UInt, pa : UInt, access  : UInt ) :Option[UInt] =
   {
-    match ((pa >> 1) & 3) {                                /* decode pa<2:1> */
+    ((pa >> 1) & 3) match {                                /* decode pa<2:1> */
 
       case 0 =>                                             /* SR */
-      return
+      None
 
       case 1=>                                             /* MMR0 */
-        data(MMR0 & cpu_tab[cpu_model].mm0)
+       //data(MMR0 & cpu_tab[cpu_model].mm0)
+        Some(MMR0.get16 & cpu_tab(cpu.cpu_model).mm0)
 
-      case 2=>                                             /* MMR1 */
-        data(MMR1)
+      case 2=>
+        /* MMR1 */
+
+        Some(MMR1.get16)
 
 
       case 3=>                                            /* MMR2 */
-        data(MMR2)
+        Some(MMR2.get16)
     }                                               /* end switch pa */
   }
 
-  t_stat MMR012_wr (int32 data, int32 pa, int32 access)
+  def MMR012_wr (data:UInt,pa:UInt, access:UInt) : UInt =
   {
-    match ((pa >> 1) & 3) {                                /* decode pa<2:1> */
+    ((pa >> 1) & 3) match {                                /* decode pa<2:1> */
 
-      case 0:                                             /* DR */
-      return SCPE_NXM;
+      case 0 =>                                           /* DR */
 
-      case 1:                                             /* MMR0 */
+
+      case 1 =>                                            /* MMR0 */
       if (access == WRITEB)
         data = (pa & 1)? (MMR0 & 0xff) | (data << 8): (MMR0 & ~0xff) | data;
       data = data & cpu_tab[cpu_model].mm0;
       MMR0 = (MMR0 & ~MMR0_WR) | (data & MMR0_WR);
-      return SCPE_OK;
+
 
       case _ =>                                            /* MMR1, MMR2 */
-      return SCPE_OK;
-    }                                               /* end switch pa */
+
+    }
+    /* end switch pa */
+    data
   }
 
   t_stat MMR3_rd (int32 *data, int32 pa, int32 access)    /* MMR3 */
@@ -753,26 +782,31 @@ class PDP11MMU(cpu: PDP11) extends BasicMMU(cpu) {
     return SCPE_OK;
   }
 
-  t_stat APR_wr (int32 data, int32 pa, int32 access)
+  def APR_wr (data:UInt, pa:UInt, access:UInt):Unit=
   {
-    int32 left, idx, curr;
 
-    idx = (pa >> 1) & 0xf;                                  /* dspace'page */
-    left = (pa >> 5) & 1;                                   /* PDR vs PAR */
+
+    var idx = (pa >> 1) & 0xf                                  /* dspace'page */
+    var left = (pa >> 5) & 1                                   /* PDR vs PAR */
     if ((pa & 0x40) == 0)                                   /* 1 for super, user */
-      idx = idx | 0x10;
-    if (pa & 0x100)                                          /* 1 for user only */
-      idx = idx | 0x20;
-    if (left)
-      curr = (APRFILE[idx] >> 16) & cpu_tab[cpu_model].par;
-    else curr = APRFILE[idx] & cpu_tab[cpu_model].pdr;
+      idx = idx | 0x10
+    if ((pa & 0x100) !=0)                                         /* 1 for user only */
+      idx = idx | 0x20
+    val curr = {
+      if (left != 0)
+      (APRFILE(idx) >> 16) & cpu_tab(cpu.cpu_model).par
+    else APRFILE(idx) & cpu_tab(cpu.cpu_model).pdr
+    }
     if (access == WRITEB)
-      data = (pa & 1)? (curr & 0xff) | (data << 8): (curr & ~0xff) | data;
-    if (left)
-      APRFILE[idx] = ((APRFILE[idx] & 0xffff) |
-        (((uint32) (data & cpu_tab[cpu_model].par)) << 16)) & ~(PDR_A|PDR_W);
-    else APRFILE[idx] = ((APRFILE[idx] & ~0xffff) |
-      (data & cpu_tab[cpu_model].pdr)) & ~(PDR_A|PDR_W);
-    return SCPE_OK;
+      data = (pa & 1)? (curr & 0xff) | (data << 8): (curr & ~0xff) | data
+    APRFILE(idx) = {
+    if (left != 0)
+      ((APRFILE(idx) & 0xffff) |
+        (( (data & cpu_tab[cpu_model].par)) << 16)) & ~(PDR_A | PDR_W)
+    else ((APRFILE(idx) & ~0xffff) |
+      (data & cpu_tab[cpu_model].pdr)) & ~(PDR_A | PDR_W)
   }
+  }
+
+
 }
