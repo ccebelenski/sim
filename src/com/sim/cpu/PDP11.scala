@@ -15,7 +15,7 @@ abstract class PDP11(isBanked: Boolean, override val machine: AbstractMachine) e
 
     unitOptions.append(BinaryUnitOption("BANKED", "Enable banked memory.", value = true))
     unitOptions.append(BinaryUnitOption("STOPONHALT", "Break on HALT instruction.", value = false))
-    unitOptions.append(ValueUnitOption("MEMORY", "Set the RAM size.", value = UInt(0xFFFF))
+    unitOptions.append(ValueUnitOption("MEMORY", "Set the RAM size.", value = (0xFFFF)))
 
   }
 
@@ -47,13 +47,16 @@ abstract class PDP11(isBanked: Boolean, override val machine: AbstractMachine) e
   val MD_UND  =        2
   val MD_USR   =       3
 
-  val STKLIM_RW =      UInt(0xff00
+  val STKLIM_RW =      UInt(0xff00)
 
   val  PCQ_SIZE   =     64                              /* must be 2**n */
   val PCQ_MASK  =       (PCQ_SIZE - 1)
-  def PCQ_ENTRY =      pcq[pcq_p = (pcq_p - 1) & PCQ_MASK] = PC
-  def calc_is(md:Int)  =    ((md) << VA_V_MODE)
-  def calc_ds(md:Int) =    (calc_is((md)) | ((MMU.MMR3 & dsmask[(md)])? VA_DS: 0))
+  def PCQ_ENTRY =      {
+    pcq_p = (pcqp - 1) & PCQ_MASK
+    pcq(pcq_p) = PC
+  }
+  def calc_is(md:Int)  =    (md << VA_V_MODE)
+  def calc_ds(md:Int) =    if(calc_is(md) | (MMU.MMR3 & dsmask(md))) VA_DS else 0
   /* Register change tracking actually goes into variable reg_mods; from there
      it is copied into MMR1 if that register is not currently locked.  */
 
@@ -61,13 +64,16 @@ abstract class PDP11(isBanked: Boolean, override val machine: AbstractMachine) e
   def GET_SIGN_B(v:UByte) =   (((v) >> 7) & 1)
   def GET_Z(v:Int)  =       ((v) == 0)
   def JMP_PC(x:Register16)  = {      PCQ_ENTRY
-    PC.set16(x)}
-  def BRANCH_F(x:UInt) =  {   PCQ_ENTRY
-    PC.set16 ((PC + (((x) + (x)) & UInt(0xff)) & UInt(0xffff)}
-  def BRANCH_B(x:UInt)  =  { PCQ_ENTRY
-    PC.set16 ((PC + (((x) + (x)) | UInt(0xff00)) & UInt(0xffff) }
-
-
+    PC.set16(x)
+  }
+  def BRANCH_F(x:UInt) = {
+    PCQ_ENTRY
+    PC.set16(PC.get16 + (((x) + (x)) & UInt(0xff)) & 0xffff)
+  }
+  def BRANCH_B(x:UInt)  = {
+    PCQ_ENTRY
+    PC.set16(PC.get16 + (((x) + (x)) | UInt(0xff00)) & 0xffff)
+  }
 
   // Registers
 
@@ -124,22 +130,22 @@ abstract class PDP11(isBanked: Boolean, override val machine: AbstractMachine) e
   val BIT_CM = 2 ^ 14 // Current access mode, 2 bits
 
   /* Trap data structures */
-  val VEC_RED = UInt(0x4
+  val VEC_RED = UInt(0x4)
   /* trap vectors */
-  val VEC_ODD = UInt(0x4
-  val VEC_MME = UInt(0xa8
-  val VEC_NXM = UInt(0x4
-  val VEC_PAR = UInt(0x4c
-  val VEC_PRV = UInt(0x4
-  val VEC_ILL = UInt(0x8
-  val VEC_BPT = UInt(0xc
-  val VEC_IOT = UInt(0x10
-  val VEC_EMT = UInt(0x18
-  val VEC_TRAP = UInt(0x1c
-  val VEC_TRC = UInt(0xc
-  val VEC_YEL = UInt(0x4
-  val VEC_PWRFL = UInt(0x14
-  val VEC_FPE = UInt(0xa4
+  val VEC_ODD = UInt(0x4)
+  val VEC_MME = UInt(0xa8)
+  val VEC_NXM = UInt(0x4)
+  val VEC_PAR = UInt(0x4c)
+  val VEC_PRV = UInt(0x4)
+  val VEC_ILL = UInt(0x8)
+  val VEC_BPT = UInt(0xc)
+  val VEC_IOT = UInt(0x10)
+  val VEC_EMT = UInt(0x18)
+  val VEC_TRAP = UInt(0x1c)
+  val VEC_TRC = UInt(0xc)
+  val VEC_YEL = UInt(0x4)
+  val VEC_PWRFL = UInt(0x14)
+  val VEC_FPE = UInt(0xa4)
 
   val trap_vec = ( /* trap req to vector */
     VEC_RED, VEC_ODD, VEC_MME, VEC_NXM,
@@ -185,7 +191,7 @@ abstract class PDP11(isBanked: Boolean, override val machine: AbstractMachine) e
   val TRAP_PWRFL: UInt = (UInt(1) << TRAP_V_PWRFL)
   val TRAP_FPE: UInt = (UInt(1) << TRAP_V_FPE)
   val TRAP_INT: UInt = (UInt(1) << TRAP_V_MAX)
-  val TRAP_ALL: UInt = ((UInt(1) << TRAP_V_MAX) - 1)
+  val TRAP_ALL: UInt = UInt((UInt(1) << TRAP_V_MAX) - 1)
   /* all traps */
   val ABRT_BKPT: UInt = (UInt(1) << ABRT_V_BKPT)
 
@@ -292,23 +298,23 @@ abstract class PDP11(isBanked: Boolean, override val machine: AbstractMachine) e
 object PDP11 {
   /* Architectural constants */
 
-  val STKL_R    =      UInt(0xe0                            /* stack limit */
-  val STKL_Y    =      UInt(0x100
-  val VASIZE    =      UInt(0x10000                         /* 2**16 */
+  val STKL_R    =      UInt(0xe0)                            /* stack limit */
+  val STKL_Y    =      UInt(0x100)
+  val VASIZE    =      UInt(0x10000  )                       /* 2**16 */
   val VAMASK    =      (VASIZE - 1)                    /* 2**16 - 1 */
-  val MEMSIZE64K =     UInt(UInt(0x10000)                         /* 2**16 */
-  val UNIMEMSIZE  =    UInt(UInt(0x40000)                       /* 2**18 */
+  val MEMSIZE64K =     UInt(0x10000)                         /* 2**16 */
+  val UNIMEMSIZE  =    UInt(0x40000)                       /* 2**18 */
   val UNIMASK      =   (UNIMEMSIZE - 1)                /* 2**18 - 1 */
-  val IOPAGEBASE    =  UInt(0x3fe000                       /* 2**22 - 2**13 */
-  val IOPAGESIZE     = UInt(0x2000                       /* 2**13 */
+  val IOPAGEBASE    =  UInt(0x3fe000)                       /* 2**22 - 2**13 */
+  val IOPAGESIZE     = UInt(0x2000  )                     /* 2**13 */
   val IOPAGEMASK      =(IOPAGESIZE - 1)                /* 2**13 - 1 */
-  val MAXMEMSIZE  =    UInt(UInt(0x400000)                       /* 2**22 */
+  val MAXMEMSIZE  =    UInt(0x400000)                       /* 2**22 */
   val PAMASK      =    (MAXMEMSIZE - 1)                /* 2**22 - 1 */
-  val DMASK       =    UInt(0xffff
-  val BMASK       =    UInt(0xff
+  val DMASK       =    UInt(0xffff)
+  val BMASK       =    UInt(0xff)
 
 }
-private case class CPUTAB(var name : String, // Model name
+protected case class CPUTAB(var name : String, // Model name
                           var std: UInt, // standard flags
                           var opt: UInt, // set/clear flags
                           var              maxm: UInt, // max memory
@@ -321,7 +327,7 @@ private case class CPUTAB(var name : String, // Model name
                          ) {
 }
 
-private object CPUOPT {
+protected object CPUOPT {
 
   val BUS_U : UInt   =       (UInt(1) << 0)                       /* Unibus */
   val BUS_Q :UInt    =      UInt(0)                             /* Qbus */
@@ -376,13 +382,13 @@ private object CPUOPT {
   val CPUT_JB: UInt =    (CPUT_73B|CPUT_83|CPUT_84)      /* KDJ11B */
   val CPUT_JE: UInt =    (CPUT_93|CPUT_94)               /* KDJ11E */
   val CPUT_JU: UInt =    (CPUT_84|CPUT_94)               /* KTJ11B UBA */
-  val CPUT_ALL    =    UInt(UInt(0xFFFFFFFF)
+  val CPUT_ALL    =    UInt(0xFFFFFFFF)
 
 
   /* CPU options */
 
-  val BUS_U : UInt   =       (UInt(1) << 0)                       /* Unibus */
-  val BUS_Q :UInt    =      UInt(0)                             /* Qbus */
+  //val BUS_U : UInt   =       (UInt(1) << 0)                       /* Unibus */
+  //val BUS_Q :UInt    =      UInt(0)                             /* Qbus */
   val OPT_EIS :UInt   =     (UInt(1) << 1)                       /* EIS */
   val OPT_FIS :UInt    =    (UInt(1) << 2)                       /* FIS */
   val OPT_FPP :UInt     =   (UInt(1) << 3)                       /* FPP */
