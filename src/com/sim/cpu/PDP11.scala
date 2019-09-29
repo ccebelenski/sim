@@ -35,11 +35,20 @@ abstract class PDP11(isBanked: Boolean, override val machine: AbstractMachine) e
   // override this for specific cpu implementation
   val cpu_type : UInt // Model as bit mask
   val cpu_opt : UInt // cpu options
-  val cpu_bme : UInt                                   /* bus map enable */
+  val cpu_bme : Boolean                                   /* bus map enable */
   val cpu_model : UInt                                /* CPU model */
   @inline def CPUT(x:UInt) : Boolean = (cpu_type & x) != 0
   @inline def CPUO(x:UInt) : Boolean = (cpu_opt & x) != 0
   @inline def UNIBUS : UInt = (cpu_opt & CPUOPT.BUS_U)
+
+  val  PCQ_SIZE:Int    =     64                              /* must be 2**n */
+  val pcq: Array[Register16] = new Array[Register16](PCQ_SIZE);                           /* PC queue */
+  var pcq_p: Int = 0
+  val PCQ_MASK: Int =       (PCQ_SIZE - 1)
+  def PCQ_ENTRY():Unit  =      {
+    pcq_p = (pcq_p - 1) & PCQ_MASK
+    pcq(pcq_p) = PC
+  }
 
   /* Protection modes */
   val MD_KER =         0
@@ -49,14 +58,6 @@ abstract class PDP11(isBanked: Boolean, override val machine: AbstractMachine) e
 
   val STKLIM_RW =      UInt(0xff00)
 
-  val  PCQ_SIZE   =     64                              /* must be 2**n */
-  val PCQ_MASK  =       (PCQ_SIZE - 1)
-  def PCQ_ENTRY =      {
-    pcq_p = (pcqp - 1) & PCQ_MASK
-    pcq(pcq_p) = PC
-  }
-  def calc_is(md:Int)  =    (md << VA_V_MODE)
-  def calc_ds(md:Int) =    if(calc_is(md) | (MMU.MMR3 & dsmask(md))) VA_DS else 0
   /* Register change tracking actually goes into variable reg_mods; from there
      it is copied into MMR1 if that register is not currently locked.  */
 
@@ -115,6 +116,130 @@ abstract class PDP11(isBanked: Boolean, override val machine: AbstractMachine) e
   val STACKFILE = new Array[Register16](4) // SP, 4 modes
 
   // TODO set up REGIFILE and STACKFILE
+
+
+
+  // PSW
+  var PSW :Int = 0
+  var cm: Int = 0  /*   current mode */
+  var pm: Int = 0   /*   previous mode */
+  var rs: Int = 0   /*   register set */
+  var fpd: Int = 0  /*   first part done */
+  var ipl: Int = 0  /*   int pri level */
+  var tbit: Int = 0 /*   trace flag */
+  var N: Int = 0
+    var Z: Int = 0
+    var V: Int = 0
+    var C: Int = 0 /*   condition codes */
+
+
+  
+  override def onHalt(singleStepped: Boolean): Unit = ???
+
+  //override val registers: Map[String, Register] = _
+
+  override def resetCPU(): Unit = {
+    PC(0)
+    PSW(0)
+    KSP(0)
+    SSP(0)
+    USP(0)
+    R0(0)
+    R00(0)
+    R10(0)
+    R1(0)
+    R01(0)
+    R11(0)
+    R2(0)
+    R02(0)
+    R12(0)
+    R3(0)
+    R03(0)
+    R13(0)
+    R4(0)
+    R04(0)
+    R14(0)
+    R5(0)
+    R05(0)
+    R15(0)
+
+
+  }
+
+  override def showRegisters(): String = ???
+
+  override def showFlags(): String = ???
+
+  override def DAsm(addr: Int, sb: StringBuilder): Int = ???
+
+  override def init(): Unit = {} // TODO
+
+  override def handles(value: UInt): Boolean = ???
+
+  override def optionChanged(sb: StringBuilder): Unit = ???
+
+  override val registers: Map[String, Register] = ???
+
+  def set_stack_trap(adr: UInt): Unit = {
+    if (CPUT(CPUOPT.HAS_STKLF)) {
+      /* fixed stack? */
+      setTRAP(PDP11.TRAP_YEL) /* always yellow trap */
+      setCPUERR(CPUOPT.CPUE_YEL)
+    }
+    else if (CPUT(CPUOPT.HAS_STKLR)) /* register limit? */
+      if (adr.intValue >= (STKLIM + PDP11.STKL_R)) {
+      /* yellow zone? */
+        setTRAP(PDP11.TRAP_YEL) /* still yellow trap */
+      setCPUERR(CPUE_YEL)
+    }
+    else {
+      /* red zone abort */
+        setCPUERR(CPUE_RED)
+      STACKFILE(MD_KER).set16(4)
+      SP.set16(4)
+      throw AbortException(PDP11.TRAP_RED)
+    }
+    /* no stack limit */
+  }
+
+  var trap_req:UInt = UInt(0) // Trap Requests
+  @inline def setTRAP(name: UInt): Unit = {trap_req = trap_req | name}
+  @inline def setCPUERR(name : UInt ) : Unit = CPUERR = CPUERR | (name)
+}
+
+object PDP11 {
+  /* Architectural constants */
+
+  val STKL_R    =      UInt(0xe0)                            /* stack limit */
+  val STKL_Y    =      UInt(0x100)
+  val VASIZE    =      UInt(0x10000  )                       /* 2**16 */
+  val VAMASK    =      (VASIZE - 1)                    /* 2**16 - 1 */
+  val MEMSIZE64K =     UInt(0x10000)                         /* 2**16 */
+  val UNIMEMSIZE  =    UInt(0x40000)                       /* 2**18 */
+  val UNIMASK      =   (UNIMEMSIZE - 1)                /* 2**18 - 1 */
+  val IOPAGEBASE    =  UInt(0x3fe000)                       /* 2**22 - 2**13 */
+  val IOPAGESIZE     = UInt(0x2000  )                     /* 2**13 */
+  val IOPAGEMASK      =(IOPAGESIZE - 1)                /* 2**13 - 1 */
+  val MAXMEMSIZE  =    UInt(0x400000)                       /* 2**22 */
+  val PAMASK      =    (MAXMEMSIZE - 1)                /* 2**22 - 1 */
+  val DMASK       =    UInt(0xffff)
+  val BMASK       =    UInt(0xff)
+
+  /* PSW */
+
+  val PSW_V_C      =   0                               /* condition codes */
+  val PSW_V_V     =    1
+  val PSW_V_Z     =    2
+  val PSW_V_N     =    3
+  val PSW_V_TBIT  =    4                               /* trace trap */
+  val PSW_V_IPL   =    5                               /* int priority */
+  val PSW_V_FPD   =    8                               /* first part done */
+  val PSW_V_RS    =    11                              /* register set */
+  val PSW_V_PM    =    12                              /* previous mode */
+  val PSW_V_CM    =    14                              /* current mode */
+  val PSW_CC      =    0xf
+  val PSW_TBIT     =   (1 << PSW_V_TBIT)
+  val PSW_PM       =   (3 << PSW_V_PM)\
 
   // PSW Bits
   val BIT_C = 2 ^ 0 // Carry
@@ -207,112 +332,15 @@ abstract class PDP11(isBanked: Boolean, override val machine: AbstractMachine) e
     TRAP_TRAP + TRAP_TRC, TRAP_TRC,
     TRAP_YEL, TRAP_PWRFL, TRAP_FPE
   )
+  /* CPUERR */
 
-  // PSW
-  var PSW :Int = 0
-  var cm: Int = 0  /*   current mode */
-  var pm: Int = 0   /*   previous mode */
-  var rs: Int = 0   /*   register set */
-  var fpd: Int = 0  /*   first part done */
-  var ipl: Int = 0  /*   int pri level */
-  var tbit: Int = 0 /*   trace flag */
-  var N: Int = 0
-    var Z: Int = 0
-    var V: Int = 0
-    var C: Int = 0 /*   condition codes */
-
-
-  
-  override def onHalt(singleStepped: Boolean): Unit = ???
-
-  //override val registers: Map[String, Register] = _
-
-  override def resetCPU(): Unit = {
-    PC(0)
-    PSW(0)
-    KSP(0)
-    SSP(0)
-    USP(0)
-    R0(0)
-    R00(0)
-    R10(0)
-    R1(0)
-    R01(0)
-    R11(0)
-    R2(0)
-    R02(0)
-    R12(0)
-    R3(0)
-    R03(0)
-    R13(0)
-    R4(0)
-    R04(0)
-    R14(0)
-    R5(0)
-    R05(0)
-    R15(0)
-
-
-  }
-
-  override def showRegisters(): String = ???
-
-  override def showFlags(): String = ???
-
-  override def DAsm(addr: Int, sb: StringBuilder): Int = ???
-
-  override def init(): Unit = {} // TODO
-
-  override def handles(value: UInt): Boolean = ???
-
-  override def optionChanged(sb: StringBuilder): Unit = ???
-
-  override val registers: Map[String, Register] = ???
-
-  def set_stack_trap(adr: UInt): Unit = {
-    if (CPUT(CPUOPT.HAS_STKLF)) {
-      /* fixed stack? */
-      setTRAP(TRAP_YEL) /* always yellow trap */
-      setCPUERR(CPUOPT.CPUE_YEL)
-    }
-    else if (CPUT(CPUOPT.HAS_STKLR)) /* register limit? */
-      if (adr.intValue >= (STKLIM + STKL_R)) {
-      /* yellow zone? */
-        setTRAP(TRAP_YEL) /* still yellow trap */
-      setCPUERR(CPUE_YEL)
-    }
-    else {
-      /* red zone abort */
-        setCPUERR(CPUE_RED)
-      STACKFILE(MD_KER).set16(4)
-      SP.set16(4)
-      ABORT(TRAP_RED)
-    }
-    /* no stack limit */
-  }
-
-  var trap_req:UInt = UInt(0) // Trap Requests
-  @inline def setTRAP(name: UInt) = {trap_req = trap_req | name}
-}
-
-object PDP11 {
-  /* Architectural constants */
-
-  val STKL_R    =      UInt(0xe0)                            /* stack limit */
-  val STKL_Y    =      UInt(0x100)
-  val VASIZE    =      UInt(0x10000  )                       /* 2**16 */
-  val VAMASK    =      (VASIZE - 1)                    /* 2**16 - 1 */
-  val MEMSIZE64K =     UInt(0x10000)                         /* 2**16 */
-  val UNIMEMSIZE  =    UInt(0x40000)                       /* 2**18 */
-  val UNIMASK      =   (UNIMEMSIZE - 1)                /* 2**18 - 1 */
-  val IOPAGEBASE    =  UInt(0x3fe000)                       /* 2**22 - 2**13 */
-  val IOPAGESIZE     = UInt(0x2000  )                     /* 2**13 */
-  val IOPAGEMASK      =(IOPAGESIZE - 1)                /* 2**13 - 1 */
-  val MAXMEMSIZE  =    UInt(0x400000)                       /* 2**22 */
-  val PAMASK      =    (MAXMEMSIZE - 1)                /* 2**22 - 1 */
-  val DMASK       =    UInt(0xffff)
-  val BMASK       =    UInt(0xff)
-
+  val CPUE_RED     =   0x4                            /* red stack */
+  val CPUE_YEL     =   0x8                            /* yellow stack */
+  val CPUE_TMO     =   0x10                            /* IO page nxm */
+  val CPUE_NXM     =   0x20                            /* memory nxm */
+  val CPUE_ODD     =   0x40                            /* odd address */
+  val CPUE_HALT    =   0x80                            /* HALT not kernel */
+  val CPUE_IMP     =   0xfc                            /* implemented bits */
 }
 protected case class CPUTAB(var name : String, // Model name
                           var std: UInt, // standard flags

@@ -28,6 +28,9 @@ abstract class BasicCPU(val isBanked: Boolean, override val machine: AbstractMac
   // Address of the last break we stopped at.
   var lastBreak: UInt = UInt(0)
 
+  /* Convert switch letter to bit mask */
+  @inline def SWMASK(x: Char) :UInt = UInt(1) << (x - 'A')
+
   // Stop on a HALT
   def stopOnHALT: Boolean = {
     getBinaryOption("STOPONHALT")
@@ -74,6 +77,8 @@ abstract class BasicCPU(val isBanked: Boolean, override val machine: AbstractMac
 
   val registers: Map[String, Register]
 
+  // Cpu error
+  var CPUERR : UInt = UInt(0)
 
   val MMU: BasicMMU
 
