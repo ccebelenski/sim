@@ -1,6 +1,8 @@
-package com.sim.cpu
+package com.sim.pdp11
 
-import com.sim.unsigned.{UInt, UShort}
+import com.sim.cpu.{BasicMMU, CompositeRegister32, Register16}
+import com.sim.unsigned.UInt
+
 import scala.annotation.switch
 
 class PDP11MMU(cpu: PDP11) extends BasicMMU(cpu) {
@@ -15,7 +17,7 @@ class PDP11MMU(cpu: PDP11) extends BasicMMU(cpu) {
   val KIPAR0 = new Register16("KIPARO")
   val KIPDR0 = new Register16("KIPDRO")
   val KIP0 = new CompositeRegister32("KIP0", KIPAR0, KIPDR0)
-  val MMR0_FREEZE = 0xe000
+
 
   /* MMR0 */
   val MMR0_MME = 0x1 // mem mgt enable
@@ -142,20 +144,18 @@ class PDP11MMU(cpu: PDP11) extends BasicMMU(cpu) {
 
   /* Effective address calculation for words */
   def GeteaW(spec: UInt): UInt = {
-    var adr: UInt = null
-
     val reg = spec & 0x7
     /* register number */
     val ds = if (reg == 7) isenable else dsenable /* dspace if not PC */
 
-    ((spec >> 3): @switch) match {
+    ((spec >> 3).intValue: @switch) match {
       /* decode spec<5:3> */
 
       case 1 => /* (R) */
         UInt(cpu.R(reg) | ds)
 
       case 2 => /* (R)+ */
-        adr = UInt((cpu.R(reg) + UInt(2)) & 0xffff)
+        val adr = UInt((cpu.R(reg) + UInt(2)) & 0xffff)
         cpu.R(reg).set16(adr.intValue)
         //cpu.R(reg) (((adr = cpu.R(reg).toUInt) + UInt(2) )& 0xffff)
         reg_mods = calc_MMR1(0x10 | reg)
@@ -164,7 +164,7 @@ class PDP11MMU(cpu: PDP11) extends BasicMMU(cpu) {
         adr | UInt(ds)
 
       case 3 => /* @(R)+ */
-        adr = UInt(cpu.R(reg) + UInt(2) & 0xffff)
+        var adr = UInt(cpu.R(reg) + UInt(2) & 0xffff)
         cpu.R(reg).set16(adr.intValue)
         reg_mods = calc_MMR1(0x10 | reg)
         if (update_MM && (reg != 7))
@@ -174,7 +174,7 @@ class PDP11MMU(cpu: PDP11) extends BasicMMU(cpu) {
 
       case 4 => /* -(R) */
         //adr = R[reg] = (R[reg] - 2) & 0xffff
-        adr = UInt((cpu.R(reg) - UInt(2)) & 0xffff)
+        val adr = UInt((cpu.R(reg) - UInt(2)) & 0xffff)
         cpu.R(reg).set16(adr.intValue)
         reg_mods = calc_MMR1(0xf0 | reg)
         if (update_MM && (reg != 7))
@@ -185,7 +185,7 @@ class PDP11MMU(cpu: PDP11) extends BasicMMU(cpu) {
 
       case 5 => /* @-(R) */
         //adr = R[reg] = (R[reg] - 2) & 0xffff
-        adr = UInt((cpu.R(reg) - UInt(2)) & 0xffff)
+        var adr = UInt((cpu.R(reg) - UInt(2)) & 0xffff)
         cpu.R(reg).set16(adr.intValue)
         reg_mods = calc_MMR1(0xf0 | reg)
         if (update_MM && (reg != 7))
@@ -196,12 +196,12 @@ class PDP11MMU(cpu: PDP11) extends BasicMMU(cpu) {
         UInt(adr | dsenable)
 
       case 6 => /* d(r) */
-        adr = ReadW(UInt(cpu.PC | isenable))
+        val adr = ReadW(UInt(cpu.PC | isenable))
         cpu.PC((cpu.PC + 2) & 0xffff)
         UInt(((cpu.R(reg) + adr) & 0xffff) | dsenable)
 
       case 7 => /* @d(R) */
-        adr = ReadW(UInt(cpu.PC | isenable))
+        var adr = ReadW(UInt(cpu.PC | isenable))
         cpu.PC.set16((cpu.PC + 2) & 0xffff)
         adr = ReadW(UInt(((cpu.R(reg) + adr) & 0xffff) | dsenable))
         UInt(adr | dsenable)
@@ -214,7 +214,7 @@ class PDP11MMU(cpu: PDP11) extends BasicMMU(cpu) {
     val reg = spec & 0x7
     /* reg number */
     val ds = if (reg == 7) isenable else dsenable /* dspace if not PC */
-    (spec >> 3: @switch) match {
+    ((spec >> 3).intValue: @switch) match {
       /* decode spec<5:3> */
 
       case 1 => /* (R) */
@@ -285,10 +285,10 @@ class PDP11MMU(cpu: PDP11) extends BasicMMU(cpu) {
           data    =       data read from memory or I/O space
   */
 
-  // TODO Solve the data write
+  // Solve the data write
   def ReadE(va: UInt): UInt = {
 
-    if (((va & UInt(1)) != 0) && (cpu.CPUT(CPUOPT.HAS_ODD)) != 0) {
+    if (((va & UInt(1)) != 0) && cpu.CPUT(CPUOPT.HAS_ODD)) {
       /* odd address? */
       cpu.setCPUERR(PDP11.CPUE_ODD)
       throw AbortException(PDP11.TRAP_ODD)
@@ -299,19 +299,22 @@ class PDP11MMU(cpu: PDP11) extends BasicMMU(cpu) {
     //    sim_brk_test(pa, BPT_RDPHY))) /* read breakpoint? */
     //  ABORT(ABRT_BKPT) /* stop simulation */
     if (ADDR_IS_MEM(pa)) /* memory address? */
-      return RdMemW(pa)
+      return get16(pa.intValue)
+    //      return RdMemW(pa)
     if ((pa < PDP11.IOPAGEBASE) || /* not I/O address */
-      (cpu.CPUT(CPUOPT.CPUT_J) && (pa >= IOBA_CPU))) {
+      (cpu.CPUT(CPUOPT.CPUT_J) && (pa.intValue >= PDP11.IOBA_CPU))) {
       /* or J11 int reg? */
       cpu.setCPUERR(PDP11.CPUE_NXM)
       throw AbortException(PDP11.TRAP_NXM)
     }
-    if (iopageR(& data, pa, READ) != SCPE_OK) {
-      /* invalid I/O addr? */
-      cpu.setCPUERR(PDP11.CPUE_TMO)
-      throw AbortException(PDP11.TRAP_NXM)
+    iopageR(pa, READ) match {
+      case None =>
+        /* invalid I/O addr? */
+        cpu.setCPUERR(PDP11.CPUE_TMO)
+        throw AbortException(PDP11.TRAP_NXM)
+      case Some(x) => x
     }
-    return data
+
   }
 
   def ReadW(va: UInt): UInt = {
@@ -379,45 +382,108 @@ class PDP11MMU(cpu: PDP11) extends BasicMMU(cpu) {
     PReadB(last_pa)
   }
 
-  // TODO Handle data write
-  def PReadW(pa: UInt): UInt = {
-    var dataret = null
+  val int_internal: Array[UInt] = Array(
+    UInt(0), PDP11.INT_INTERNAL1, PDP11.INT_INTERNAL2, PDP11.INT_INTERNAL3,
+    PDP11.INT_INTERNAL4, PDP11.INT_INTERNAL5, PDP11.INT_INTERNAL6, PDP11.INT_INTERNAL7
+  )
 
-    if (ADDR_IS_MEM(pa)) /* memory address? */
-      return RdMemW(pa)
-    if (pa < PDP11.IOPAGEBASE) {
-      /* not I/O address? */
-      cpu.setCPUERR(PDP11.CPUE_NXM)
-      throw AbortException(PDP11.TRAP_NXM)
+  /* Calculate interrupt outstanding
+   In a Qbus system, all device interrupts are treated as BR4 */
+
+  def calc_ints(nipl: Int, trq: Int): Int = {
+    val all_int: Boolean = if ((cpu.UNIBUS.intValue != 0) || (nipl < PDP11.IPL_HMIN.intValue)) true else false
+    var i = PDP11.IPL_HLVL - 1
+    while (i > nipl.intValue) {
+      val t = if (all_int) cpu.int_req(i)
+      else cpu.int_req(i) & int_internal(i)
+      if (t != 0) return trq | PDP11.TRAP_INT.intValue
+
+      i = i - 1
     }
-    if (iopageR(& data, pa, READ) != SCPE_OK) {
-      /* invalid I/O addr? */
-      cpu.setCPUERR(PDP11.CPUE_TMO)
-      throw AbortException(PDP11.TRAP_NXM)
-    }
-    return dataret
+    trq & ~PDP11.TRAP_INT
   }
 
-  // TODO Handle data write
+  // IO Dispatch jump tables
+  val iodispR = new Array[(UInt, Int) => Option[UInt]](PDP11.IOPAGESIZE.intValue >> 1)
+  val iodispW = new Array[(UInt, UInt, Int) => Option[UInt]](PDP11.IOPAGESIZE.intValue >> 1)
+
+  //t_stat (*iodispR[IOPAGESIZE >> 1])(int32 *dat, int32 ad, int32 md);
+  //t_stat (*iodispW[IOPAGESIZE >> 1])(int32 dat, int32 ad, int32 md);
+  /* I/O page lookup and linkage routines
+     Inputs:
+          *data   =       pointer to data to read, if READ
+          data    =       data to store, if WRITE or WRITEB
+          pa      =       address
+          access  =       READ, WRITE, or WRITEB
+     Outputs:
+          status  =       SCPE_OK or SCPE_NXM
+  */
+
+  def iopageR(pa: UInt, access: Int): Option[UInt] = {
+    var dataret: Option[UInt] = null
+
+    val idx = (pa & PDP11.IOPAGEMASK) >> 1
+    if (iodispR(idx) != null) {
+      dataret = iodispR(idx)(pa, access)
+      cpu.trap_req = calc_ints(cpu.ipl, cpu.trap_req)
+      return dataret
+    }
+    None
+  }
+
+  def iopageW(data: UInt, pa: UInt, access: Int): Option[UInt] = {
+    val idx = (pa & PDP11.IOPAGEMASK) >> 1
+    if (iodispW(idx) != null) {
+      val dataret = iodispW(idx)(data, pa, access)
+      cpu.trap_req = calc_ints(cpu.ipl, cpu.trap_req)
+      return dataret
+    }
+    None
+  }
+
+  // Handle data write
+  def PReadW(pa: UInt): UInt = {
+    if (ADDR_IS_MEM(pa)) /* memory address? */
+      return get16(pa.intValue)
+    //return RdMemW(pa)
+    if (pa < PDP11.IOPAGEBASE) {
+      /* not I/O address? */
+      cpu.setCPUERR(PDP11.CPUE_NXM)
+      throw AbortException(PDP11.TRAP_NXM)
+    }
+    val dataret = iopageR(pa, READ)
+    dataret match {
+      case None =>
+        /* invalid I/O addr? */
+        cpu.setCPUERR(PDP11.CPUE_TMO)
+        throw AbortException(PDP11.TRAP_NXM)
+      case Some(x) => x
+    }
+
+  }
+
+  // Handle data write
   def PReadB(pa: UInt): UInt = {
 
-    var data: UInt = null
-
     if (ADDR_IS_MEM(pa)) /* memory address? */
-      return RdMemB(pa)
+      return get8(pa.intValue)
+    //return RdMemB(pa)
     if (pa < PDP11.IOPAGEBASE) {
       /* not I/O address? */
       cpu.setCPUERR(PDP11.CPUE_NXM)
       throw AbortException(PDP11.TRAP_NXM)
 
     }
-    if (iopageR(& data, pa, READ) != SCPE_OK) {
-      /* invalid I/O addr? */
-      cpu.setCPUERR(PDP11.CPUE_TMO)
-      throw AbortException(PDP11.TRAP_NXM)
-
+    val dataret = iopageR(pa, READ)
+    dataret match {
+      case None =>
+        /* invalid I/O addr? */
+        cpu.setCPUERR(PDP11.CPUE_TMO)
+        throw AbortException(PDP11.TRAP_NXM)
+      case Some(x) =>
+        UInt((if ((pa & 1) != 0) x >> 8 else x) & 0xff)
     }
-    UInt((if ((pa & 1) != 0) data >> 8 else data) & 0xff)
+
   }
 
   /* Write byte and word routines
@@ -456,7 +522,7 @@ class PDP11MMU(cpu: PDP11) extends BasicMMU(cpu) {
      set reason accordingly but don't do an ABORT.  This is used when we want
      to break after doing the operation, used for interrupt processing.  */
   def WriteCW(data: UInt, va: UInt): Unit = {
-    if ((((va & UInt(1)) != 0) && cpu.CPUT(CPUOPT.HAS_ODD) != 0) != 0) {
+    if (((va & UInt(1)) != 0) && cpu.CPUT(CPUOPT.HAS_ODD)) {
       /* odd address? */
       cpu.setCPUERR(PDP11.CPUE_ODD)
       throw AbortException(PDP11.TRAP_ODD)
@@ -472,7 +538,8 @@ class PDP11MMU(cpu: PDP11) extends BasicMMU(cpu) {
   def PWriteW(data: UInt, pa: UInt): Unit = {
     if (ADDR_IS_MEM(pa)) {
       /* memory address? */
-      WrMemW(pa, data)
+      put16(pa.intValue, data.toUShort)
+      //      WrMemW(pa, data)
       return
     }
     if (pa < PDP11.IOPAGEBASE) {
@@ -480,17 +547,20 @@ class PDP11MMU(cpu: PDP11) extends BasicMMU(cpu) {
       cpu.setCPUERR(PDP11.CPUE_NXM)
       throw AbortException(PDP11.TRAP_NXM)
     }
-    if (iopageW(data, pa, WRITE) != SCPE_OK) {
-      /* invalid I/O addr? */
-      cpu.setCPUERR(PDP11.CPUE_TMO)
-      throw AbortException(PDP11.TRAP_NXM)
+    iopageW(data, pa, WRITE) match {
+      case None =>
+        /* invalid I/O addr? */
+        cpu.setCPUERR(PDP11.CPUE_TMO)
+        throw AbortException(PDP11.TRAP_NXM)
+      case Some(x) => // Nothing
     }
   }
 
   def PWriteB(data: UInt, pa: UInt): Unit = {
     if (ADDR_IS_MEM(pa)) {
       /* memory address? */
-      WrMemB(pa, data)
+      put8(pa.intValue, data.toUByte)
+      //WrMemB(pa, data)
       return
     }
     if (pa < PDP11.IOPAGEBASE) {
@@ -498,12 +568,13 @@ class PDP11MMU(cpu: PDP11) extends BasicMMU(cpu) {
       cpu.setCPUERR(PDP11.CPUE_NXM)
       throw AbortException(PDP11.TRAP_NXM)
     }
-    if (iopageW(data, pa, WRITEB) != SCPE_OK) {
-      /* invalid I/O addr? */
-      cpu.setCPUERR(PDP11.CPUE_TMO)
-      throw AbortException(PDP11.TRAP_NXM)
+    iopageW(data, pa, WRITEB) match {
+      case None =>
+        /* invalid I/O addr? */
+        cpu.setCPUERR(PDP11.CPUE_TMO)
+        throw AbortException(PDP11.TRAP_NXM)
+      case Some(_) => // Nothing
     }
-    return
   }
 
   /* Relocate virtual address, read access
@@ -566,7 +637,7 @@ class PDP11MMU(cpu: PDP11) extends BasicMMU(cpu) {
     (apr & PDR_ACF: @switch) match {
       /* case on ACF */
 
-      case (1 | 4) => /* trap read */
+      case 1 | 4 => /* trap read */
         if (cpu.CPUT(CPUOPT.HAS_MMTR)) {
           /* traps implemented? */
           APRFILE(apridx) = APRFILE(apridx) | PDR_A /* set A */
@@ -575,15 +646,15 @@ class PDP11MMU(cpu: PDP11) extends BasicMMU(cpu) {
             if (update_MM) /* update MMR0 */
               MMR0.set16((MMR0 & ~MMR0_PAGE) | (apridx << MMR0_V_PAGE))
             MMR0.set16(MMR0 | MMR0_TRAP) /* set trap flag */
-            cpu.setTRAP(PDP11.TRAP_MME) /* set trap */
+            cpu.setTRAP(PDP11.TRAP_MME.intValue) /* set trap */
           }
           return /* continue op */
         } /* not impl, abort NR */
-      case (0 | 3 | 7) => /* non-resident */
+      case 0 | 3 | 7 => /* non-resident */
         err = MMR0_NR /* set MMR0 */
       /* go test PLF, abort */
 
-      case (2 | 5 | 6) => /* readable */
+      case 2 | 5 | 6 => /* readable */
         return /* continue */
     } /* end switch */
 
@@ -624,8 +695,7 @@ class PDP11MMU(cpu: PDP11) extends BasicMMU(cpu) {
   */
 
   def relocW(va: UInt): UInt = {
-    var pa: UInt = null
-
+    var pa = UInt(0)
     if ((MMR0 & MMR0_MME) != 0) {
       /* if mmgt */
       val apridx = (va >> VA_V_APF) & 0x3f
@@ -671,7 +741,7 @@ class PDP11MMU(cpu: PDP11) extends BasicMMU(cpu) {
     (apr & PDR_ACF: @switch) match {
       /* case on ACF */
 
-      case (4 | 5) => /* trap write */
+      case 4 | 5 => /* trap write */
         if (cpu.CPUT(CPUOPT.HAS_MMTR)) {
           /* traps implemented? */
           APRFILE(apridx) = APRFILE(apridx) | PDR_A /* set A */
@@ -680,14 +750,14 @@ class PDP11MMU(cpu: PDP11) extends BasicMMU(cpu) {
             if (update_MM) /* update MMR0 */
               MMR0.set16((MMR0 & ~MMR0_PAGE) | (apridx << MMR0_V_PAGE))
             MMR0.set16(MMR0 | MMR0_TRAP) /* set trap flag */
-            cpu.setTRAP(PDP11.TRAP_MME) /* set trap */
+            cpu.setTRAP(PDP11.TRAP_MME.intValue) /* set trap */
           }
           return /* continue op */
         } /* not impl, abort NR */
-      case (0 | 3 | 7) => /* non-resident */
+      case 0 | 3 | 7 => /* non-resident */
         err = MMR0_NR /* MMR0 status */
 
-      case (1 | 2) => /* read only */
+      case 1 | 2 => /* read only */
         err = MMR0_RO /* MMR0 status */
 
 
@@ -763,7 +833,7 @@ class PDP11MMU(cpu: PDP11) extends BasicMMU(cpu) {
 
   // Solve data return
   def MMR012_rd(pa: UInt, access: UInt): Option[UInt] = {
-    ((pa >> 1) & 3) match {
+    (pa >> 1) & 3 match {
       /* decode pa<2:1> */
 
       case 0 => /* SR */
@@ -775,9 +845,7 @@ class PDP11MMU(cpu: PDP11) extends BasicMMU(cpu) {
 
       case 2 =>
         /* MMR1 */
-
         Some(MMR1.get16)
-
 
       case 3 => /* MMR2 */
         Some(MMR2.get16)
@@ -789,10 +857,7 @@ class PDP11MMU(cpu: PDP11) extends BasicMMU(cpu) {
     var dataret = data
     ((pa >> 1) & 3: @switch) match {
       /* decode pa<2:1> */
-
       case 0 => /* DR */
-
-
       case 1 => /* MMR0 */
         if (access == WRITEB)
           dataret = if ((pa & 1) != 0) UInt((MMR0.get16 & 0xff) | (data.intValue << 8))
@@ -868,9 +933,4 @@ class PDP11MMU(cpu: PDP11) extends BasicMMU(cpu) {
     }
     dataret
   }
-
-
 }
-
-final case class AbortException(code: UInt, private val message: String = "", private val cause: Throwable = None.orNull)
-  extends Exception(message, cause)

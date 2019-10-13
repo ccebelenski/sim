@@ -207,6 +207,7 @@ abstract class BasicMMU(val cpu: BasicCPU) {
     put8(address + 1, UByte(((value >> 8) & 0xFF).toByte))
   }
 
+
   def get8(address: Register16): UByte = {
     get8(address.get16)
   }
