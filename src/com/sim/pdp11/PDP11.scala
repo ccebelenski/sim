@@ -5,7 +5,7 @@ import com.sim.device.{BinaryUnitOption, ValueUnitOption}
 import com.sim.machine.AbstractMachine
 import com.sim.unsigned.{UByte, UInt, UShort}
 
-abstract class PDP11(isBanked: Boolean, override val machine: AbstractMachine) extends BasicCPU(isBanked, machine) {
+abstract class PDP11(isBanked: Boolean = false, override val machine: AbstractMachine) extends BasicCPU(isBanked, machine) {
   override val name = "PDP11"
   override val MMU: PDP11MMU = new PDP11MMU(this)
   override val description: String = "PDP11 CPU"
@@ -66,7 +66,7 @@ abstract class PDP11(isBanked: Boolean, override val machine: AbstractMachine) e
   val pcq: Array[Register16] = new Array[Register16](PCQ_SIZE);
   /* PC queue */
   var pcq_p: Int = 0
-  val PCQ_MASK: Int = (PCQ_SIZE - 1)
+  val PCQ_MASK: Int = {PCQ_SIZE - 1}
 
   def PCQ_ENTRY(): Unit = {
     pcq_p = (pcq_p - 1) & PCQ_MASK
@@ -84,11 +84,11 @@ abstract class PDP11(isBanked: Boolean, override val machine: AbstractMachine) e
   /* Register change tracking actually goes into variable reg_mods; from there
      it is copied into MMR1 if that register is not currently locked.  */
 
-  def GET_SIGN_W(v: UShort): Int = (((v) >> 15) & 1)
+  def GET_SIGN_W(v: UShort): Int = {(v >> 15) & 1}
 
-  def GET_SIGN_B(v: UByte): Int = (((v) >> 7) & 1)
+  def GET_SIGN_B(v: UByte): Int = {(v >> 7) & 1}
 
-  def GET_Z(v: Int): Boolean = ((v) == 0)
+  def GET_Z(v: Int): Boolean = {v == 0}
 
   def JMP_PC(x: Register16): Unit = {
     PCQ_ENTRY()
@@ -97,12 +97,12 @@ abstract class PDP11(isBanked: Boolean, override val machine: AbstractMachine) e
 
   def BRANCH_F(x: UInt): Unit = {
     PCQ_ENTRY()
-    PC.set16(PC.get16 + (((x) + (x)) & UInt(0xff)) & 0xffff)
+    PC.set16(PC.get16 + ((x + x) & UInt(0xff)) & 0xffff)
   }
 
   def BRANCH_B(x: UInt): Unit = {
     PCQ_ENTRY()
-    PC.set16(PC.get16 + (((x) + (x)) | UInt(0xff00)) & 0xffff)
+    PC.set16(PC.get16 + ((x + x) | UInt(0xff00)) & 0xffff)
   }
 
   // Registers
@@ -172,33 +172,42 @@ abstract class PDP11(isBanked: Boolean, override val machine: AbstractMachine) e
   override def onHalt(singleStepped: Boolean): Unit = ???
 
   //override val registers: Map[String, Register] = _
-
   override def resetCPU(): Unit = {
-    PC(0)
-    PSW = 0
-    KSP(0)
-    SSP(0)
-    USP(0)
-    R0(0)
-    R00(0)
-    R10(0)
-    R1(0)
-    R01(0)
-    R11(0)
-    R2(0)
-    R02(0)
-    R12(0)
-    R3(0)
-    R03(0)
-    R13(0)
-    R4(0)
-    R04(0)
-    R14(0)
-    R5(0)
-    R05(0)
-    R15(0)
 
+    PIRQ.set16(0)
+    STKLIM.set16(0)
+    if (CPUT (CPUOPT.CPUT_T))                                      /* T11? */
+      PSW = 0xe0                                       /* start at IPL 7 */
+    else
+      PSW = 0                                            /* else at IPL 0 */
+    MMU.MMR0.set16(0)
+    MMU.MMR1.set16(0)
+    MMU.MMR2.set16(0)
+    MMU.MMR3.set16(0)
 
+    trap_req = 0;
+    wait_state = 0;
+    if (M == NULL) {                    /* First time init */
+      M = (uint16 *) calloc (MEMSIZE >> 1, sizeof (uint16));
+      if (M == NULL)
+        return SCPE_MEM;
+      //sim_set_pchar (0, "01000023640"); /* ESC, CR, LF, TAB, BS, BEL, ENQ */
+      //sim_brk_dflt = SWMASK ('E');
+      //sim_brk_types = sim_brk_dflt|SWMASK ('P')|
+      //  SWMASK ('R')|SWMASK ('S')|
+      //  SWMASK ('W')|SWMASK ('X');
+      //sim_brk_type_desc = cpu_breakpoints;
+      //sim_vm_is_subroutine_call = &cpu_is_pc_a_subroutine_call;
+      sim_clock_precalibrate_commands = pdp11_clock_precalibrate_commands;
+      auto_config(NULL, 0);           /* do an initial auto configure */
+    }
+    pcq_r = find_reg ("PCQ", NULL, dptr);
+    if (pcq_r)
+      pcq_r->qptr = 0;
+    else
+      return SCPE_IERR;
+    //set_r_display (0, MD_KER);
+    return build_dib_tab ();            /* build, chk dib_tab */
   }
 
   override def showRegisters(): String = ???
@@ -385,71 +394,71 @@ object PDP11 {
   /* Unibus I/O page layout - see pdp11_io_lib.c for address layout details
     Massbus devices (RP, TU) do not appear in the Unibus IO page */
 
-  val IOBA_AUTO = (0) /* Assigned by Auto Configure */
+  val IOBA_AUTO = 0 /* Assigned by Auto Configure */
 
   /* Processor registers which have I/O page addresses
    */
 
-  val IOBA_CTL = (IOPAGEBASE + 0x1f50)
+  val IOBA_CTL:Int = IOPAGEBASE + 0x1f50
   /* board ctrl */
   val IOLN_CTL = 0x8
 
-  val IOBA_UCA = (IOPAGEBASE + 0xff8)
+  val IOBA_UCA:Int = IOPAGEBASE + 0xff8
   /* UC15 DR11 #1 */
   val IOLN_UCA = 0x6
-  val IOBA_UCB = (IOPAGEBASE + 0xff0)
+  val IOBA_UCB:Int  = IOPAGEBASE + 0xff0
   /* UC15 DR11 #2 */
   val IOLN_UCB = 0x6
-  val IOBA_UBM = (IOPAGEBASE + 0x1080)
+  val IOBA_UBM:Int  = IOPAGEBASE + 0x1080
   /* Unibus map */
   //val IOLN_UBM     =   (UBM_LNT_LW * sizeof (int32))
-  val IOBA_MMR3 = (IOPAGEBASE + 0x154e)
+  val IOBA_MMR3:Int  = IOPAGEBASE + 0x154e
   /* MMR3 */
   val IOLN_MMR3 = 0x2
-  val IOBA_TTI = (IOPAGEBASE + 0x1f70)
+  val IOBA_TTI :Int = IOPAGEBASE + 0x1f70
   /* DL11 rcv */
   val IOLN_TTI = 0x4
-  val IOBA_TTO = (IOPAGEBASE + 0x1f74)
+  val IOBA_TTO :Int = IOPAGEBASE + 0x1f74
   /* DL11 xmt */
   val IOLN_TTO = 0x4
-  val IOBA_SR = (IOPAGEBASE + 0x1f78)
+  val IOBA_SR :Int = IOPAGEBASE + 0x1f78
   /* SR */
   val IOLN_SR = 0x2
-  val IOBA_MMR012 = (IOPAGEBASE + 0x1f7a)
+  val IOBA_MMR012:Int  = IOPAGEBASE + 0x1f7a
   /* MMR0-2 */
   val IOLN_MMR012 = 0x6
-  val IOBA_GPR = (IOPAGEBASE + 0x1fc0)
+  val IOBA_GPR:Int  = IOPAGEBASE + 0x1fc0
   /* GPR's */
   val IOLN_GPR = 0x8
-  val IOBA_UCTL = (IOPAGEBASE + 0x1fd8)
+  val IOBA_UCTL:Int  = IOPAGEBASE + 0x1fd8
   /* UBA ctrl */
   val IOLN_UCTL = 0x8
-  val IOBA_CPU = (IOPAGEBASE + 0x1fe0)
+  val IOBA_CPU: Int = IOPAGEBASE + 0x1fe0
   /* CPU reg */
   val IOLN_CPU = 0x1e
-  val IOBA_PSW = (IOPAGEBASE + 0x1ffe)
+  val IOBA_PSW:Int = IOPAGEBASE + 0x1ffe
   /* PSW */
   val IOLN_PSW = 0x2
-  val IOBA_UIPDR = (IOPAGEBASE + 0x1f80)
+  val IOBA_UIPDR:Int = IOPAGEBASE + 0x1f80
   /* user APR's */
   val IOLN_UIPDR = 0x10
-  val IOBA_UDPDR = (IOPAGEBASE + 0x1f90)
+  val IOBA_UDPDR:Int = IOPAGEBASE + 0x1f90
   val IOLN_UDPDR = 0x10
-  val IOBA_UIPAR = (IOPAGEBASE + 0x1fa0)
+  val IOBA_UIPAR:Int = IOPAGEBASE + 0x1fa0
   val IOLN_UIPAR = 0x10
-  val IOBA_UDPAR = (IOPAGEBASE + 0x1fb0)
+  val IOBA_UDPAR:Int = IOPAGEBASE + 0x1fb0
   val IOLN_UDPAR = 0x10
-  val IOBA_SUP = (IOPAGEBASE + 0x1480)
+  val IOBA_SUP:Int  = IOPAGEBASE + 0x1480
   /* supervisor APR's */
   val IOLN_SUP = 0x40
-  val IOBA_KIPDR = (IOPAGEBASE + 0x14c0)
+  val IOBA_KIPDR:Int = IOPAGEBASE + 0x14c0
   /* kernel APR's */
   val IOLN_KIPDR = 0x10
-  val IOBA_KDPDR = (IOPAGEBASE + 0x14d0)
+  val IOBA_KDPDR:Int = IOPAGEBASE + 0x14d0
   val IOLN_KDPDR = 0x10
-  val IOBA_KIPAR = (IOPAGEBASE + 0x14e0)
+  val IOBA_KIPAR:Int  = IOPAGEBASE + 0x14e0
   val IOLN_KIPAR = 0x10
-  val IOBA_KDPAR = (IOPAGEBASE + 0x14f0)
+  val IOBA_KDPAR:Int  = IOPAGEBASE + 0x14f0
   val IOLN_KDPAR = 0x10
 
   /* Interrupt assignments; within each level, priority is right to left
@@ -533,73 +542,73 @@ object PDP11 {
   /* BR2 */
   val INT_V_PIR1 = 0 /* BR1 */
 
-  val INT_PIR7: UInt = (UInt(1) << INT_V_PIR7)
-  val INT_UCB: UInt = (UInt(1) << INT_V_UCB)
-  val INT_PIR6: UInt = (UInt(1) << INT_V_PIR6)
-  val INT_CLK: UInt = (UInt(1) << INT_V_CLK)
-  val INT_PCLK: UInt = (UInt(1) << INT_V_PCLK)
-  val INT_DTA: UInt = (UInt(1) << INT_V_DTA)
-  val INT_TA: UInt = (UInt(1) << INT_V_TA)
-  val INT_CR: UInt = (UInt(1) << INT_V_CR)
-  val INT_PIR5: UInt = (UInt(1) << INT_V_PIR5)
-  val INT_RK: UInt = (UInt(1) << INT_V_RK)
-  val INT_RL: UInt = (UInt(1) << INT_V_RL)
-  val INT_RX: UInt = (UInt(1) << INT_V_RX)
-  val INT_TM: UInt = (UInt(1) << INT_V_TM)
-  val INT_RP: UInt = (UInt(1) << INT_V_RP)
-  val INT_TS: UInt = (UInt(1) << INT_V_TS)
-  val INT_HK: UInt = (UInt(1) << INT_V_HK)
-  val INT_RQ: UInt = (UInt(1) << INT_V_RQ)
-  val INT_DZRX: UInt = (UInt(1) << INT_V_DZRX)
-  val INT_DZTX: UInt = (UInt(1) << INT_V_DZTX)
-  val INT_TQ: UInt = (UInt(1) << INT_V_TQ)
-  val INT_RY: UInt = (UInt(1) << INT_V_RY)
-  val INT_XQ: UInt = (UInt(1) << INT_V_XQ)
-  val INT_XU: UInt = (UInt(1) << INT_V_XU)
-  val INT_TU: UInt = (UInt(1) << INT_V_TU)
-  val INT_RF: UInt = (UInt(1) << INT_V_RF)
-  val INT_RC: UInt = (UInt(1) << INT_V_RC)
-  val INT_RS: UInt = (UInt(1) << INT_V_RS)
-  val INT_DMCRX: UInt = (UInt(1) << INT_V_DMCRX)
-  val INT_DMCTX: UInt = (UInt(1) << INT_V_DMCTX)
-  val INT_KMCA: UInt = (UInt(1) << INT_V_KMCA)
-  val INT_KMCB: UInt = (UInt(1) << INT_V_KMCB)
-  val INT_DUPRX: UInt = (UInt(1) << INT_V_DUPRX)
-  val INT_DUPTX: UInt = (UInt(1) << INT_V_DUPTX)
-  val INT_UCA: UInt = (UInt(1) << INT_V_UCA)
-  val INT_PIR4: UInt = (UInt(1) << INT_V_PIR4)
-  val INT_TTI: UInt = (UInt(1) << INT_V_TTI)
-  val INT_TTO: UInt = (UInt(1) << INT_V_TTO)
-  val INT_PTR: UInt = (UInt(1) << INT_V_PTR)
-  val INT_PTP: UInt = (UInt(1) << INT_V_PTP)
-  val INT_LPT: UInt = (UInt(1) << INT_V_LPT)
-  val INT_VHRX: UInt = (UInt(1) << INT_V_VHRX)
-  val INT_VHTX: UInt = (UInt(1) << INT_V_VHTX)
-  val INT_CD: UInt = (UInt(1) << INT_V_CD)
-  val INT_DLI: UInt = (UInt(1) << INT_V_DLI)
-  val INT_DLO: UInt = (UInt(1) << INT_V_DLO)
-  val INT_DCI: UInt = (UInt(1) << INT_V_DCI)
-  val INT_DCO: UInt = (UInt(1) << INT_V_DCO)
-  val INT_VTLP: UInt = (UInt(1) << INT_V_VTLP)
-  val INT_VTST: UInt = (UInt(1) << INT_V_VTST)
-  val INT_VTCH: UInt = (UInt(1) << INT_V_VTCH)
-  val INT_VTNM: UInt = (UInt(1) << INT_V_VTNM)
-  val INT_LK: UInt = (UInt(1) << INT_V_LK)
-  val INT_PIR3: UInt = (UInt(1) << INT_V_PIR3)
-  val INT_PIR2: UInt = (UInt(1) << INT_V_PIR2)
-  val INT_PIR1: UInt = (UInt(1) << INT_V_PIR1)
-  val INT_TDRX: UInt = (UInt(1) << INT_V_TDRX)
-  val INT_TDTX: UInt = (UInt(1) << INT_V_TDTX)
-  val INT_CH: UInt = (UInt(1) << INT_V_CH)
-  val INT_NG: UInt = (UInt(1) << INT_V_NG)
+  val INT_PIR7: UInt = UInt(1) << INT_V_PIR7
+  val INT_UCB: UInt = UInt(1) << INT_V_UCB
+  val INT_PIR6: UInt = UInt(1) << INT_V_PIR6
+  val INT_CLK: UInt = UInt(1) << INT_V_CLK
+  val INT_PCLK: UInt = UInt(1) << INT_V_PCLK
+  val INT_DTA: UInt = UInt(1) << INT_V_DTA
+  val INT_TA: UInt = UInt(1) << INT_V_TA
+  val INT_CR: UInt = UInt(1) << INT_V_CR
+  val INT_PIR5: UInt = UInt(1) << INT_V_PIR5
+  val INT_RK: UInt = UInt(1) << INT_V_RK
+  val INT_RL: UInt = UInt(1) << INT_V_RL
+  val INT_RX: UInt = UInt(1) << INT_V_RX
+  val INT_TM: UInt = UInt(1) << INT_V_TM
+  val INT_RP: UInt = UInt(1) << INT_V_RP
+  val INT_TS: UInt = UInt(1) << INT_V_TS
+  val INT_HK: UInt = UInt(1) << INT_V_HK
+  val INT_RQ: UInt = UInt(1) << INT_V_RQ
+  val INT_DZRX: UInt = UInt(1) << INT_V_DZRX
+  val INT_DZTX: UInt = UInt(1) << INT_V_DZTX
+  val INT_TQ: UInt = UInt(1) << INT_V_TQ
+  val INT_RY: UInt = UInt(1) << INT_V_RY
+  val INT_XQ: UInt = UInt(1) << INT_V_XQ
+  val INT_XU: UInt = UInt(1) << INT_V_XU
+  val INT_TU: UInt = UInt(1) << INT_V_TU
+  val INT_RF: UInt = UInt(1) << INT_V_RF
+  val INT_RC: UInt = UInt(1) << INT_V_RC
+  val INT_RS: UInt = UInt(1) << INT_V_RS
+  val INT_DMCRX: UInt = UInt(1) << INT_V_DMCRX
+  val INT_DMCTX: UInt = UInt(1) << INT_V_DMCTX
+  val INT_KMCA: UInt = UInt(1) << INT_V_KMCA
+  val INT_KMCB: UInt = UInt(1) << INT_V_KMCB
+  val INT_DUPRX: UInt = UInt(1) << INT_V_DUPRX
+  val INT_DUPTX: UInt = UInt(1) << INT_V_DUPTX
+  val INT_UCA: UInt = UInt(1) << INT_V_UCA
+  val INT_PIR4: UInt = UInt(1) << INT_V_PIR4
+  val INT_TTI: UInt = UInt(1) << INT_V_TTI
+  val INT_TTO: UInt = UInt(1) << INT_V_TTO
+  val INT_PTR: UInt = UInt(1) << INT_V_PTR
+  val INT_PTP: UInt = UInt(1) << INT_V_PTP
+  val INT_LPT: UInt = UInt(1) << INT_V_LPT
+  val INT_VHRX: UInt = UInt(1) << INT_V_VHRX
+  val INT_VHTX: UInt = UInt(1) << INT_V_VHTX
+  val INT_CD: UInt = UInt(1) << INT_V_CD
+  val INT_DLI: UInt = UInt(1) << INT_V_DLI
+  val INT_DLO: UInt = UInt(1) << INT_V_DLO
+  val INT_DCI: UInt = UInt(1) << INT_V_DCI
+  val INT_DCO: UInt = UInt(1) << INT_V_DCO
+  val INT_VTLP: UInt = UInt(1) << INT_V_VTLP
+  val INT_VTST: UInt = UInt(1) << INT_V_VTST
+  val INT_VTCH: UInt = UInt(1) << INT_V_VTCH
+  val INT_VTNM: UInt = UInt(1) << INT_V_VTNM
+  val INT_LK: UInt = UInt(1) << INT_V_LK
+  val INT_PIR3: UInt = UInt(1) << INT_V_PIR3
+  val INT_PIR2: UInt = UInt(1) << INT_V_PIR2
+  val INT_PIR1: UInt = UInt(1) << INT_V_PIR1
+  val INT_TDRX: UInt = UInt(1) << INT_V_TDRX
+  val INT_TDTX: UInt = UInt(1) << INT_V_TDTX
+  val INT_CH: UInt = UInt(1) << INT_V_CH
+  val INT_NG: UInt = UInt(1) << INT_V_NG
 
-  val INT_INTERNAL7: UInt = (INT_PIR7)
-  val INT_INTERNAL6: UInt = (INT_PIR6 | INT_CLK)
-  val INT_INTERNAL5: UInt = (INT_PIR5)
-  val INT_INTERNAL4: UInt = (INT_PIR4)
-  val INT_INTERNAL3: UInt = (INT_PIR3)
-  val INT_INTERNAL2: UInt = (INT_PIR2)
-  val INT_INTERNAL1: UInt = (INT_PIR1)
+  val INT_INTERNAL7: UInt = INT_PIR7
+  val INT_INTERNAL6: UInt = INT_PIR6 | INT_CLK
+  val INT_INTERNAL5: UInt = INT_PIR5
+  val INT_INTERNAL4: UInt = INT_PIR4
+  val INT_INTERNAL3: UInt = INT_PIR3
+  val INT_INTERNAL2: UInt = INT_PIR2
+  val INT_INTERNAL1: UInt = INT_PIR1
 
   val IPL_UCB = 7
   /* int pri levels */
