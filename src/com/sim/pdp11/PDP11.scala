@@ -105,6 +105,9 @@ abstract class PDP11(isBanked: Boolean = false, override val machine: AbstractMa
     PC.set16(PC.get16 + ((x + x) | UInt(0xff00)) & 0xffff)
   }
 
+  var wait_state: Int = 0
+  var trap_req: Int = 0
+
   // Registers
 
   val R0 = new Register16("R0")
@@ -187,10 +190,10 @@ abstract class PDP11(isBanked: Boolean = false, override val machine: AbstractMa
 
     trap_req = 0;
     wait_state = 0;
-    if (M == NULL) {                    /* First time init */
-      M = (uint16 *) calloc (MEMSIZE >> 1, sizeof (uint16));
-      if (M == NULL)
-        return SCPE_MEM;
+    //if (M == NULL) {                    /* First time init */
+    //  M = (uint16 *) calloc (MEMSIZE >> 1, sizeof (uint16));
+    //  if (M == NULL)
+    //    return SCPE_MEM;
       //sim_set_pchar (0, "01000023640"); /* ESC, CR, LF, TAB, BS, BEL, ENQ */
       //sim_brk_dflt = SWMASK ('E');
       //sim_brk_types = sim_brk_dflt|SWMASK ('P')|
@@ -198,16 +201,16 @@ abstract class PDP11(isBanked: Boolean = false, override val machine: AbstractMa
       //  SWMASK ('W')|SWMASK ('X');
       //sim_brk_type_desc = cpu_breakpoints;
       //sim_vm_is_subroutine_call = &cpu_is_pc_a_subroutine_call;
-      sim_clock_precalibrate_commands = pdp11_clock_precalibrate_commands;
-      auto_config(NULL, 0);           /* do an initial auto configure */
-    }
-    pcq_r = find_reg ("PCQ", NULL, dptr);
-    if (pcq_r)
-      pcq_r->qptr = 0;
-    else
-      return SCPE_IERR;
+      //sim_clock_precalibrate_commands = pdp11_clock_precalibrate_commands;
+      //auto_config(NULL, 0);           /* do an initial auto configure */
+
+    //pcq_r = find_reg ("PCQ", NULL, dptr);
+    //if (pcq_r)
+    //  pcq_r->qptr = 0;
+    //else
+    //  return SCPE_IERR;
     //set_r_display (0, MD_KER);
-    return build_dib_tab ();            /* build, chk dib_tab */
+    //return build_dib_tab ();            /* build, chk dib_tab */
   }
 
   override def showRegisters(): String = ???
@@ -246,7 +249,7 @@ abstract class PDP11(isBanked: Boolean = false, override val machine: AbstractMa
     /* no stack limit */
   }
 
-  var trap_req: Int = 0 // Trap Requests
+
   @inline def setTRAP(name: Int): Unit = {
     trap_req = trap_req | name
   }
