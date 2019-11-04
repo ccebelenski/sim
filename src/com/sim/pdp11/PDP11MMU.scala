@@ -143,7 +143,7 @@ class PDP11MMU(cpu: PDP11) extends BasicMMU(cpu) {
   */
 
   /* Effective address calculation for words */
-  def GeteaW(spec: UInt): UInt = {
+  def GeteaW(spec: Int): UInt = {
     val reg = spec & 0x7
     /* register number */
     val ds = if (reg == 7) isenable else dsenable /* dspace if not PC */

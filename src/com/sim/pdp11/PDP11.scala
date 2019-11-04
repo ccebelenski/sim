@@ -1,5 +1,6 @@
 package com.sim.pdp11
 
+import com.sim.SimTimer
 import com.sim.cpu._
 import com.sim.device.{BinaryUnitOption, ValueUnitOption}
 import com.sim.machine.AbstractMachine
@@ -24,7 +25,1478 @@ abstract class PDP11(isBanked: Boolean = false, override val machine: AbstractMa
     super.showCommand(stringBuilder)
   }
 
-  override def runcpu(singleStep: Boolean): Unit = ???
+  override def runcpu(singleStep: Boolean): Unit = {
+
+
+    var IR = UInt(0)
+    var srcspec = 0
+    var srcreg = true
+    var dstspec = 0
+    var dstreg = true
+    var src = 0
+    var src2 = 0
+    var dst = 0
+    var ea = 0
+    var i = 0
+    var t = 0
+    var sign = 0
+    var oldrs = 0
+
+    // TODO Bunch of housekeeping
+
+    IR = MMU.ReadE(PC | UInt(MMU.isenable)) /* fetch instruction */
+    SimTimer.sim_interval = SimTimer.sim_interval - 1
+    srcspec = (IR >> 6) & 0x3f /* src, dst specs */
+    dstspec = IR & 0x3f
+    srcreg = srcspec <= 0x7 /* src, dst = rmode? */
+    dstreg = dstspec <= 0x7
+    PC(PC + 2 & 0xffff) /* incr PC, mod 65k */
+
+    // Start of decode ***********************************************************************************
+    /* decode IR<15:12> */
+    ((IR >> 12) & 0xf) match {
+
+      /* Opcode 0: no operands, specials, branches, JSR, SOPs */
+      case 0 =>
+        /* decode IR<11:6> */
+        ((IR >> 6) & 0x3f) match {
+          case 0 =>
+            /* no operand */
+            if (IR.intValue >= 0x8) {
+              /* 000010 - 000077 */
+              setTRAP(PDP11.TRAP_ILL.intValue) /* illegal */
+              // break
+            }
+            else IR match {
+              case 0 => /* HALT */
+                if ((cm == MD_KER) && (!CPUT(CPUOPT.CPUT_J) || ((MAINT & MAINT_HTRAP) == 0)))
+                  reason = STOP_HALT
+                else if (CPUT(CPUOPT.HAS_HALT4)) {
+                  /* priv trap? */
+                  setTRAP(PDP11.TRAP_PRV.intValue)
+                  setCPUERR(PDP11.CPUE_HALT)
+                }
+                else setTRAP(PDP11.TRAP_ILL.intValue) /* no, ill inst */
+              //break;
+              case 1 => /* WAIT */
+                wait_state = 1;
+              //break;
+              case 3 => /* BPT */
+                setTRAP(PDP11.TRAP_BPT.intValue)
+              //break;
+              case 4 => /* IOT */
+                setTRAP(PDP11.TRAP_IOT.intValue)
+              //break;
+              case 5 => /* RESET */
+                if (cm == MD_KER) {
+                  reset_all(2); /* skip CPU, sys reg */
+                  PIRQ = 0; /* clear PIRQ */
+                  STKLIM = 0; /* clear STKLIM */
+                  MMU.MMR0(0) /* clear MMR0 */
+                  MMU.MMR3(0) /* clear MMR3 */
+                  cpu_bme = 0; /* (also clear bme) */
+                  for (i <- 0 to PDP11.IPL_HLVL) int_req(i) = 0
+                  trap_req = trap_req & ~PDP11.TRAP_INT
+                  MMU.dsenable = MMU.calc_ds(cm)
+                }
+              //break;
+              case 6 => /* RTT */
+                if (!CPUT(CPUOPT.HAS_RTT)) {
+                  setTRAP(PDP11.TRAP_ILL.intValue)
+                  //break;
+                }
+              case 2 => /* RTI */
+                src = MMU.ReadW(SP | MMU.dsenable);
+                src2 = MMU.ReadW(((SP + 2) & 0xffff) | MMU.dsenable);
+                STACKFILE(cm) = {
+                  SP((SP + 4) & 0xffff)
+                  SP
+                };
+                oldrs = rs;
+                put_PSW(src2, (cm != MD_KER)); /* store PSW, prot */
+                if (rs != oldrs) {
+                  for (i <- 0 to 6) {
+                    REGFILE(i)(oldrs) = R(i)
+                    R(i) = REGFILE(i)(rs)
+                  }
+                }
+                SP(STACKFILE(cm))
+                MMU.isenable = MMU.calc_is(cm)
+                MMU.dsenable = MMU.calc_ds(cm);
+                trap_req = MMU.calc_ints(ipl, trap_req);
+                JMP_PC(src);
+                if (CPUT(CPUOPT.HAS_RTT) && tbit && /* RTT impl? */
+                  (IR == 0x2))
+                  setTRAP(PDP11.TRAP_TRC.intValue) /* RTI immed trap */
+              //break;
+              case 7 => /* MFPT */
+                if (CPUT(CPUOPT.HAS_MFPT)) /* implemented? */
+                  R(0) = cpu_tab(cpu_model).mfpt; /* get type */
+                else setTRAP(PDP11.TRAP_ILL.intValue)
+              //break;
+            } /* end switch no ops */
+          //break;                                      /* end case no ops */
+
+
+          case 1 => /* JMP */
+            if (dstreg)
+              setTRAP(CPUT({
+                if (CPUOPT.HAS_JREG4 == true) PDP11.TRAP_PRV else PDP11.TRAP_ILL
+              }))
+            else {
+              dst = MMU.GeteaW(dstspec) & 0xffff /* get eff addr */
+              if (CPUT(CPUOPT.CPUT_05 | CPUOPT.CPUT_20) && /* 11/05, 11/20 */
+                ((dstspec & 0x38) == 0x10)) /* JMP (R)+? */
+                dst = R(dstspec & 0x7) /* use post incr */
+              JMP_PC(dst);
+            }
+          //break;                                      /* end JMP */
+
+          case 2 => /* RTS et al*/
+            if (IR.intValue < 0x88) {
+              /* RTS */
+              dstspec = dstspec & 0x7
+              JMP_PC(R(dstspec));
+              R(dstspec)(MMU.ReadW(SP | MMU.dsenable))
+              if (dstspec != 6) SP((SP + 2) & 0xffff)
+              //break;
+            } else {
+              /* end if RTS */
+              if (IR.intValue < 0x98) {
+                setTRAP(PDP11.TRAP_ILL.intValue);
+                //break;
+              } else {
+                if (IR.intValue < 0xa0) {
+                  /* SPL */
+                  if (CPUT(CPUOPT.HAS_SPL)) {
+                    if (cm == MD_KER)
+                      ipl = IR & 0x7
+                    trap_req = MMU.calc_ints(ipl, trap_req);
+                  }
+                  else setTRAP(PDP11.TRAP_ILL.intValue)
+                  // break;
+                } else {
+                  /* end if SPL */
+                  if (IR.intValue < 0xb0) {
+                    /* clear CC */
+                    if ((IR & 0x8) != 0) N = 0
+                    if ((IR & 0x4) != 0) Z = 0
+                    if ((IR & 2) != 0) V = 0
+                    if ((IR & 1) != 0) C = 0
+                    // break;
+                  } else {
+                    /* end if clear CCs */
+                    /* set CC */
+                    if ((IR & 0x8) != 0) N = 1
+                    if ((IR & 4) != 0) Z = 1
+                    if ((IR & 2) != 0) V = 1
+                    if ((IR & 1) != 0) C = 1
+                    // break; /* end case RTS et al */
+                  }
+                }
+              }
+            }
+
+          case 3 => /* SWAB */
+            dst = if (dstreg) R(dstspec) else MMU.ReadMW(MMU.GeteaW(dstspec))
+            dst = ((dst & 0xff) << 8) | ((dst >> 8) & 0xff);
+            N = GET_SIGN_B(dst & 0xff);
+            Z = GET_Z(dst & 0xff);
+            if (!CPUT(CPUOPT.CPUT_20))
+              V = 0;
+            C = 0;
+            if (hst_ent) hst_ent -> dst = dst;
+            if (dstreg) R(dstspec)(dst);
+            else MMU.PWriteW(dst, last_pa);
+          //break;                                      /* end SWAB */
+
+          case 4 | 5 => /* BR */
+            BRANCH_F(IR);
+          //break;
+
+          case 0x6 | 0x7 => /* BR */
+            BRANCH_B(IR);
+          //break;
+
+          case 0x8 | 0x9 => /* BNE */
+            if (Z == 0) {
+              BRANCH_F(IR);
+            }
+          //break;
+
+          case 0xa | 0xb => /* BNE */
+            if (Z == 0) {
+              BRANCH_B(IR);
+            }
+          //break;
+
+          case 0xc | 0xd => /* BEQ */
+            if (Z) {
+              BRANCH_F(IR);
+            }
+          //break;
+
+          case 0xe | 0xf => /* BEQ */
+            if (Z) {
+              BRANCH_B(IR);
+            }
+          //break;
+
+          case 0x10 | 0x11 => /* BGE */
+            if ((N ^ V) == 0) {
+              BRANCH_F(IR);
+            }
+          //break;
+
+          case 0x12 | 0x13 => /* BGE */
+            if ((N ^ V) == 0) {
+              BRANCH_B(IR);
+            }
+          //break;
+
+          case 0x14 | 0x15 => /* BLT */
+            if (N ^ V) {
+              BRANCH_F(IR);
+            }
+          //break;
+
+          case 0x16 | 0x17 => /* BLT */
+            if (N ^ V) {
+              BRANCH_B(IR);
+            }
+          //break;
+
+          case 0x18 | 0x19 => /* BGT */
+            if ((Z | (N ^ V)) == 0) {
+              BRANCH_F(IR);
+            }
+          //break;
+
+          case 0x1a | 0x1b => /* BGT */
+            if ((Z | (N ^ V)) == 0) {
+              BRANCH_B(IR);
+            }
+          //break;
+
+          case 0x1c | 0x1d => /* BLE */
+            if (Z | (N ^ V)) {
+              BRANCH_F(IR);
+            }
+          //break;
+
+          case 0x1e | 0x1f => /* BLE */
+            if (Z | (N ^ V)) {
+              BRANCH_B(IR);
+            }
+          //break;
+
+          case 0x20 | 0x21 | 0x22 | 0x23 | /* JSR */
+               0x24 | 0x25 | 0x26 | 0x27 =>
+            if (dstreg) {
+              setTRAP(if (CPUT(CPUOPT.HAS_JREG4) == true) PDP11.TRAP_PRV.intValue else PDP11.TRAP_ILL.intValue)
+            } else {
+              srcspec = srcspec & 0x7;
+              dst = MMU.GeteaW(dstspec);
+              if (CPUT(CPUOPT.CPUT_05 | CPUOPT.CPUT_20) && /* 11/05, 11/20 */
+                ((dstspec & 0x38) == 0x10)) /* JSR (R)+? */
+                dst = R(dstspec & 0x7) /* use post incr */
+              SP((SP - 2) & 0xffff)
+              MMU.reg_mods = MMU.calc_MMR1(0xf6);
+              if (MMU.update_MM) MMU.MMR1 ( MMU.reg_mods)
+              MMU.WriteW(R(srcspec), SP | MMU.dsenable);
+              if ((cm == MD_KER) && (SP < (STKLIM + PDP11.STKL_Y)))
+                set_stack_trap(SP);
+              R(srcspec) = PC;
+              if (hst_ent) hst_ent -> dst = dst;
+              JMP_PC(dst & 0xffff);
+            }
+          //break;                                      /* end JSR */
+
+          case 0x28 => /* CLR */
+            N = 0
+            V = 0
+            C = 0
+            Z = 1
+            if (dstreg) R(dstspec) ( 0)
+            else MMU.WriteW(0, MMU.GeteaW(dstspec))
+            //break;
+
+          case 0x29 => /* COM */
+            dst = if(dstreg)  R(dstspec) else  MMU.ReadMW(MMU.GeteaW(dstspec))
+            dst = dst ^ 0xffff
+            N = GET_SIGN_W(dst);
+            Z = GET_Z(dst);
+            V = 0
+            C = 1
+            if (dstreg) R(dstspec) else MMU.PWriteW(dst, MMU.last_pa)
+            //break;
+
+          case 0x2a => /* INC */
+            dst = if (dstreg) R(dstspec) else MMU.ReadMW(MMU.GeteaW(dstspec))
+            dst = (dst + 1) & 0xffff
+            N = GET_SIGN_W(dst)
+            Z = GET_Z(dst)
+            V = if(dst == 0x8000) -1 else 0
+            if (dstreg) R(dstspec) = dst
+            else MMU.PWriteW(dst, MMU.last_pa)
+          //break;
+
+          case 0x2b => /* DEC */
+            dst = if (dstreg) R(dstspec) else MMU.ReadMW(MMU.GeteaW(dstspec))
+            dst = (dst - 1) & 0xffff
+            N = GET_SIGN_W(dst);
+            Z = GET_Z(dst);
+            V = (if(dst == 0x7fff) -1 else 0)
+            if (dstreg) R(dstspec) ( dst )  else R(dstspec) (MMU.PWriteW(dst, MMU.last_pa))
+          //break;
+
+          case 0x2c => /* NEG */
+            dst = if(dstreg)  R(dstspec) else MMU.ReadMW(MMU.GeteaW(dstspec))
+            dst = (-dst) & 0xffff
+            N = GET_SIGN_W(dst);
+            Z = GET_Z(dst);
+            V = (if(dst == 0x8000) -1 else 0)
+            C = Z ^ 1
+            if (dstreg)
+              R(dstspec) (dst)
+            else MMU.PWriteW(dst, MMU.last_pa)
+//            break;
+
+          case 0x2d => /* ADC */
+            dst = if(dstreg)  R(dstspec) else  MMU.ReadMW(MMU.GeteaW(dstspec))
+            dst = (dst + C) & 0xffff
+            N = GET_SIGN_W(dst);
+            Z = GET_Z(dst);
+            V = (C && (if(dst == 0x8000) -1 else 0))
+            C = C & Z
+            if (dstreg) R(dstspec) ( dst)
+            else MMU.PWriteW(dst, MMU.last_pa)
+//            break;
+
+          case 0x2e => /* SBC */
+            dst = if(dstreg)  R(dstspec) else  MMU.ReadMW(MMU.GeteaW(dstspec));
+            dst = (dst - C) & 0xffff
+            N = GET_SIGN_W(dst);
+            Z = GET_Z(dst);
+            V = (C && (dst == 0x7fff));
+            C = (C && (dst == 0xffff));
+            if (hst_ent)
+              hst_ent -> dst = dst;
+            if (dstreg)
+              R(dstspec) = dst;
+            else PWriteW(dst, last_pa);
+            break;
+
+          case 0x2f => /* TST */
+            dst = dstreg ? R(dstspec): MMU.ReadW
+            (MMU.GeteaW(dstspec));
+            if (hst_ent)
+              hst_ent -> dst = dst;
+            N = GET_SIGN_W(dst);
+            Z = GET_Z(dst);
+            V = C = 0;
+            break;
+
+          case 0x30 => /* ROR */
+            src = dstreg ? R(dstspec): MMU.ReadMW
+            (MMU.GeteaW(dstspec));
+            dst = (src >> 1) | (C << 15);
+            N = GET_SIGN_W(dst);
+            Z = GET_Z(dst);
+            C = (src & 1);
+            V = N ^ C;
+            if (hst_ent)
+              hst_ent -> dst = dst;
+            if (dstreg)
+              R(dstspec) = dst;
+            else PWriteW(dst, last_pa);
+            break;
+
+          case 0x31 => /* ROL */
+            src = dstreg ? R(dstspec): MMU.ReadMW
+            (MMU.GeteaW(dstspec));
+            dst = ((src << 1) | C) & 0xffff;
+            N = GET_SIGN_W(dst);
+            Z = GET_Z(dst);
+            C = GET_SIGN_W(src);
+            V = N ^ C;
+            if (hst_ent)
+              hst_ent -> dst = dst;
+            if (dstreg)
+              R(dstspec) = dst;
+            else PWriteW(dst, last_pa);
+            break;
+
+          case 0x32 => /* ASR */
+            src = dstreg ? R(dstspec): MMU.ReadMW
+            (MMU.GeteaW(dstspec));
+            dst = (src >> 1) | (src & 0x8000);
+            N = GET_SIGN_W(dst);
+            Z = GET_Z(dst);
+            C = (src & 1);
+            V = N ^ C;
+            if (hst_ent)
+              hst_ent -> dst = dst;
+            if (dstreg)
+              R(dstspec) = dst;
+            else PWriteW(dst, last_pa);
+            break;
+
+          case 0x33 => /* ASL */
+            src = dstreg ? R(dstspec): MMU.ReadMW
+            (MMU.GeteaW(dstspec));
+            dst = (src << 1) & 0xffff;
+            N = GET_SIGN_W(dst);
+            Z = GET_Z(dst);
+            C = GET_SIGN_W(src);
+            V = N ^ C;
+            if (hst_ent)
+              hst_ent -> dst = dst;
+            if (dstreg)
+              R(dstspec) = dst;
+            else PWriteW(dst, last_pa);
+            break;
+
+          /* Notes:
+         - MxPI must mask GeteaW returned address to force ispace
+         - MxPI must set MMR1 for SP recovery in case of fault
+      */
+
+          case 0x34 => /* MARK */
+            if (CPUT(CPUOPT.HAS_MARK)) {
+              i = (PC + dstspec + dstspec) & 0xffff;
+              JMP_PC(R[5]);
+              R(5) = MMU.ReadW(i | dsenable);
+              SP = (i + 2) & 0xffff;
+            }
+            else setTRAP(PDP11.TRAP_ILL);
+          //break;
+
+          case 0x35 => /* MFPI */
+            if (CPUT(CPUOPT.HAS_MXPY)) {
+              if (dstreg) {
+                if ((dstspec == 6) && (cm != pm))
+                  dst = STACKFILE[pm];
+                else dst = R(dstspec);
+              }
+              else {
+                i = if ((cm == pm) && (cm == MD_USR)) calc_ds(pm) else calc_is(pm);
+                dst = MMU.ReadW((MMU.GeteaW(dstspec) & 0xffff) | i);
+              }
+              N = GET_SIGN_W(dst);
+              Z = GET_Z(dst);
+              V = 0;
+              SP = (SP - 2) & 0xffff;
+              reg_mods = calc_MMR1(0xf6);
+              if (update_MM)
+                MMR1 = reg_mods;
+              if (hst_ent)
+                hst_ent -> dst = dst;
+              WriteW(dst, SP | dsenable);
+              if ((cm == MD_KER) && (SP < (STKLIM + STKL_Y)))
+                set_stack_trap(SP);
+            }
+            else setTRAP(PDP11.TRAP_ILL);
+          //break;
+
+          case 0x36 => /* MTPI */
+            if (CPUT(CPUOPT.HAS_MXPY)) {
+              dst = MMU.ReadW(SP | dsenable);
+              N = GET_SIGN_W(dst);
+              Z = GET_Z(dst);
+              V = 0
+              SP = (SP + 2) & 0xffff
+              reg_mods = 0x16
+              if (update_MM) MMR1 = reg_mods;
+              if (hst_ent)
+                hst_ent -> dst = dst;
+              if (dstreg) {
+                if ((dstspec == 6) && (cm != pm))
+                  STACKFILE[pm] = dst;
+                else R(dstspec) = dst;
+              }
+              else WriteW(dst, (MMU.GeteaW(dstspec) & 0xffff) | calc_is(pm));
+            }
+            else setTRAP(PDP11.TRAP_ILL);
+          //break;
+
+          case 0x37 => /* SXT */
+            if (CPUT(HAS_SXS)) {
+              dst = N ? 0xffff: 0;
+              Z = N ^ 1;
+              V = 0;
+              if (hst_ent)
+                hst_ent -> dst = dst;
+              if (dstreg)
+                R(dstspec) = dst;
+              else WriteW(dst, GeteaW(dstspec));
+            }
+            else setTRAP(PDP11.TRAP_ILL);
+            break;
+
+          case 0x38 => /* CSM */
+            if (CPUT(HAS_CSM) && (MMR3 & MMR3_CSM) && (cm != MD_KER)) {
+              dst = dstreg ? R(dstspec): MMU.ReadW
+              (MMU.GeteaW(dstspec));
+              PSW = get_PSW() & ~PSW_CC; /* PSW, cc = 0 */
+              STACKFILE[cm] = SP;
+              WriteW(PSW, ((SP - 2) & 0xffff) | calc_ds(MD_SUP));
+              WriteW(PC, ((SP - 4) & 0xffff) | calc_ds(MD_SUP));
+              WriteW(dst, ((SP - 6) & 0xffff) | calc_ds(MD_SUP));
+              SP = (SP - 6) & 0xffff;
+              pm = cm;
+              cm = MD_SUP;
+              tbit = 0;
+              isenable = calc_is(cm);
+              dsenable = calc_ds(cm);
+              PC = MMU.ReadW(0x8 | isenable);
+            }
+            else setTRAP(PDP11.TRAP_ILL);
+            break;
+
+          case 0x3a => /* TSTSET */
+            if (CPUT(HAS_TSWLK) && !dstreg) {
+              dst = MMU.ReadMW(MMU.GeteaW(dstspec));
+              N = GET_SIGN_W(dst);
+              Z = GET_Z(dst);
+              V = 0;
+              C = (dst & 1);
+              R[0] = dst; /* R[0] <- dst */
+              if (hst_ent)
+                hst_ent -> dst = dst | 1;
+              PWriteW(R[0] | 1, last_pa); /* dst <- R[0] | 1 */
+            }
+            else setTRAP(PDP11.TRAP_ILL);
+            break;
+
+          case 0x3b => /* WRTLCK */
+            if (CPUT(CPUOPT.HAS_TSWLK) && !dstreg) {
+              N = GET_SIGN_W(R[0]);
+              Z = GET_Z(R[0]);
+              V = 0;
+              MMU.WriteW(R[0], MMU.GeteaW(dstspec));
+              if (hst_ent)
+                hst_ent -> dst = R[0];
+            }
+            else setTRAP(PDP11.TRAP_ILL);
+          //break;
+
+          case _ =>
+            setTRAP(PDP11.TRAP_ILL);
+          //break;
+        } /* end switch SOPs */
+      //break;                                          /* end case 000 */
+
+      /* Opcodes 01 - 06: double operand word instructions
+       J-11 (and F-11) optimize away register source operand decoding.
+       As a result, dop R,+/-(R) use the modified version of R as source.
+       Most (but not all) other PDP-11's fetch the source operand before
+       any destination operand decoding.
+       Add: v = [sign (src) = sign (src2)] and [sign (src) != sign (result)]
+       Cmp: v = [sign (src) != sign (src2)] and [sign (src2) = sign (result)]
+    */
+
+      case 1 => /* MOV */
+        if (CPUT(CPUOPT.IS_SDSD) && srcreg && !dstreg) {
+          /* R,not R */
+          ea = MMU.GeteaW(dstspec);
+          dst = R(srcspec);
+        } else {
+          dst = if (srcreg) R(srcspec) else MMU.ReadW(MMU.GeteaW(srcspec));
+          if (!dstreg)
+            ea = MMU.GeteaW(dstspec)
+        }
+        N = GET_SIGN_W(dst);
+        Z = GET_Z(dst);
+        V = 0;
+        if (hst_ent) {
+          hst_ent -> src = dst;
+          hst_ent -> dst = dst;
+        }
+        if (dstreg) R(dstspec) = dst;
+        else MMU.WriteW(dst, ea);
+      //break;
+
+      case 2 => /* CMP */
+        if (CPUT(CPUOPT.IS_SDSD) && srcreg && !dstreg) {
+          /* R,not R */
+          src2 = MMU.ReadW(MMU.GeteaW(dstspec));
+          src = R(srcspec);
+        }
+        else {
+          src = if(srcreg) R(srcspec) else  MMU.ReadW(MMU.GeteaW(srcspec));
+          src2 = if(dstreg) R(dstspec)else  MMU.ReadW(MMU.GeteaW(dstspec));
+        }
+        dst = (src - src2) & 0xffff
+        if (hst_ent) {
+          hst_ent -> src = src;
+          hst_ent -> dst = src2;
+        }
+        N = GET_SIGN_W(dst);
+        Z = GET_Z(dst);
+        V = GET_SIGN_W((src ^ src2) & (~src2 ^ dst));
+        C = (src < src2);
+        //break;
+
+      case 3 => /* BIT */
+        if (CPUT(CPUOPT.IS_SDSD) && srcreg && !dstreg) {
+          /* R,not R */
+          src2 = MMU.ReadW(MMU.GeteaW(dstspec));
+          src = R(srcspec);
+        }
+        else {
+          src = if(srcreg) R(srcspec) else  MMU.ReadW(MMU.GeteaW(srcspec))
+          src2 = if(dstreg) R(dstspec) else  MMU.ReadW(MMU.GeteaW(dstspec))
+        }
+        dst = src2 & src
+        if (hst_ent) {
+          hst_ent -> src = src
+          hst_ent -> dst = dst
+        }
+        N = GET_SIGN_W(dst);
+        Z = GET_Z(dst);
+        V = 0;
+        //break;
+
+      case 4 => /* BIC */
+        if (CPUT(CPUOPT.IS_SDSD) && srcreg && !dstreg) {
+          /* R,not R */
+          src2 = MMU.ReadMW(MMU.GeteaW(dstspec));
+          src = R(srcspec);
+        }
+        else {
+          src = if(srcreg)  R(srcspec) else MMU.ReadW(MMU.GeteaW(srcspec));
+          src2 = if(dstreg) R(dstspec) else  MMU.ReadMW(MMU.GeteaW(dstspec));
+        }
+        dst = src2 & ~src;
+        if (hst_ent) {
+          hst_ent -> src = src;
+          hst_ent -> dst = dst;
+        }
+        N = GET_SIGN_W(dst);
+        Z = GET_Z(dst);
+        V = 0;
+        if (dstreg)
+          R(dstspec) ( dst)
+        else MMU.PWriteW(dst, last_pa);
+        //break;
+
+      case 5 => /* BIS */
+        if (CPUT(CPUOPT.IS_SDSD) && srcreg && !dstreg) {
+          /* R,not R */
+          src2 = MMU.ReadMW(MMU.GeteaW(dstspec))
+          src = R(srcspec)
+        }
+        else {
+          src = if(srcreg) R(srcspec) else  MMU.ReadW(MMU.GeteaW(srcspec))
+          src2 = if(dstreg) R(dstspec) else  MMU.ReadMW(MMU.GeteaW(dstspec))
+        }
+        dst = src2 | src
+        if (hst_ent) {
+          hst_ent -> src = src;
+          hst_ent -> dst = dst;
+        }
+        N = GET_SIGN_W(dst)
+        Z = GET_Z(dst)
+        V = 0
+        if (dstreg) R(dstspec) (dst)
+        else MMU.PWriteW(dst, last_pa)
+      //break;
+
+      case 6 => /* ADD */
+        if (CPUT(CPUOPT.IS_SDSD) && srcreg && !dstreg) {
+          /* R,not R */
+          src2 = MMU.ReadMW(MMU.GeteaW(dstspec))
+          src = R(srcspec)
+        }
+        else {
+          src = if (srcreg) R(srcspec) else MMU.ReadW(MMU.GeteaW(srcspec))
+          src2 = if (dstreg) R(dstspec) else MMU.ReadMW(MMU.GeteaW(dstspec))
+        }
+        dst = (src2 + src) & 0xffff
+        if (hst_ent) {
+          hst_ent -> src = src;
+          hst_ent -> dst = dst;
+        }
+        N = GET_SIGN_W(dst)
+        Z = GET_Z(dst)
+        V = GET_SIGN_W((~src ^ src2) & (src ^ dst))
+        C = (dst < src)
+        if (dstreg)
+          R(dstspec) (dst)
+        else MMU.PWriteW(dst, last_pa)
+      //break;
+
+      /* Opcode 07: EIS, FIS, CIS
+       Notes:
+       - The code assumes that the host int length is at least 32 bits.
+       - MUL carry: C is set if the (signed) result doesn't fit in 16 bits.
+       - Divide has three error cases:
+            1. Divide by zero.
+            2. Divide largest negative number by -1.
+            3. (Signed) quotient doesn't fit in 16 bits.
+         Cases 1 and 2 must be tested in advance, to avoid C runtime errors.
+       - ASHx left: overflow if the bits shifted out do not equal the sign
+         of the result (convert shift out to 1/0, xor against sign).
+       - ASHx right: if right shift sign extends, then the shift and
+         conditional or of shifted -1 is redundant.  If right shift zero
+         extends, then the shift and conditional or does sign extension.
+    */
+
+      case 0x7 =>
+        srcspec = srcspec & 0x7;
+        ((IR >> 9) & 0x7) match {
+          /* decode IR<11:9> */
+
+          case 0 => /* MUL */
+            if (!CPUO(CPUOPT.OPT_EIS)) {
+              setTRAP(PDP11.TRAP_ILL)
+
+            } else {
+              src2 = if (dstreg) R(dstspec) else MMU.ReadW(MMU.GeteaW(dstspec))
+              src = R(srcspec)
+              if (GET_SIGN_W(src2)) src2 = src2 | ~0x7fff
+              if (GET_SIGN_W(src)) src = src | ~0x7fff
+              dst = src * src2
+              if (hst_ent) {
+                hst_ent -> src = src
+                hst_ent -> dst = dst
+              }
+              R(srcspec) ( (dst >> 16) & 0xffff)
+              R(srcspec | 1) ( dst & 0xffff)
+              N = (dst < 0)
+              Z = GET_Z(dst)
+              V = 0
+              C = ((dst > 0x7fff) || (dst < -0x8000))
+            }
+          //break;
+
+          case 1 => /* DIV */
+            if (!CPUO(CPUOPT.OPT_EIS)) {
+              setTRAP(PDP11.TRAP_ILL.intValue)
+
+            } else {
+              src2 = if (dstreg) R(dstspec) else MMU.ReadW(MMU.GeteaW(dstspec))
+              src = (R(srcspec) << 16) | R(srcspec | 1)
+              if (src2 == 0) {
+                N = 0; /* J11,11/70 compat */
+                Z =1
+                V =1
+                C = 1
+                //break;
+              } else {
+                if ((src == 0x80000000) && (src2 == 0xffff)) {
+                  V = 1 /* J11,11/70 compat */
+                  N = 0
+                  Z = 0
+                  C = 0 /* N = Z = 0 */
+                  //break;
+                } else {
+                  if (GET_SIGN_W(src2))
+                    src2 = src2 | ~0x7fff;
+                  if (GET_SIGN_W(R(srcspec)))
+                    src = src | ~0x7fffffff;
+                  dst = src / src2;
+                  if (hst_ent) {
+                    hst_ent -> src = src;
+                    hst_ent -> dst = dst;
+                  }
+                  N = (if(dst < 0) 1 else 0) /* N set on 32b result */
+                  if ((dst > 0x7fff) || (dst < -0x8000)) {
+                    V = 1 /* J11,11/70 compat */
+                    Z = 0
+                    C = 0 /* Z = C = 0 */
+                    //break;
+                  } else {
+                    R(srcspec) ( dst & 0xffff)
+                    R(srcspec | 1) ((src - (src2 * dst)) & 0xffff)
+                    Z = GET_Z(dst)
+                    V = 0
+                    C = 0
+                    //break;
+                  }
+                }
+              }
+            }
+
+          case 2 => /* ASH */
+            if (!CPUO(CPUOPT.OPT_EIS)) {
+              setTRAP(PDP11.TRAP_ILL.intValue);
+              //break;
+            } else {
+              src2 = if (dstreg) R(dstspec) else MMU.ReadW(MMU.GeteaW(dstspec));
+              src2 = src2 & 0x3f;
+              sign = GET_SIGN_W(R(srcspec));
+              src = if (sign != 0) R(srcspec) | ~0x7fff else R(srcspec)
+              if (src2 == 0) {
+                /* [0] */
+                dst = src
+                V = 0
+                C = 0
+              }
+              else if (src2 <= 15) {
+                /* [1,15] */
+                dst = src << src2
+                i = (src >> (16 - src2)) & 0xffff
+                V = if(i != (dst & 0x8000)  ) 0xffff else 0
+                C = (i & 1)
+              }
+              else if (src2 <= 31) {
+                /* [16,31] */
+                dst = 0;
+                V = if(src != 0) 1 else 0
+                C = (src << (src2 - 16)) & 1
+              }
+              else if (src2 == 32) {
+                /* [32] = -32 */
+                dst = -sign
+                V = 0;
+                C = sign
+              }
+              else {
+                /* [33,63] = -31,-1 */
+                dst = (src >> (64 - src2)) | (-sign << (src2 - 32))
+                V = 0
+                C = ((src >> (63 - src2)) & 1)
+              }
+              if (hst_ent) {
+                hst_ent -> src = src;
+                hst_ent -> dst = dst;
+              }
+              dst = {
+                R(srcspec) ( dst & 0xffff)
+                R(srcspec)
+              }
+              N = GET_SIGN_W(dst);
+              Z = GET_Z(dst);
+              //break;
+            }
+          case 3 => /* ASHC */
+            if (!CPUO(CPUOPT.OPT_EIS)) {
+              setTRAP(PDP11.TRAP_ILL.intValue);
+              //break;
+            } else {
+              src2 = if (dstreg) R(dstspec) else MMU.ReadW(MMU.GeteaW(dstspec))
+              src2 = src2 & 0x3f
+              sign = GET_SIGN_W(R(srcspec));
+              src = (R(srcspec) << 16) | R(srcspec | 1)
+              if (src2 == 0) {
+                /* [0] */
+                dst = src;
+                V = 0
+                C = 0
+              }
+              else if (src2 <= 31) {
+                /* [1,31] */
+                dst = (src) << src2
+                i = (src >> (32 - src2)) | (-sign << src2);
+                V = (if(i != (dst & 0x80000000))  -1 else  0)
+                C = (i & 1)
+              }
+              else if (src2 == 32) {
+                /* [32] = -32 */
+                dst = -sign
+                V = 0
+                C = sign
+              }
+              else {
+                /* [33,63] = -31,-1 */
+                dst = (src >> (64 - src2)) | (-sign << (src2 - 32));
+                V = 0;
+                C = ((src >> (63 - src2)) & 1);
+              }
+              i = R(srcspec) = (dst >> 16) & 0xffff;
+              if (hst_ent) {
+                hst_ent -> src = src;
+                hst_ent -> dst = dst;
+              }
+              dst = R(srcspec | 1) = dst & 0xffff;
+              N = GET_SIGN_W(i);
+              Z = GET_Z(dst | i);
+              //break;
+            }
+          case 4 => /* XOR */
+            if (CPUT(CPUOPT.HAS_SXS)) {
+              if (CPUT(CPUOPT.IS_SDSD) && !dstreg) {
+                /* R,not R */
+                src2 = MMU.ReadMW(MMU.GeteaW(dstspec));
+                src = R(srcspec)
+              }
+              else {
+                src = R(srcspec);
+                src2 = if(dstreg) R(dstspec) else MMU.ReadMW(MMU.GeteaW(dstspec))
+              }
+              dst = src ^ src2;
+              if (hst_ent) {
+                hst_ent -> src = src;
+                hst_ent -> dst = dst;
+              }
+              N = GET_SIGN_W(dst);
+              Z = GET_Z(dst);
+              V = 0;
+              if (dstreg) R(dstspec) ( dst)
+              else MMU.PWriteW(dst, last_pa)
+            }
+            else setTRAP(PDP11.TRAP_ILL);
+          //break;
+
+          case 5 => /* FIS */
+            if (CPUO(CPUOPT.OPT_FIS))
+              fis11(IR);
+            else setTRAP(PDP11.TRAP_ILL);
+          //break;
+
+          case 6 => /* CIS */
+            if (CPUT(CPUOPT.CPUT_60) && (cm == MD_KER) && /* 11/60 MED? */
+              (IR == 0x7d80)) {
+              MMU.ReadE(PC | MMU.isenable) /* read immediate */
+              PC ( (PC + 2) & 0xffff)
+            }
+            else if (CPUO(CPUOPT.OPT_CIS)) /* CIS option? */
+              reason = cis11(IR)
+            else setTRAP(PDP11.TRAP_ILL.intValue)
+          //break;
+
+          case 7 => /* SOB */
+            if (CPUT(CPUOPT.HAS_SXS)) {
+              R(srcspec) ( (R(srcspec) - 1) & 0xffff)
+              if (hst_ent)
+                hst_ent -> dst = R(srcspec)
+              if (R(srcspec)) {
+                JMP_PC((PC - dstspec - dstspec) & 0xffff)
+              }
+            }
+            else setTRAP(PDP11.TRAP_ILL.intValue)
+          //break;
+        } /* end switch EIS */
+      //break;                                          /* end case 007 */
+
+      /* Opcode 10: branches, traps, SOPs */
+
+      case 0x8 =>
+        ((IR >> 6) & 0x3f) match {
+          /* decode IR<11:6> */
+
+          case 0x0 | 0x1 => /* BPL */
+            if (N == 0) {
+              BRANCH_F(IR);
+            }
+          //break;
+
+          case 0x2 | 0x3 => /* BPL */
+            if (N == 0) {
+              BRANCH_B(IR);
+            }
+          //break;
+
+          case 0x4 | 0x5 => /* BMI */
+            if (N!= 0) {
+              BRANCH_F(IR);
+            }
+          //break;
+
+          case 0x6 | 0x7 => /* BMI */
+            if (N!= 0) {
+              BRANCH_B(IR);
+            }
+          //break;
+
+          case 0x08 | 0x09 => /* BHI */
+            if ((C | Z) == 0) {
+              BRANCH_F(IR);
+            }
+          //break;
+
+          case 0xa | 0xb => /* BHI */
+            if ((C | Z) == 0) {
+              BRANCH_B(IR);
+            }
+          //break;
+
+          case 0xc | 0xd => /* BLOS */
+            if (C != 0 | Z != 0) {
+              BRANCH_F(IR);
+            }
+          //break;
+
+          case 0xe | 0xf => /* BLOS */
+            if (C != 0| Z != 0) {
+              BRANCH_B(IR);
+            }
+          //break;
+
+          case 0x10 | 0x11 => /* BVC */
+            if (V == 0) {
+              BRANCH_F(IR);
+            }
+          //break;
+
+          case 0x12 | 0x13 => /* BVC */
+            if (V == 0) {
+              BRANCH_B(IR);
+            }
+          //break;
+
+          case 0x14 | 0x15 => /* BVS */
+            if (V!= 0) {
+              BRANCH_F(IR);
+            }
+          //break;
+
+          case 0x16 | 0x17 => /* BVS */
+            if (V!= 0) {
+              BRANCH_B(IR);
+            }
+          //break;
+
+          case 0x18 | 0x19 => /* BCC */
+            if (C == 0) {
+              BRANCH_F(IR);
+            }
+          //break;
+
+          case 0x1a | 0x1b => /* BCC */
+            if (C == 0) {
+              BRANCH_B(IR);
+            }
+          //break;
+
+          case 0x1c | 0x1d => /* BCS */
+            if (C!= 0) {
+              BRANCH_F(IR);
+            }
+          //break;
+
+          case 0x1e | 0x1f => /* BCS */
+            if (C!= 0) {
+              BRANCH_B(IR);
+            }
+          //break;
+
+          case 0x20 | 0x21 | 0x22 | 0x23 => /* EMT */
+            setTRAP(PDP11.TRAP_EMT.intValue)
+          //break;
+
+          case 0x24 | 0x25 | 0x26 | 0x27 => /* TRAP */
+            setTRAP(PDP11.TRAP_TRAP.intValue)
+          //break;
+
+          case 0x28 => /* CLRB */
+            N = 0
+            V = 0
+            C = 0
+            Z = 1
+            if (dstreg) R(dstspec) ( R(dstspec) & 0xff00)
+            else MMU.WriteB(0, MMU.GeteaB(dstspec));
+            if (hst_ent) {
+              if (dstreg)
+                hst_ent -> dst = R(dstspec);
+              else hst_ent -> dst = 0;
+            }
+          //break;
+
+          case 0x29 => /* COMB */
+            dst = if (dstreg) R(dstspec) else MMU.ReadMB(MMU.GeteaB(dstspec));
+            dst = (dst ^ 0xff) & 0xff;
+            N = GET_SIGN_B(dst);
+            Z = GET_Z(dst);
+            V = 0;
+            C = 1;
+            if (dstreg) R(dstspec) = (R(dstspec) & 0xff00) | dst;
+            else MMU.PWriteB(dst, last_pa);
+            if (hst_ent) {
+              if (dstreg)
+                hst_ent -> dst = R(dstspec);
+              else hst_ent -> dst = dst;
+            }
+          //break;
+
+          case 0x2a => /* INCB */
+            dst = if (dstreg) R(dstspec) else MMU.ReadMB(MMU.GeteaB(dstspec))
+            dst = (dst + 1) & 0xff
+            N = GET_SIGN_B(dst);
+            Z = GET_Z(dst);
+            V = (dst == 0x80);
+            if (dstreg)
+              R(dstspec) ( (R(dstspec) & 0xff00) | dst)
+            else MMU.PWriteB(dst, last_pa);
+            if (hst_ent) {
+              if (dstreg)
+                hst_ent -> dst = R(dstspec);
+              else hst_ent -> dst = dst;
+            }
+          //break;
+
+          case 0x2b => /* DECB */
+            dst = if (dstreg) R(dstspec) else MMU.ReadMB(MMU.GeteaB(dstspec));
+            dst = (dst - 1) & 0xff;
+            N = GET_SIGN_B(dst);
+            Z = GET_Z(dst);
+            V = (dst == 0x7f)
+            if (dstreg)
+              R(dstspec) ( (R(dstspec) & 0xff00) | dst)
+            else MMU.PWriteB(dst, last_pa);
+            if (hst_ent) {
+              if (dstreg)
+                hst_ent -> dst = R(dstspec);
+              else hst_ent -> dst = dst;
+            }
+          //break;
+
+          case 0x2c => /* NEGB */
+            dst = if (dstreg) R(dstspec) else MMU.ReadMB(MMU.GeteaB(dstspec));
+            dst = (-dst) & 0xff;
+            N = GET_SIGN_B(dst);
+            Z = GET_Z(dst);
+            V = (dst == 0x80);
+            C = (Z ^ 1);
+            if (dstreg) R(dstspec) ( (R(dstspec) & 0xff00) | dst)
+            else MMU.PWriteB(dst, last_pa);
+            if (hst_ent) {
+              if (dstreg)
+                hst_ent -> dst = R(dstspec);
+              else hst_ent -> dst = dst;
+            }
+          //break;
+
+          case 0x2d => /* ADCB */
+            dst = if (dstreg) R(dstspec) else MMU.ReadMB(MMU.GeteaB(dstspec))
+            dst = (dst + C) & 0xff
+            N = GET_SIGN_B(dst)
+            Z = GET_Z(dst)
+            V = (C && (if(dst == 0x80) -1 else 0))
+            C = C & Z
+            if (dstreg) R(dstspec) ( (R(dstspec) & 0xff00) | dst)
+            else MMU.PWriteB(dst, last_pa)
+            if (hst_ent) {
+              if (dstreg)
+                hst_ent -> dst = R(dstspec)
+              else hst_ent -> dst = dst
+            }
+          //break;
+
+          case 0x2e => /* SBCB */
+            dst = if (dstreg) R(dstspec) else MMU.ReadMB(MMU.GeteaB(dstspec));
+            dst = (dst - C) & 0xff;
+            N = GET_SIGN_B(dst);
+            Z = GET_Z(dst);
+            V = (C && (dst == 0x7f));
+            C = (C && (dst == 0xff));
+            if (dstreg) R(dstspec) ( (R(dstspec) & 0xff00) | dst)
+            else MMU.PWriteB(dst, last_pa);
+            if (hst_ent) {
+              if (dstreg)
+                hst_ent -> dst = R(dstspec);
+              else hst_ent -> dst = dst;
+            }
+          //break;
+
+          case 0x2f => /* TSTB */
+            dst = if (dstreg) R(dstspec) & 0xff else MMU.ReadB(MMU.GeteaB(dstspec));
+            if (hst_ent)
+              hst_ent -> dst = dst;
+            N = GET_SIGN_B(dst);
+            Z = GET_Z(dst);
+            V = C = 0;
+          //break;
+
+          case 0x30 => /* RORB */
+            src = if (dstreg) R(dstspec) else MMU.ReadMB(MMU.GeteaB(dstspec))
+            dst = ((src & 0xff) >> 1) | (C << 7)
+            N = GET_SIGN_B(dst)
+            Z = GET_Z(dst)
+            C = (src & 1)
+            V = N ^ C
+            if (dstreg) R(dstspec) ((R(dstspec) & 0xff00) | dst)
+            else MMU.PWriteB(dst, last_pa)
+            if (hst_ent) {
+              if (dstreg)
+                hst_ent -> dst = R(dstspec);
+              else hst_ent -> dst = dst;
+            }
+          //break;
+
+          case 0x31 => /* ROLB */
+            src = if (dstreg) R(dstspec) else MMU.ReadMB(MMU.GeteaB(dstspec))
+            dst = ((src << 1) | C) & 0xff
+            N = GET_SIGN_B(dst)
+            Z = GET_Z(dst)
+            C = GET_SIGN_B(src & 0xff)
+            V = N ^ C
+            if (dstreg) R(dstspec) ( (R(dstspec) & 0xff00) | dst)
+            else MMU.PWriteB(dst, last_pa)
+            if (hst_ent) {
+              if (dstreg)
+                hst_ent -> dst = R(dstspec)
+              else hst_ent -> dst = dst
+            }
+          //break;
+
+          case 0x32 => /* ASRB */
+            src = if (dstreg) R(dstspec) else MMU.ReadMB(MMU.GeteaB(dstspec));
+            dst = ((src & 0xff) >> 1) | (src & 0x80);
+            N = GET_SIGN_B(dst);
+            Z = GET_Z(dst);
+            C = (src & 1);
+            V = N ^ C;
+            if (dstreg)
+              R(dstspec) = (R(dstspec) & 0xff00) | dst;
+            else MMU.PWriteB(dst, last_pa);
+            if (hst_ent) {
+              if (dstreg)
+                hst_ent -> dst = R(dstspec);
+              else hst_ent -> dst = dst;
+            }
+          //break;
+
+          case 0x33 => /* ASLB */
+            src = if (dstreg) R(dstspec) else MMU.ReadMB(MMU.GeteaB(dstspec));
+            dst = (src << 1) & 0xff;
+            N = GET_SIGN_B(dst);
+            Z = GET_Z(dst);
+            C = GET_SIGN_B(src & 0xff);
+            V = N ^ C;
+            if (dstreg) R(dstspec) = (R(dstspec) & 0xff00) | dst;
+            else MMU.PWriteB(dst, last_pa);
+            if (hst_ent) {
+              if (dstreg)
+                hst_ent -> dst = R(dstspec);
+              else hst_ent -> dst = dst;
+            }
+          //break;
+
+          /* Notes:
+         - MTPS cannot alter the T bit
+         - MxPD must mask GeteaW returned address, dspace is from cm not pm
+         - MxPD must set MMR1 for SP recovery in case of fault
+      */
+
+          case 0x34 => /* MTPS */
+            if (CPUT(CPUOPT.HAS_MXPS)) {
+              dst = if (dstreg) R(dstspec) else MMU.ReadB(MMU.GeteaB(dstspec))
+              if (cm == MD_KER) {
+                ipl = (dst >> PDP11.PSW_V_IPL) & 0x7
+                trap_req = MMU.calc_ints(ipl, trap_req);
+              }
+              N = (dst >> PDP11.PSW_V_N) & 1
+              Z = (dst >> PDP11.PSW_V_Z) & 1
+              V = (dst >> PDP11.PSW_V_V) & 1
+              C = (dst >> PDP11.PSW_V_C) & 1
+            }
+            else setTRAP(PDP11.TRAP_ILL.intValue)
+          //break;
+
+          case 0x35 => /* MFPD */
+            if (CPUT(CPUOPT.HAS_MXPY)) {
+              if (dstreg) {
+                if ((dstspec == 6) && (cm != pm))
+                  dst = STACKFILE(pm)
+                else dst = R(dstspec)
+              }
+              else dst = MMU.ReadW((MMU.GeteaW(dstspec) & 0xffff) | MMU.calc_ds(pm))
+              N = GET_SIGN_W(dst)
+              Z = GET_Z(dst)
+              V = 0
+              SP((SP - 2) & 0xffff)
+              reg_mods = MMU.calc_MMR1(0xf6)
+              if (MMU.update_MM) MMU.MMR1 = MMU.reg_mods
+              if (hst_ent)
+                hst_ent -> dst = dst;
+              MMU.WriteW(dst, SP | MMU.dsenable);
+              if ((cm == MD_KER) && (SP < (STKLIM + PDP11.STKL_Y)))
+                set_stack_trap(SP);
+            }
+            else setTRAP(PDP11.TRAP_ILL)
+          //break;
+
+          case 0x36 => /* MTPD */
+            if (CPUT(CPUOPT.HAS_MXPY)) {
+              dst = MMU.ReadW(SP | MMU.dsenable)
+              N = GET_SIGN_W(dst)
+              Z = GET_Z(dst)
+              V = 0
+              SP((SP + 2) & 0xffff)
+              MMU.reg_mods = 0x16
+              if (MMU.update_MM)
+                MMU.MMR1 = MMU.reg_mods;
+              if (hst_ent)
+                hst_ent -> dst = dst;
+              if (dstreg) {
+                if ((dstspec == 6) && (cm != pm))
+                  STACKFILE(pm) ( dst)
+                else R(dstspec) ( dst)
+              }
+              else MMU.WriteW(dst, (MMU.GeteaW(dstspec) & 0xffff) | MMU.calc_ds(pm))
+            }
+            else setTRAP(PDP11.TRAP_ILL.intValue)
+          //break;
+
+          case 0x37 => /* MFPS */
+            if (CPUT(CPUOPT.HAS_MXPS)) {
+              dst = get_PSW() & 0xff;
+              N = GET_SIGN_B(dst);
+              Z = GET_Z(dst);
+              V = 0;
+              if (dstreg) R(dstspec) (if (dst & 0x80) 0xff00 | dst else dst)
+              else MMU.WriteB(dst, MMU.GeteaB(dstspec))
+            }
+            else setTRAP(PDP11.TRAP_ILL.intValue)
+          // break;
+
+          case _ =>
+            setTRAP(PDP11.TRAP_ILL.intValue)
+          //break;
+        } /* end switch SOPs */
+      //break;                                          /* end case 010 */
+
+      /* Opcodes 11 - 16: double operand byte instructions
+       Cmp: v = [sign (src) != sign (src2)] and [sign (src2) = sign (result)]
+       Sub: v = [sign (src) != sign (src2)] and [sign (src) = sign (result)]
+    */
+
+      case 0x9 => /* MOVB */
+        if (CPUT(CPUOPT.IS_SDSD) && srcreg && !dstreg) {
+          /* R,not R */
+          ea = MMU.GeteaB(dstspec);
+          dst = R(srcspec) & 0xff;
+        }
+        else {
+          dst = if (srcreg) R(srcspec) & 0xff else MMU.ReadB(MMU.GeteaB(srcspec));
+          if (!dstreg)
+            ea = MMU.GeteaB(dstspec)
+        }
+        N = GET_SIGN_B(dst)
+        Z = GET_Z(dst)
+        V = 0
+        if (dstreg)
+          R(dstspec) (if((dst & 0x80) != 0)  0xff00 | dst else  dst)
+        else MMU.WriteB(dst, ea);
+        if (hst_ent) {
+          hst_ent -> src = srcreg ? R(srcspec): dst;
+          hst_ent -> dst = dstreg ? R(dstspec): dst;
+        }
+      //break;
+
+      case 0xa => /* CMPB */
+        if (CPUT(CPUOPT.IS_SDSD) && srcreg && !dstreg) {
+          /* R,not R */
+          src2 = MMU.ReadB(MMU.GeteaB(dstspec));
+          src = R(srcspec) & 0xff;
+        }
+        else {
+          src = if(srcreg) R(srcspec) & 0xff else  MMU.ReadB(MMU.GeteaB(srcspec))
+          src2 = if(dstreg)  R(dstspec) & 0xff else  MMU.ReadB(MMU.GeteaB(dstspec))
+        }
+        if (hst_ent) {
+          hst_ent -> src = src;
+          hst_ent -> dst = src2;
+        }
+        dst = (src - src2) & 0xff
+        N = GET_SIGN_B(dst)
+        Z = GET_Z(dst)
+        V = GET_SIGN_B((src ^ src2) & (~src2 ^ dst))
+        C = (src < src2)
+        //break;
+
+      case 0xb => /* BITB */
+        if (CPUT(CPUOPT.IS_SDSD) && srcreg && !dstreg) {
+          /* R,not R */
+          src2 = MMU.ReadB(MMU.GeteaB(dstspec));
+          src = R(srcspec) & 0xff;
+        }
+        else {
+          src = if(srcreg)  R(srcspec) & 0xff else  MMU.ReadB(MMU.GeteaB(srcspec))
+          src2 = if(dstreg) R(dstspec) & 0xff else  MMU.ReadB(MMU.GeteaB(dstspec))
+        }
+        dst = (src2 & src) & 0xff;
+        if (hst_ent) {
+          hst_ent -> src = src;
+          hst_ent -> dst = dst;
+        }
+        N = GET_SIGN_B(dst);
+        Z = GET_Z(dst);
+        V = 0
+        //break;
+
+      case 0xc => /* BICB */
+        if (CPUT(CPUOPT.IS_SDSD) && srcreg && !dstreg) {
+          /* R,not R */
+          src2 = MMU.ReadMB(MMU.GeteaB(dstspec))
+          src = R(srcspec)
+        }
+        else {
+          src = if(srcreg)  R(srcspec) else  MMU.ReadB(MMU.GeteaB(srcspec))
+          src2 = if(dstreg) R(dstspec) else  MMU.ReadMB(MMU.GeteaB(dstspec))
+        }
+        dst = (src2 & ~src) & 0xff
+        if (hst_ent) {
+          hst_ent -> src = src;
+          hst_ent -> dst = dst;
+        }
+        N = GET_SIGN_B(dst)
+        Z = GET_Z(dst)
+        V = 0
+        if (dstreg)
+          R(dstspec) ( (R(dstspec) & 0xff00) | dst)
+        else MMU.PWriteB(dst, last_pa);
+        //break;
+
+      case 0xd => /* BISB */
+        if (CPUT(CPUOPT.IS_SDSD) && srcreg && !dstreg) {
+          /* R,not R */
+          src2 = MMU.ReadMB(MMU.GeteaB(dstspec));
+          src = R(srcspec);
+        }
+        else {
+          src = if(srcreg) R(srcspec) else  MMU.ReadB(MMU.GeteaB(srcspec))
+          src2 = if(dstreg) R(dstspec) else  MMU.ReadMB(MMU.GeteaB(dstspec))
+        }
+        dst = (src2 | src) & 0xff;
+        if (hst_ent) {
+          hst_ent -> src = src;
+          hst_ent -> dst = dst;
+        }
+        N = GET_SIGN_B(dst);
+        Z = GET_Z(dst);
+        V = 0
+        if (dstreg) R(dstspec) ( (R(dstspec) & 0xff00) | dst)
+        else MMU.PWriteB(dst, last_pa);
+        //break;
+
+      case 0xe => /* SUB */
+        if (CPUT(CPUOPT.IS_SDSD) && srcreg && !dstreg) {
+          /* R,not R */
+          src2 = MMU.ReadMW(MMU.GeteaW(dstspec))
+          src = R(srcspec)
+        }
+        else {
+          src = if(srcreg)  R(srcspec) else  MMU.ReadW(MMU.GeteaW(srcspec))
+          src2 = if(dstreg) R(dstspec) else  MMU.ReadMW(MMU.GeteaW(dstspec))
+        }
+        dst = (src2 - src) & 0xffff;
+        if (hst_ent) {
+          hst_ent -> src = src;
+          hst_ent -> dst = dst;
+        }
+        N = GET_SIGN_W(dst);
+        Z = GET_Z(dst);
+        V = GET_SIGN_W((src ^ src2) & (~src ^ dst));
+        C = (src2 < src);
+        if (dstreg)
+          R(dstspec) ( dst)
+        else MMU.PWriteW(dst, last_pa)
+        //break;
+
+      /* Opcode 17: floating point */
+
+      case 0xf =>
+        if (CPUO(CPUOPT.OPT_FPP))
+          fp11(IR); /* call fpp */
+        else setTRAP(PDP11.TRAP_ILL.intValue);
+        //break; /* end case 017 */
+    } /* end switch op */
+  } /* end main loop */
+
 
   override def runcpu(singleStep: Boolean, startAddr: UInt): Unit = {
     // Force the PC
@@ -66,7 +1538,9 @@ abstract class PDP11(isBanked: Boolean = false, override val machine: AbstractMa
   val pcq: Array[Register16] = new Array[Register16](PCQ_SIZE);
   /* PC queue */
   var pcq_p: Int = 0
-  val PCQ_MASK: Int = {PCQ_SIZE - 1}
+  val PCQ_MASK: Int = {
+    PCQ_SIZE - 1
+  }
 
   def PCQ_ENTRY(): Unit = {
     pcq_p = (pcq_p - 1) & PCQ_MASK
@@ -84,11 +1558,17 @@ abstract class PDP11(isBanked: Boolean = false, override val machine: AbstractMa
   /* Register change tracking actually goes into variable reg_mods; from there
      it is copied into MMR1 if that register is not currently locked.  */
 
-  def GET_SIGN_W(v: UShort): Int = {(v >> 15) & 1}
+  def GET_SIGN_W(v: UShort): Int = {
+    (v >> 15) & 1
+  }
 
-  def GET_SIGN_B(v: UByte): Int = {(v >> 7) & 1}
+  def GET_SIGN_B(v: UByte): Int = {
+    (v >> 7) & 1
+  }
 
-  def GET_Z(v: Int): Boolean = {v == 0}
+  def GET_Z(v: Int): Boolean = {
+    v == 0
+  }
 
   def JMP_PC(x: Register16): Unit = {
     PCQ_ENTRY()
@@ -179,10 +1659,10 @@ abstract class PDP11(isBanked: Boolean = false, override val machine: AbstractMa
 
     PIRQ.set16(0)
     STKLIM.set16(0)
-    if (CPUT (CPUOPT.CPUT_T))                                      /* T11? */
-      PSW = 0xe0                                       /* start at IPL 7 */
+    if (CPUT(CPUOPT.CPUT_T)) /* T11? */
+      PSW = 0xe0 /* start at IPL 7 */
     else
-      PSW = 0                                            /* else at IPL 0 */
+      PSW = 0 /* else at IPL 0 */
     MMU.MMR0.set16(0)
     MMU.MMR1.set16(0)
     MMU.MMR2.set16(0)
@@ -194,15 +1674,15 @@ abstract class PDP11(isBanked: Boolean = false, override val machine: AbstractMa
     //  M = (uint16 *) calloc (MEMSIZE >> 1, sizeof (uint16));
     //  if (M == NULL)
     //    return SCPE_MEM;
-      //sim_set_pchar (0, "01000023640"); /* ESC, CR, LF, TAB, BS, BEL, ENQ */
-      //sim_brk_dflt = SWMASK ('E');
-      //sim_brk_types = sim_brk_dflt|SWMASK ('P')|
-      //  SWMASK ('R')|SWMASK ('S')|
-      //  SWMASK ('W')|SWMASK ('X');
-      //sim_brk_type_desc = cpu_breakpoints;
-      //sim_vm_is_subroutine_call = &cpu_is_pc_a_subroutine_call;
-      //sim_clock_precalibrate_commands = pdp11_clock_precalibrate_commands;
-      //auto_config(NULL, 0);           /* do an initial auto configure */
+    //sim_set_pchar (0, "01000023640"); /* ESC, CR, LF, TAB, BS, BEL, ENQ */
+    //sim_brk_dflt = SWMASK ('E');
+    //sim_brk_types = sim_brk_dflt|SWMASK ('P')|
+    //  SWMASK ('R')|SWMASK ('S')|
+    //  SWMASK ('W')|SWMASK ('X');
+    //sim_brk_type_desc = cpu_breakpoints;
+    //sim_vm_is_subroutine_call = &cpu_is_pc_a_subroutine_call;
+    //sim_clock_precalibrate_commands = pdp11_clock_precalibrate_commands;
+    //auto_config(NULL, 0);           /* do an initial auto configure */
 
     //pcq_r = find_reg ("PCQ", NULL, dptr);
     //if (pcq_r)
@@ -402,66 +1882,66 @@ object PDP11 {
   /* Processor registers which have I/O page addresses
    */
 
-  val IOBA_CTL:Int = IOPAGEBASE + 0x1f50
+  val IOBA_CTL: Int = IOPAGEBASE + 0x1f50
   /* board ctrl */
   val IOLN_CTL = 0x8
 
-  val IOBA_UCA:Int = IOPAGEBASE + 0xff8
+  val IOBA_UCA: Int = IOPAGEBASE + 0xff8
   /* UC15 DR11 #1 */
   val IOLN_UCA = 0x6
-  val IOBA_UCB:Int  = IOPAGEBASE + 0xff0
+  val IOBA_UCB: Int = IOPAGEBASE + 0xff0
   /* UC15 DR11 #2 */
   val IOLN_UCB = 0x6
-  val IOBA_UBM:Int  = IOPAGEBASE + 0x1080
+  val IOBA_UBM: Int = IOPAGEBASE + 0x1080
   /* Unibus map */
   //val IOLN_UBM     =   (UBM_LNT_LW * sizeof (int32))
-  val IOBA_MMR3:Int  = IOPAGEBASE + 0x154e
+  val IOBA_MMR3: Int = IOPAGEBASE + 0x154e
   /* MMR3 */
   val IOLN_MMR3 = 0x2
-  val IOBA_TTI :Int = IOPAGEBASE + 0x1f70
+  val IOBA_TTI: Int = IOPAGEBASE + 0x1f70
   /* DL11 rcv */
   val IOLN_TTI = 0x4
-  val IOBA_TTO :Int = IOPAGEBASE + 0x1f74
+  val IOBA_TTO: Int = IOPAGEBASE + 0x1f74
   /* DL11 xmt */
   val IOLN_TTO = 0x4
-  val IOBA_SR :Int = IOPAGEBASE + 0x1f78
+  val IOBA_SR: Int = IOPAGEBASE + 0x1f78
   /* SR */
   val IOLN_SR = 0x2
-  val IOBA_MMR012:Int  = IOPAGEBASE + 0x1f7a
+  val IOBA_MMR012: Int = IOPAGEBASE + 0x1f7a
   /* MMR0-2 */
   val IOLN_MMR012 = 0x6
-  val IOBA_GPR:Int  = IOPAGEBASE + 0x1fc0
+  val IOBA_GPR: Int = IOPAGEBASE + 0x1fc0
   /* GPR's */
   val IOLN_GPR = 0x8
-  val IOBA_UCTL:Int  = IOPAGEBASE + 0x1fd8
+  val IOBA_UCTL: Int = IOPAGEBASE + 0x1fd8
   /* UBA ctrl */
   val IOLN_UCTL = 0x8
   val IOBA_CPU: Int = IOPAGEBASE + 0x1fe0
   /* CPU reg */
   val IOLN_CPU = 0x1e
-  val IOBA_PSW:Int = IOPAGEBASE + 0x1ffe
+  val IOBA_PSW: Int = IOPAGEBASE + 0x1ffe
   /* PSW */
   val IOLN_PSW = 0x2
-  val IOBA_UIPDR:Int = IOPAGEBASE + 0x1f80
+  val IOBA_UIPDR: Int = IOPAGEBASE + 0x1f80
   /* user APR's */
   val IOLN_UIPDR = 0x10
-  val IOBA_UDPDR:Int = IOPAGEBASE + 0x1f90
+  val IOBA_UDPDR: Int = IOPAGEBASE + 0x1f90
   val IOLN_UDPDR = 0x10
-  val IOBA_UIPAR:Int = IOPAGEBASE + 0x1fa0
+  val IOBA_UIPAR: Int = IOPAGEBASE + 0x1fa0
   val IOLN_UIPAR = 0x10
-  val IOBA_UDPAR:Int = IOPAGEBASE + 0x1fb0
+  val IOBA_UDPAR: Int = IOPAGEBASE + 0x1fb0
   val IOLN_UDPAR = 0x10
-  val IOBA_SUP:Int  = IOPAGEBASE + 0x1480
+  val IOBA_SUP: Int = IOPAGEBASE + 0x1480
   /* supervisor APR's */
   val IOLN_SUP = 0x40
-  val IOBA_KIPDR:Int = IOPAGEBASE + 0x14c0
+  val IOBA_KIPDR: Int = IOPAGEBASE + 0x14c0
   /* kernel APR's */
   val IOLN_KIPDR = 0x10
-  val IOBA_KDPDR:Int = IOPAGEBASE + 0x14d0
+  val IOBA_KDPDR: Int = IOPAGEBASE + 0x14d0
   val IOLN_KDPDR = 0x10
-  val IOBA_KIPAR:Int  = IOPAGEBASE + 0x14e0
+  val IOBA_KIPAR: Int = IOPAGEBASE + 0x14e0
   val IOLN_KIPAR = 0x10
-  val IOBA_KDPAR:Int  = IOPAGEBASE + 0x14f0
+  val IOBA_KDPAR: Int = IOPAGEBASE + 0x14f0
   val IOLN_KDPAR = 0x10
 
   /* Interrupt assignments; within each level, priority is right to left
