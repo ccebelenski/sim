@@ -317,6 +317,7 @@ class PDP11MMU(cpu: PDP11) extends BasicMMU(cpu) {
 
   }
 
+  def ReadW(va:Int):UInt = ReadW(UInt(va))
   def ReadW(va: UInt): UInt = {
 
     if (((va & 1) != 0) && cpu.CPUT(CPUOPT.HAS_ODD)) {
@@ -359,6 +360,7 @@ class PDP11MMU(cpu: PDP11) extends BasicMMU(cpu) {
     PReadW(pa)
   }
 
+  def ReadMW(va: Int) : UInt = ReadMW(UInt(va))
   def ReadMW(va: UInt): UInt = {
     if (((va & 1) != 0) && cpu.CPUT(CPUOPT.HAS_ODD)) {
       /* odd address? */
@@ -535,6 +537,7 @@ class PDP11MMU(cpu: PDP11) extends BasicMMU(cpu) {
     PWriteW(data, pa)
   }
 
+  def PWriteW(data:Int, pa:UInt): Unit = PWriteW(UInt(data), pa)
   def PWriteW(data: UInt, pa: UInt): Unit = {
     if (ADDR_IS_MEM(pa)) {
       /* memory address? */
