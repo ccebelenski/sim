@@ -210,6 +210,7 @@ class PDP11MMU(cpu: PDP11) extends BasicMMU(cpu) {
 
   /* Effective address calculation for bytes */
 
+  def GeteaB(spec:Int): UInt = GeteaB(UInt(spec))
   def GeteaB(spec: UInt): UInt = {
     val reg = spec & 0x7
     /* reg number */
