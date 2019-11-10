@@ -4,7 +4,7 @@ import com.sim.SimTimer
 import com.sim.cpu._
 import com.sim.device.{BinaryUnitOption, ValueUnitOption}
 import com.sim.machine.AbstractMachine
-import com.sim.unsigned.{UByte, UInt, UShort}
+import com.sim.unsigned.{UByte, UInt}
 
 abstract class PDP11(isBanked: Boolean = false, override val machine: AbstractMachine) extends BasicCPU(isBanked, machine) {
   override val name = "PDP11"
@@ -26,7 +26,7 @@ abstract class PDP11(isBanked: Boolean = false, override val machine: AbstractMa
   }
 
   // PSW
-  var PSW: Int = 0
+  var PSW: UInt = UInt(0)
   var cm: Int = 0
   /*   current mode */
   var pm: Int = 0
@@ -44,6 +44,9 @@ abstract class PDP11(isBanked: Boolean = false, override val machine: AbstractMa
   var Z: Boolean = false
   var V: Boolean = false
   var C: Boolean = false
+
+// orig from cputab
+  val CPU_MOD_MFPT : Int
 
   override def runcpu(singleStep: Boolean): Unit = {
 
@@ -128,10 +131,12 @@ abstract class PDP11(isBanked: Boolean = false, override val machine: AbstractMa
               case 2 => /* RTI */
                 src = MMU.ReadW(SP.get16 | MMU.dsenable)
                 src2 = MMU.ReadW(((SP.get16 + 2) & 0xffff) | MMU.dsenable)
-                STACKFILE(cm) (
-                  {SP((SP + 4) & 0xffff)
-                  SP.get16}
-            )
+                STACKFILE(cm)(
+                  {
+                    SP((SP + 4) & 0xffff)
+                    SP.get16
+                  }
+                )
                 oldrs = rs
                 put_PSW(src2, (cm != MD_KER)) /* store PSW, prot */
                 if (rs != oldrs) {
@@ -151,12 +156,11 @@ abstract class PDP11(isBanked: Boolean = false, override val machine: AbstractMa
 
               case 7 => /* MFPT */
                 if (CPUT(CPUOPT.HAS_MFPT)) /* implemented? */
-                  R(0) = cpu_tab(cpu_model).mfpt /* get type */
+                  R(0) (CPU_MOD_MFPT) /* get type */
                 else setTRAP(PDP11.TRAP_ILL.intValue)
 
             } /* end switch no ops */
           /* end case no ops */
-
 
           case 1 => /* JMP */
             if (dstreg)
@@ -165,7 +169,7 @@ abstract class PDP11(isBanked: Boolean = false, override val machine: AbstractMa
                 if (CPUOPT.HAS_JREG4) PDP11.TRAP_PRV.intValue else PDP11.TRAP_ILL.intValue
               }))
             else {
-              dst = UInt(MMU.GeteaW(dstspec) & 0xffff )/* get eff addr */
+              dst = UInt(MMU.GeteaW(dstspec) & 0xffff) /* get eff addr */
               if (CPUT(CPUOPT.CPUT_05 | CPUOPT.CPUT_20) && /* 11/05, 11/20 */
                 ((dstspec & 0x38) == 0x10)) /* JMP (R)+? */
                 dst = R(dstspec & 0x7).get16 /* use post incr */
@@ -232,46 +236,29 @@ abstract class PDP11(isBanked: Boolean = false, override val machine: AbstractMa
           case 4 | 5 => /* BR */
             BRANCH_F(IR)
 
-
           case 0x6 | 0x7 => /* BR */
             BRANCH_B(IR)
 
-
           case 0x8 | 0x9 => /* BNE */
-            if (Z == 0)
-              BRANCH_F(IR)
-
+            if (Z == 0) BRANCH_F(IR)
 
           case 0xa | 0xb => /* BNE */
-            if (Z == 0)
-              BRANCH_B(IR)
-
+            if (Z == 0) BRANCH_B(IR)
 
           case 0xc | 0xd => /* BEQ */
-            if (Z)
-              BRANCH_F(IR)
-
+            if (Z) BRANCH_F(IR)
 
           case 0xe | 0xf => /* BEQ */
-            if (Z)
-              BRANCH_B(IR)
-
+            if (Z) BRANCH_B(IR)
 
           case 0x10 | 0x11 => /* BGE */
-            if ((N ^ V) == 0) {
-              BRANCH_F(IR)
-            }
-
+            if ((N ^ V) == 0) BRANCH_F(IR)
 
           case 0x12 | 0x13 => /* BGE */
-            if ((N ^ V) == 0)
-              BRANCH_B(IR)
-
+            if ((N ^ V) == 0) BRANCH_B(IR)
 
           case 0x14 | 0x15 => /* BLT */
-            if (N ^ V)
-              BRANCH_F(IR)
-
+            if (N ^ V) BRANCH_F(IR)
 
           case 0x16 | 0x17 => /* BLT */
             if (N ^ V) BRANCH_B(IR)
@@ -359,7 +346,7 @@ abstract class PDP11(isBanked: Boolean = false, override val machine: AbstractMa
             dst = UInt(dst + (if (C) 1 else 0) & 0xffff)
             N = GET_SIGN_W(dst)
             Z = GET_Z(dst)
-            V = (C && (if (dst == 0x8000) true else false))
+            V = C && (if (dst == 0x8000) true else false)
             C = C & Z
             if (dstreg) R(dstspec)(dst.intValue)
             else MMU.PWriteW(dst, MMU.last_pa)
@@ -450,7 +437,7 @@ abstract class PDP11(isBanked: Boolean = false, override val machine: AbstractMa
               SP((SP - 2) & 0xffff)
               MMU.reg_mods = MMU.calc_MMR1(0xf6)
               if (MMU.update_MM) MMU.MMR1(MMU.reg_mods)
-              MMU.WriteW(dst, SP.get16 | MMU.dsenable)
+              MMU.WriteW(dst, UInt(SP.get16 | MMU.dsenable))
               if ((cm == MD_KER) && (SP.get16 < (STKLIM + PDP11.STKL_Y)))
                 set_stack_trap(SP.get16)
             }
@@ -476,8 +463,7 @@ abstract class PDP11(isBanked: Boolean = false, override val machine: AbstractMa
 
           case 0x37 => /* SXT */
             if (CPUT(CPUOPT.HAS_SXS)) {
-              // TODO CHeck this
-              dst = if (N != 0) true else false
+              dst = if (N) UInt(0xffff) else UInt(0)
               Z = N
               V = false
               if (dstreg)
@@ -487,9 +473,10 @@ abstract class PDP11(isBanked: Boolean = false, override val machine: AbstractMa
             else setTRAP(PDP11.TRAP_ILL.intValue)
 
           case 0x38 => /* CSM */
-            if (CPUT(CPUOPT.HAS_CSM) && (MMU.MMR3.get16 & MMU.MMR3_CSM) && (cm != MD_KER)) {
+            if (CPUT(CPUOPT.HAS_CSM) && ((MMU.MMR3.get16 & MMU.MMR3_CSM)
+              != 0) && (cm != MD_KER)) {
               dst = if (dstreg) R(dstspec).get16 else MMU.ReadW(MMU.GeteaW(dstspec))
-              PSW = get_PSW() & ~PSW_CC /* PSW, cc = 0 */
+              PSW = get_PSW & ~PDP11.PSW_CC /* PSW, cc = 0 */
               STACKFILE(cm)(SP)
               MMU.WriteW(PSW, ((SP.get16 - 2) & 0xffff) | MMU.calc_ds(MD_SUP))
               MMU.WriteW(PC.get16, ((SP.get16 - 4) & 0xffff) | MMU.calc_ds(MD_SUP))
@@ -517,7 +504,6 @@ abstract class PDP11(isBanked: Boolean = false, override val machine: AbstractMa
             }
             else setTRAP(PDP11.TRAP_ILL.intValue)
 
-
           case 0x3b => /* WRTLCK */
             if (CPUT(CPUOPT.HAS_TSWLK) && !dstreg) {
               N = GET_SIGN_W(R(0))
@@ -526,7 +512,6 @@ abstract class PDP11(isBanked: Boolean = false, override val machine: AbstractMa
               MMU.WriteW(R(0).get16, MMU.GeteaW(dstspec))
             }
             else setTRAP(PDP11.TRAP_ILL.intValue)
-
 
           case _ =>
             setTRAP(PDP11.TRAP_ILL.intValue)
@@ -559,7 +544,6 @@ abstract class PDP11(isBanked: Boolean = false, override val machine: AbstractMa
         if (dstreg) R(dstspec)(dst.intValue)
         else MMU.WriteW(dst, ea)
 
-
       case 2 => /* CMP */
         if (CPUT(CPUOPT.IS_SDSD) && srcreg && !dstreg) {
           /* R,not R */
@@ -574,8 +558,7 @@ abstract class PDP11(isBanked: Boolean = false, override val machine: AbstractMa
         N = GET_SIGN_W(dst)
         Z = GET_Z(dst)
         V = GET_SIGN_W((src ^ src2) & (~src2 ^ dst))
-        C = (src < src2)
-
+        C = src < src2
 
       case 3 => /* BIT */
         if (CPUT(CPUOPT.IS_SDSD) && srcreg && !dstreg) {
@@ -642,7 +625,7 @@ abstract class PDP11(isBanked: Boolean = false, override val machine: AbstractMa
         N = GET_SIGN_W(dst)
         Z = GET_Z(dst)
         V = GET_SIGN_W((~src ^ src2) & (src ^ dst))
-        C = (dst < src)
+        C = dst < src
         if (dstreg) R(dstspec)(dst.intValue)
         else MMU.PWriteW(dst, MMU.last_pa)
 
@@ -665,7 +648,7 @@ abstract class PDP11(isBanked: Boolean = false, override val machine: AbstractMa
 
       case 0x7 =>
         srcspec = srcspec & 0x7
-        ((IR >> 9) & 0x7) match {
+        (IR >> 9) & 0x7 match {
           /* decode IR<11:9> */
 
           case 0 => /* MUL */
@@ -805,6 +788,7 @@ abstract class PDP11(isBanked: Boolean = false, override val machine: AbstractMa
               }
               else if (src2 == 32) {
                 /* [32] = -32 */
+                // TODO Check Logic
                 dst = -sign
                 V = false
                 C = sign
@@ -881,48 +865,38 @@ abstract class PDP11(isBanked: Boolean = false, override val machine: AbstractMa
       /* Opcode 10: branches, traps, SOPs */
 
       case 0x8 =>
-        ((IR >> 6) & 0x3f) match {
+        (IR >> 6) & 0x3f match {
           /* decode IR<11:6> */
 
           case 0x0 | 0x1 => /* BPL */
             if (N == 0) BRANCH_F(IR)
 
-
           case 0x2 | 0x3 => /* BPL */
             if (N == 0) BRANCH_B(IR)
-
 
           case 0x4 | 0x5 => /* BMI */
             if (N != 0) BRANCH_F(IR)
 
-
           case 0x6 | 0x7 => /* BMI */
             if (N != 0) BRANCH_B(IR)
-
 
           case 0x08 | 0x09 => /* BHI */
             if ((C | Z) == 0) BRANCH_F(IR)
 
-
           case 0xa | 0xb => /* BHI */
             if ((C | Z) == 0) BRANCH_B(IR)
-
 
           case 0xc | 0xd => /* BLOS */
             if (C != 0 | Z != 0) BRANCH_F(IR)
 
-
           case 0xe | 0xf => /* BLOS */
             if (C != 0 | Z != 0) BRANCH_B(IR)
-
 
           case 0x10 | 0x11 => /* BVC */
             if (V == 0) BRANCH_F(IR)
 
-
           case 0x12 | 0x13 => /* BVC */
             if (V == 0) BRANCH_B(IR)
-
 
           case 0x14 | 0x15 => /* BVS */
             if (V != 0) BRANCH_F(IR)
@@ -966,13 +940,12 @@ abstract class PDP11(isBanked: Boolean = false, override val machine: AbstractMa
             if (dstreg) R(dstspec)((R(dstspec) & 0xff00) | dst)
             else MMU.PWriteB(dst, MMU.last_pa)
 
-
           case 0x2a => /* INCB */
             dst = if (dstreg) R(dstspec).get16 else MMU.ReadMB(MMU.GeteaB(dstspec))
-            dst = (dst + 1) & 0xff
+            dst = UInt((dst + 1) & 0xff)
             N = GET_SIGN_B(dst.intValue)
             Z = GET_Z(dst)
-            V = (dst == 0x80)
+            V = dst == 0x80
             if (dstreg)
               R(dstspec)((R(dstspec) & 0xff00) | dst)
             else MMU.PWriteB(dst, MMU.last_pa)
@@ -983,7 +956,7 @@ abstract class PDP11(isBanked: Boolean = false, override val machine: AbstractMa
             dst = UInt((dst - 1) & 0xff)
             N = GET_SIGN_B(dst.intValue)
             Z = GET_Z(dst)
-            V = (dst == 0x7f)
+            V = dst == 0x7f
             if (dstreg)
               R(dstspec)((R(dstspec) & 0xff00) | dst)
             else MMU.PWriteB(dst, MMU.last_pa)
@@ -996,7 +969,7 @@ abstract class PDP11(isBanked: Boolean = false, override val machine: AbstractMa
             Z = GET_Z(dst)
             V = (dst == 0x80)
             // TODO Check logic
-            C = (Z ^ 1)
+            C = Z ^ 1
             if (dstreg) R(dstspec)((R(dstspec) & 0xff00) | dst)
             else MMU.PWriteB(dst, MMU.last_pa)
 
@@ -1007,7 +980,7 @@ abstract class PDP11(isBanked: Boolean = false, override val machine: AbstractMa
             dst = UInt((dst + C) & 0xff)
             N = GET_SIGN_B(dst.intValue)
             Z = GET_Z(dst)
-            V = (C && (if (dst == 0x80) true else false))
+            V = C && (if (dst == 0x80) true else false)
             C = C & Z
             if (dstreg) R(dstspec)((R(dstspec) & 0xff00) | dst)
             else MMU.PWriteB(dst, MMU.last_pa)
@@ -1019,14 +992,14 @@ abstract class PDP11(isBanked: Boolean = false, override val machine: AbstractMa
             dst = (dst - C) & 0xff
             N = GET_SIGN_B(dst.intValue)
             Z = GET_Z(dst)
-            V = (C && (dst == 0x7f))
-            C = (C && (dst == 0xff))
+            V = C && (dst == 0x7f)
+            C = C && (dst == 0xff)
             if (dstreg) R(dstspec)((R(dstspec) & 0xff00) | dst)
             else MMU.PWriteB(dst, MMU.last_pa)
 
 
           case 0x2f => /* TSTB */
-            dst = if (dstreg) R(dstspec) & 0xff else MMU.ReadB(MMU.GeteaB(dstspec))
+            dst = if (dstreg) UInt(R(dstspec).get16 & 0xff) else MMU.ReadB(MMU.GeteaB(dstspec))
             N = GET_SIGN_B(dst.intValue)
             Z = GET_Z(dst)
             V = false
@@ -1035,6 +1008,7 @@ abstract class PDP11(isBanked: Boolean = false, override val machine: AbstractMa
 
           case 0x30 => /* RORB */
             src = if (dstreg) R(dstspec).get16 else MMU.ReadMB(MMU.GeteaB(dstspec))
+            // TODO Check logic
             dst = ((src & 0xff) >> 1) | (C << 7)
             N = GET_SIGN_B(dst.intValue)
             Z = GET_Z(dst)
@@ -1111,7 +1085,7 @@ abstract class PDP11(isBanked: Boolean = false, override val machine: AbstractMa
               SP((SP - 2) & 0xffff)
               MMU.reg_mods = MMU.calc_MMR1(0xf6)
               if (MMU.update_MM) MMU.MMR1(MMU.reg_mods)
-              MMU.WriteW(dst, SP | MMU.dsenable)
+              MMU.WriteW(dst, UInt(SP.get16 | MMU.dsenable))
               if ((cm == MD_KER) && (SP < (STKLIM + PDP11.STKL_Y)))
                 set_stack_trap(SP.get16)
             }
@@ -1126,20 +1100,20 @@ abstract class PDP11(isBanked: Boolean = false, override val machine: AbstractMa
               SP((SP + 2) & 0xffff)
               MMU.reg_mods = 0x16
               if (MMU.update_MM)
-                MMU.MMR1 = MMU.reg_mods
+                MMU.MMR1(MMU.reg_mods)
               if (dstreg) {
                 if ((dstspec == 6) && (cm != pm))
                   STACKFILE(pm)(dst.intValue)
                 else R(dstspec)(dst.intValue)
               }
-              else MMU.WriteW(dst, (MMU.GeteaW(dstspec) & 0xffff) | MMU.calc_ds(pm))
+              else MMU.WriteW(dst, UInt((MMU.GeteaW(dstspec) & 0xffff) | MMU.calc_ds(pm)))
             }
             else setTRAP(PDP11.TRAP_ILL.intValue)
 
 
           case 0x37 => /* MFPS */
             if (CPUT(CPUOPT.HAS_MXPS)) {
-              dst = get_PSW() & 0xff
+              dst = UInt(get_PSW & 0xff)
               N = GET_SIGN_B(dst.intValue)
               Z = GET_Z(dst)
               V = false
@@ -1190,7 +1164,7 @@ abstract class PDP11(isBanked: Boolean = false, override val machine: AbstractMa
         N = GET_SIGN_B(dst.intValue)
         Z = GET_Z(dst)
         V = GET_SIGN_B((src ^ src2) & (~src2 ^ dst.intValue))
-        C = (src < src2)
+        C = src < src2
 
       case 0xb => /* BITB */
         if (CPUT(CPUOPT.IS_SDSD) && srcreg && !dstreg) {
@@ -1295,7 +1269,7 @@ abstract class PDP11(isBanked: Boolean = false, override val machine: AbstractMa
 
   @inline def CPUO(x: UInt): Boolean = (cpu_opt & x) != 0
 
-  @inline def UNIBUS: UInt = (cpu_opt & CPUOPT.BUS_U)
+  @inline def UNIBUS: UInt = cpu_opt & CPUOPT.BUS_U
 
   /*
   Traps and interrupts.  Variable trap_req bit-encodes all possible
@@ -1509,6 +1483,75 @@ abstract class PDP11(isBanked: Boolean = false, override val machine: AbstractMa
   }
 
   @inline def setCPUERR(name: UInt): Unit = CPUERR = CPUERR | name
+
+  /* Assemble PSW from pieces */
+
+  def get_PSW: Int = {
+    (cm << PDP11.PSW_V_CM) | (pm << PDP11.PSW_V_PM) |
+      (rs << PDP11.PSW_V_RS) | (fpd << PDP11.PSW_V_FPD) |
+      (ipl << PDP11.PSW_V_IPL) | (tbit << PDP11.PSW_V_TBIT) |
+      (if (N) 1 else 0 << PDP11.PSW_V_N) | (if (Z) 1 else 0 << PDP11.PSW_V_Z) |
+      (if (V) 1 else 0 << PDP11.PSW_V_V) | (if (C) 1 else 0 << PDP11.PSW_V_C)
+  }
+
+  /* Explicit PSW write - T-bit may be protected */
+
+  def PSW_wr(data: Int, pa: Int, access: Int): Unit = {
+
+    if (access == MMU.WRITEC) {
+      /* console access? */
+      PSW = data & cpu_tab[cpu_model].psw;
+      return
+    }
+    var curr = get_PSW
+    /* get current */
+    var oldrs = rs /* save reg set */
+    STACKFILE(cm)(SP.get16) /* save curr SP */
+    if (access == MMU.WRITEB) data = (pa & 1) ?
+      (curr & 0xff) | (data << 8): (curr & ~
+    0xff
+    ) | data
+    if (!CPUT(CPUOPT.HAS_EXPT)) /* expl T writes? */
+      data = (data & ~PDP11.PSW_TBIT) | (curr & PDP11.PSW_TBIT); /* no, use old T */
+    put_PSW(data, false) /* call calc_is,ds */
+    if (rs != oldrs) {
+      /* switch reg set */
+      for (i <- 0 to 6) {
+        REGFILE(i)(oldrs)(R(i).get16)
+        R(i)(REGFILE(i)(rs).get16)
+      }
+    }
+    // TODO Check if we're changing what SP points to or the value
+    SP = STACKFILE(cm) /* switch SP */
+    MMU.isenable = MMU.calc_is(cm)
+    MMU.dsenable = MMU.calc_ds(cm)
+  }
+
+  /* Store pieces of new PSW - implements RTI/RTT protection */
+  val CPU_PSW_MASK: Int
+
+  def put_PSW(val1: Int, prot: Boolean): Unit = {
+    val val2 = val1 & CPU_PSW_MASK /* mask off invalid bits */
+    if (prot) {
+      /* protected? */
+      cm = cm | ((val2 >> PDP11.PSW_V_CM) & 0x3) /* or to cm,pm,rs */
+      pm = pm | ((val2 >> PDP11.PSW_V_PM) & 0x3) /* can't change ipl */
+      rs = rs | ((val2 >> PDP11.PSW_V_RS) & 0x1)
+    }
+    else {
+      cm = (val2 >> PDP11.PSW_V_CM) & 0x3 /* write cm,pm,rs,ipl */
+      pm = (val2 >> PDP11.PSW_V_PM) & 0x3
+      rs = (val2 >> PDP11.PSW_V_RS) & 0x1
+      ipl = (val2 >> PDP11.PSW_V_IPL) & 0x7
+    }
+    fpd = (val2 >> PDP11.PSW_V_FPD) & 0x1 /* always writeable */
+    tbit = (val2 >> PDP11.PSW_V_TBIT) & 0x1
+    N = CHECK_C((val2 >> PDP11.PSW_V_N) & 0x1)
+    Z = CHECK_C((val2 >> PDP11.PSW_V_Z) & 0x1)
+    V = CHECK_C((val2 >> PDP11.PSW_V_V) & 0x1)
+    C = CHECK_C((val2 >> PDP11.PSW_V_C) & 0x1)
+
+  }
 }
 
 object PDP11 {
