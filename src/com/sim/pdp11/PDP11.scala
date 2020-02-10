@@ -50,7 +50,6 @@ abstract class PDP11(isBanked: Boolean = false, override val machine: AbstractMa
 
   override def runcpu(singleStep: Boolean): Unit = {
 
-
     var IR = UInt(0)
     var srcspec: Int = 0
     var srcreg = true
@@ -752,7 +751,7 @@ abstract class PDP11(isBanked: Boolean = false, override val machine: AbstractMa
               else {
                 /* [33,63] = -31,-1 */
                 // TODO Check logic
-                dst = (src >> (64 - src2)) | (-sign << (src2 - 32))
+                dst = UInt((src >> (64 - src2)) | (-sign << (src2 - 32)))
                 V = false
                 C = CHECK_C((src >> (63 - src2)) & 1)
               }
@@ -796,8 +795,7 @@ abstract class PDP11(isBanked: Boolean = false, override val machine: AbstractMa
               }
               else {
                 /* [33,63] = -31,-1 */
-                // TODO Check Logic
-                dst = (src >> (64 - src2)) | (-sign << (src2 - 32))
+                dst = UInt((src >> (64 - src2)) | (-sign << (src2 - 32)))
                 V = false
                 C = if (((src >> (63 - src2)) & 1) != 0) true else false
               }
@@ -1313,12 +1311,13 @@ abstract class PDP11(isBanked: Boolean = false, override val machine: AbstractMa
   /* Register change tracking actually goes into variable reg_mods; from there
      it is copied into MMR1 if that register is not currently locked.  */
 
+  @inline
   def CHECK_C(c: Int): Boolean = {
     if (c != 0) true else false
   }
 
   def GET_SIGN_W(v: UInt): Int = {
-    ((v >> 15) & 1)
+    (v >> 15) & 1
   }
 
   def GET_SIGN_W(v: Int): Int = GET_SIGN_W(UInt(v.toShort))
@@ -1330,10 +1329,12 @@ abstract class PDP11(isBanked: Boolean = false, override val machine: AbstractMa
   def GET_SIGN_B(v: Int): Int = GET_SIGN_B(UByte(v.toByte))
 
 
+  @inline
   def GET_Z(v: Int): Boolean = {
     v == 0
   }
 
+  @inline
   def GET_Z(v: UInt): Boolean = GET_Z(v.intValue)
 
   def JMP_PC(x: Register16): Unit = {
@@ -1897,7 +1898,7 @@ abstract class PDP11(isBanked: Boolean = false, override val machine: AbstractMa
     Z = false
   }
     dst.sign = dst.sign & ~unsignedtab(type0) & (if(!(Z & !V)) 1 else 0)
-    N = CHECK_C(dst.sign & (if(!Z == true) 1 else 0 )      )                              /* N = sign, if ~zero */
+    N = CHECK_C(dst.sign & (if(!Z) 1 else 0 )      )                              /* N = sign, if ~zero */
 
     if ((flag & PACKED) != 0) {                                    /* packed? */
       val end = lnt / 2                                      /* end of string */
@@ -2029,13 +2030,12 @@ abstract class PDP11(isBanked: Boolean = false, override val machine: AbstractMa
 
   def LntDstr (dsrc:DSTR, nz: Int) : Int =
   {
-    var i:Int = 0
-    if (nz == 0) return 0;
+    if (nz == 0) return 0
     for (i <- 7 to 0 by -1) {
     if (((dsrc.val0(nz - 1) >> (i * 4)) & 0xF)!= 0)
       return ((nz - 1) * 8) + i
-  }
-    ((nz - 1) * 8) + i
+    }
+    (nz - 1) * 8
   }
 
   /* Create table of multiples
@@ -2051,7 +2051,7 @@ abstract class PDP11(isBanked: Boolean = false, override val machine: AbstractMa
   {
     mtable(1) = dsrc
     for (i <- 2 until 10)
-    AddDstr (mtable(1), mtable(i-1), mtable(i), 0);
+    AddDstr (mtable(1), mtable(i-1), mtable(i), 0)
   }
 
   /* Word shift right
@@ -2209,7 +2209,6 @@ abstract class PDP11(isBanked: Boolean = false, override val machine: AbstractMa
   }
 
   /* Test for CIS mid-instruction interrupt */
-
   def cis_int_test (cycles:Int, oldpc:Int):Boolean =
   {
     var cycles2 = cycles
@@ -2237,21 +2236,21 @@ abstract class PDP11(isBanked: Boolean = false, override val machine: AbstractMa
 object PDP11 {
   /* Architectural constants */
 
-  val STKL_R = UInt(0xe0)
+  val STKL_R: UInt = UInt(0xe0)
   /* stack limit */
-  val STKL_Y = UInt(0x100)
-  val VASIZE = UInt(0x10000) // 2**16
+  val STKL_Y: UInt = UInt(0x100)
+  val VASIZE: UInt = UInt(0x10000) // 2**16
   val VAMASK: Int = VASIZE - 1 // 2**16 - 1
-  val MEMSIZE64K = UInt(0x10000) //  2**16
-  val UNIMEMSIZE = UInt(0x40000) // 2**18
+  val MEMSIZE64K: UInt = UInt(0x10000) //  2**16
+  val UNIMEMSIZE: UInt = UInt(0x40000) // 2**18
   val UNIMASK: Int = UNIMEMSIZE - 1 // 2**18 - 1
-  val IOPAGEBASE = UInt(0x3fe000) // 2**22 - 2**13
-  val IOPAGESIZE = UInt(0x2000) // 2**13
+  val IOPAGEBASE: UInt = UInt(0x3fe000) // 2**22 - 2**13
+  val IOPAGESIZE: UInt = UInt(0x2000) // 2**13
   val IOPAGEMASK: Int = IOPAGESIZE - 1 // 2**13 - 1
-  val MAXMEMSIZE = UInt(0x400000) // 2**22
+  val MAXMEMSIZE: UInt = UInt(0x400000) // 2**22
   val PAMASK: Int = MAXMEMSIZE - 1 // 2**22 - 1
-  val DMASK = UInt(0xffff)
-  val BMASK = UInt(0xff)
+  val DMASK: UInt = UInt(0xffff)
+  val BMASK: UInt = UInt(0xff)
 
   /* PSW */
 
@@ -2284,24 +2283,24 @@ object PDP11 {
   val BIT_CM: Int = 2 ^ 14 // Current access mode, 2 bits
 
   /* Trap data structures */
-  val VEC_RED = UInt(0x4)
+  val VEC_RED: UInt = UInt(0x4)
   /* trap vectors */
-  val VEC_ODD = UInt(0x4)
-  val VEC_MME = UInt(0xa8)
-  val VEC_NXM = UInt(0x4)
-  val VEC_PAR = UInt(0x4c)
-  val VEC_PRV = UInt(0x4)
-  val VEC_ILL = UInt(0x8)
-  val VEC_BPT = UInt(0xc)
-  val VEC_IOT = UInt(0x10)
-  val VEC_EMT = UInt(0x18)
-  val VEC_TRAP = UInt(0x1c)
-  val VEC_TRC = UInt(0xc)
-  val VEC_YEL = UInt(0x4)
-  val VEC_PWRFL = UInt(0x14)
-  val VEC_FPE = UInt(0xa4)
+  val VEC_ODD: UInt = UInt(0x4)
+  val VEC_MME: UInt = UInt(0xa8)
+  val VEC_NXM: UInt = UInt(0x4)
+  val VEC_PAR: UInt = UInt(0x4c)
+  val VEC_PRV: UInt = UInt(0x4)
+  val VEC_ILL: UInt = UInt(0x8)
+  val VEC_BPT: UInt = UInt(0xc)
+  val VEC_IOT: UInt = UInt(0x10)
+  val VEC_EMT: UInt = UInt(0x18)
+  val VEC_TRAP: UInt = UInt(0x1c)
+  val VEC_TRC: UInt = UInt(0xc)
+  val VEC_YEL: UInt = UInt(0x4)
+  val VEC_PWRFL: UInt = UInt(0x14)
+  val VEC_FPE: UInt = UInt(0xa4)
 
-  val trap_vec = Array(/* trap req to vector */
+  val trap_vec: Array[UInt] = Array(/* trap req to vector */
     VEC_RED, VEC_ODD, VEC_MME, VEC_NXM,
     VEC_PAR, VEC_PRV, VEC_ILL, VEC_BPT,
     VEC_IOT, VEC_EMT, VEC_TRAP, VEC_TRC,
@@ -2350,7 +2349,7 @@ object PDP11 {
   val ABRT_BKPT: UInt = UInt(1) << ABRT_V_BKPT
 
 
-  val trap_clear = Array(/* trap clears */
+  val trap_clear: Array[UInt] = Array(/* trap clears */
     TRAP_RED + TRAP_PAR + TRAP_YEL + TRAP_TRC + TRAP_ODD + TRAP_NXM,
     TRAP_ODD + TRAP_PAR + TRAP_YEL + TRAP_TRC,
     TRAP_MME + TRAP_PAR + TRAP_YEL + TRAP_TRC,
@@ -2363,13 +2362,13 @@ object PDP11 {
   )
   /* CPUERR */
 
-  val CPUE_RED = UInt(0x4) // red stack
-  val CPUE_YEL = UInt(0x8) // yellow stack
-  val CPUE_TMO = UInt(0x10) // IO page nxm
-  val CPUE_NXM = UInt(0x20) // memory nxm
-  val CPUE_ODD = UInt(0x40) // odd address
-  val CPUE_HALT = UInt(0x80) // HALT not kernel
-  val CPUE_IMP = UInt(0xfc) // implemented bits
+  val CPUE_RED: UInt = UInt(0x4) // red stack
+  val CPUE_YEL: UInt = UInt(0x8) // yellow stack
+  val CPUE_TMO: UInt = UInt(0x10) // IO page nxm
+  val CPUE_NXM: UInt = UInt(0x20) // memory nxm
+  val CPUE_ODD: UInt = UInt(0x40) // odd address
+  val CPUE_HALT: UInt = UInt(0x80) // HALT not kernel
+  val CPUE_IMP: UInt = UInt(0xfc) // implemented bits
 
   /* Unibus I/O page layout - see pdp11_io_lib.c for address layout details
     Massbus devices (RP, TU) do not appear in the Unibus IO page */
