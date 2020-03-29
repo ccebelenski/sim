@@ -6,11 +6,14 @@
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
-        <module name="sim" />
+        <module name="term" />
+        <module name="simcomp" />
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel>
       <module name="sim" target="11" />
+      <module name="simcomp" target="11" />
+      <module name="term" target="11" />
     </bytecodeTargetLevel>
   </component>
 </project>

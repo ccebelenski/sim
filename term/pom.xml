@@ -2,75 +2,27 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <groupId>sim</groupId>
-    <artifactId>sim1</artifactId>
+    <artifactId>term</artifactId>
     <version>1.0-SNAPSHOT</version>
     <inceptionYear>2018</inceptionYear>
-    <packaging>pom</packaging>
-    <properties>
+    <packaging>jar</packaging>
+
+    <parent>
+        <artifactId>sim1</artifactId>
+        <groupId>sim</groupId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
+    <!--properties>
         <scala.version>2.13.1</scala.version>
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <java.version>11</java.version>
         <start-class>sim.App</start-class>
-    </properties>
-
-    <modules>
-        <module>simcomp</module>
-        <module>term</module>
-    </modules>
-    <dependencies>
-        <dependency>
-            <groupId>org.scala-lang</groupId>
-            <artifactId>scala-library</artifactId>
-            <version>${scala.version}</version>
-        </dependency>
-        <!-- https://mvnrepository.com/artifact/org.beryx/text-io -->
-        <dependency>
-            <groupId>org.beryx</groupId>
-            <artifactId>text-io</artifactId>
-            <version>3.3.0</version>
-        </dependency>
-        <!-- https://mvnrepository.com/artifact/org.beryx/text-io-web -->
-        <dependency>
-            <groupId>org.beryx</groupId>
-            <artifactId>text-io-web</artifactId>
-            <version>3.3.0</version>
-        </dependency>
-        <!-- https://mvnrepository.com/artifact/junit/junit -->
-        <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <version>4.12</version>
-            <scope>test</scope>
-        </dependency>
-        <!-- https://mvnrepository.com/artifact/org.slf4j/slf4j-log4j12 -->
-        <!--dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-log4j12</artifactId>
-            <version>1.7.26</version>
-        </dependency-->
-        <!-- https://mvnrepository.com/artifact/org.slf4j/slf4j-api -->
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
-            <version>1.7.26</version>
-        </dependency>
-        <!-- https://mvnrepository.com/artifact/org.slf4j/slf4j-jdk14 -->
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-jdk14</artifactId>
-            <version>1.7.26</version>
-        </dependency>
-        <dependency>
-            <groupId>com.typesafe.akka</groupId>
-            <artifactId>akka-actor_2.13</artifactId>
-            <version>2.6.4</version>
-        </dependency>
-
-    </dependencies>
+    </properties-->
     <build>
-        <sourceDirectory>../src</sourceDirectory>
+
+        <sourceDirectory>src</sourceDirectory>
         <testSourceDirectory>test</testSourceDirectory>
         <plugins>
             <plugin>
@@ -129,4 +81,5 @@
             </plugin>
         </plugins>
     </build>
+
 </project>
