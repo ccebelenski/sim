@@ -3,9 +3,11 @@ package com.sim.term
 import java.awt.event.{ActionEvent, AdjustmentEvent, KeyEvent, KeyListener}
 import java.awt._
 
+import akka.actor.{ActorRef, ActorSystem, Props}
+import com.sim.term.actors.TerminalSender
 import javax.swing._
 
-class Term(val model: AbstractTerminalModel) extends JComponent {
+class Term(val model: AbstractTerminalModel, val actor:ActorRef) extends JComponent {
 
   init()
 
@@ -61,7 +63,7 @@ class Term(val model: AbstractTerminalModel) extends JComponent {
 
     setDoubleBuffered(true)
 
-    addKeyListener(new AnsiCharacterListener(model))
+    addKeyListener(new CharacterListener(model, actor))
     setFocusTraversalKeysEnabled(false)
     setFocusable(true)
     requestFocusInWindow()
@@ -123,7 +125,11 @@ object Term {
   def main(args: Array[String]): Unit = {
     val frame = new JFrame()
     frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE)
-    val t = new Term(new VT100TerminalModel(80, 24))
+
+    val system = ActorSystem("TerminalSystem")
+    val terminalSender: ActorRef = system.actorOf(Props[TerminalSender], name = "terminalactor")
+
+    val t = new Term(new VT100TerminalModel(80, 24), terminalSender)
     frame.add(t)
     frame.pack()
     frame.setVisible(true)
