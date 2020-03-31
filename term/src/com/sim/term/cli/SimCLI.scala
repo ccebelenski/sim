@@ -1,16 +1,9 @@
 package com.sim.term.cli
 
-import java.util.concurrent.TimeUnit
-
 import akka.actor.{ActorSystem, Props}
 import com.sim.term.{Term, VT100TerminalModel}
 import javax.swing.{JFrame, WindowConstants}
 
-import scala.concurrent.{Await, Future}
-import scala.concurrent.duration.Duration
-import akka.pattern.ask
-import akka.util.Timeout
-import scala.concurrent.duration._
 import scala.language.postfixOps
 
 
@@ -33,16 +26,20 @@ class SimCLI {
   // Set a prompt
   def setPrompt(prompt: String): Unit = {
     this.prompt = Some(prompt)
+    CLIMonitor.promptLength = prompt.length
+
   }
 
   // Get a command line string
   def getline: String = {
 
+    CLIMonitor.acceptInput = true
     t.print(prompt.getOrElse(""))
-    val future :Future[String] = ask(actor,JunkObject)(Timeout(1,TimeUnit.MINUTES)).mapTo[String]
-    val cmdLine = Await.result(future, 1 minute)
 
-    cmdLine
+    CLIMonitor.waitForLine()
+    CLIMonitor.acceptInput = false
+
+    CLIMonitor.cmdLine
   }
 }
 
@@ -57,5 +54,31 @@ object SimCLI {
     x.setPrompt("> ")
     System.out.println("\n\n\nResult>" + x.getline)
 
+  }
+}
+
+private class CLIMonitor
+
+object CLIMonitor {
+  @volatile
+  var cmdLine: String = _
+
+  @volatile
+  var acceptInput: Boolean = true
+
+  var promptLength : Int = 0
+
+  private val monitor: CLIMonitor = new CLIMonitor()
+
+  def waitForLine(): Unit = {
+    monitor.synchronized {
+      monitor.wait()
+    }
+  }
+
+  def doNotify(): Unit = {
+    monitor.synchronized {
+      monitor.notify()
+    }
   }
 }

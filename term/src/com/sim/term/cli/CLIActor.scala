@@ -4,8 +4,6 @@ import java.awt.event.KeyEvent
 
 import akka.actor.Actor
 
-case object JunkObject
-
 class CLIActor  extends Actor {
 
   private val CSICHAR = 0x7f
@@ -13,10 +11,31 @@ class CLIActor  extends Actor {
   override def receive: Receive = {
     case keyEvent:KeyEvent =>
       if(keyEvent.isActionKey) {
+        processActionKey(keyEvent)
         System.out.println(KeyEvent.getKeyText(keyEvent.getExtendedKeyCode))
       } else {
-        System.out.print(keyEvent.getKeyChar)
+        processCharacterKey(keyEvent)
       }
-      sender ! JunkObject
+
+  }
+
+  private def processActionKey(keyEvent:KeyEvent):Unit = {
+    if(!CLIMonitor.acceptInput) return // not accepting characters
+  }
+
+  private def processCharacterKey(keyEvent:KeyEvent): Unit = {
+    if(!CLIMonitor.acceptInput) return // not accepting characters
+    keyEvent.getKeyChar match {
+      case '\n' => // Return key
+
+        System.out.println("RET")
+        CLIMonitor.cmdLine = "Test"
+        CLIMonitor.doNotify()
+
+      case x:Char => // Other key
+        System.out.print(x)
+    }
+
+
   }
 }
