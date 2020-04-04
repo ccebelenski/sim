@@ -36,8 +36,12 @@ class AnsiControlSequenceParser(val listener: AnsiControlSequenceListener) {
         character = reader.read
         character != -1
       }) {
-        if ((character >= 'a' && character <= 'z') || (character >= 'A' && character <= 'Z')) {
-          val array = parameters.toString.split(";")
+        if ((character >= 'a'.toInt && character <= 'z'.toInt) || (character >= 'A'.toInt && character <= 'Z'.toInt)) {
+          val array = {
+            val t = parameters.toString.split(';')
+            if(t.length == 1 && t.head == "") Array.empty[String] else t
+          }
+
           val seq = new AnsiControlSequence(character.toChar, array.toList)
           listener.parsedControlSequence(seq)
           finishedSequence = true

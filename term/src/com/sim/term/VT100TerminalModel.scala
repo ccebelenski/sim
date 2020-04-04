@@ -269,12 +269,12 @@ class VT100TerminalModel(val columns: Int = VT100TerminalModel.DEFAULT_COLUMNS,
 
         case 'K' =>
           n = 0
-          if (parameters.length == 1) n = parameters.head.toInt
-          if (n == 0) for (row <- cursorRow until rows) {
-            cells(row)(cursorColumn) = null
+          if (parameters.length == 1) n = Integer.parseInt(parameters.head)
+          if (n == 0) for (c <- cursorColumn until columns) {
+            cells(cursorRow)(c) = null
           }
-          else if (n == 1) for (row <- cursorRow to 0 by -1) {
-            cells(row)(cursorColumn) = null
+          else if (n == 1) for (c <- cursorColumn to 0 by -1) {
+            cells(cursorRow)(c) = null
           }
           else if (n == 2) for (column <- 0 until columns) {
             cells(cursorRow)(column) = null
