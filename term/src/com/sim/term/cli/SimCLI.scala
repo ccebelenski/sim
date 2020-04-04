@@ -9,18 +9,13 @@ import scala.language.postfixOps
 
 class SimCLI {
 
-  private val system = ActorSystem("CLI")
-  private val actor = system.actorOf(Props[CLIActor], name = "CLIActor")
-
   private val frame = new JFrame()
   frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE)
-  private val t = new Term(new VT100TerminalModel(80, 24), actor)
+  private val t = new Term(new VT100TerminalModel(80, 24))
   frame.add(t)
   frame.pack()
   frame.setVisible(true)
 
-  // Buffer to store the cmd line
-  private val buffer: StringBuilder = new StringBuilder
   private var prompt: Option[String] = None
 
   // Set a prompt
@@ -32,13 +27,8 @@ class SimCLI {
 
   // Get a command line string
   def getline: String = {
-
-    CLIMonitor.acceptInput = true
     t.print(prompt.getOrElse(""))
-
     CLIMonitor.waitForLine()
-    CLIMonitor.acceptInput = false
-
     CLIMonitor.cmdLine
   }
 }
@@ -52,7 +42,9 @@ object SimCLI {
 
     val x = new SimCLI
     x.setPrompt("> ")
-    System.out.println("\n\n\nResult>" + x.getline)
+    val result = x.getline
+    System.out.println(s"\nResult> ${result}")
+    System.out.println(s"Length: ${result.length}")
 
   }
 }
@@ -64,7 +56,7 @@ object CLIMonitor {
   var cmdLine: String = _
 
   @volatile
-  var acceptInput: Boolean = true
+  var acceptInput: Boolean = false
 
   var promptLength : Int = 0
 
@@ -72,7 +64,9 @@ object CLIMonitor {
 
   def waitForLine(): Unit = {
     monitor.synchronized {
+      acceptInput = true
       monitor.wait()
+      acceptInput = false
     }
   }
 
