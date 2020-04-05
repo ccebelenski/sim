@@ -1,6 +1,6 @@
 package sim.EventTests
 
-import com.sim._
+import sim._
 import org.junit.Test
 import org.junit.Assert._
 import sim.{TestDevice, TestMachine, TestUnit}

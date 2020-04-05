@@ -5,10 +5,9 @@ import java.util.ServiceLoader
 import sim.cpu.BasicCPU
 import sim.device.{BasicDevice, BasicUnit, PortMappedDevice}
 import sim.unsigned.UInt
-import sim.{EventQueue, Named, SimTimer, SimTimerUnit, Utils}
+import sim._
 
 import scala.jdk.CollectionConverters._
-//import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 

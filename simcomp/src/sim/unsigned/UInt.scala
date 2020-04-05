@@ -60,7 +60,6 @@ object UInt {
       case 0xf => fifteen
       case 0x10 => sixteen
       case 0xff => ff
-      case 0xff => ffff
       case 0x7f => sevf
       case _ => new UInt(x)
     }

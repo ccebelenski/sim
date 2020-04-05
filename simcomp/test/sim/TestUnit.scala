@@ -1,5 +1,7 @@
 package sim
 
+import sim.device._
+
 class TestUnit(device:BasicDevice) extends BasicUnit(device: BasicDevice){
 
   override def cancel(): Unit = ???

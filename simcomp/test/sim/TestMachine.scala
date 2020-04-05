@@ -1,6 +1,7 @@
 package sim
 
 import sim.cpu.BasicCPU
+import sim.machine.AbstractMachine
 
 class TestMachine extends AbstractMachine {
   override def init(): Unit = {

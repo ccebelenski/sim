@@ -1,6 +1,6 @@
 package sim.timer
 
-import com.sim.SimTimer
+import sim.SimTimer
 import org.junit.Test
 
 class TimerTests {

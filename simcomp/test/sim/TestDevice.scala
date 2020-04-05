@@ -1,5 +1,9 @@
 package sim
 
+import sim.device.BasicDevice
+import sim.machine.AbstractMachine
+import sim.unsigned.UInt
+
 class TestDevice(machine:AbstractMachine) extends BasicDevice(machine:AbstractMachine) {
 
   override val description: String = "Test Device"

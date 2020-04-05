@@ -1,10 +1,10 @@
 package sim.cpu
 
-import com.sim.Utils
-import com.sim.s100.{S100FD400Device, S100Machine}
-import com.sim.unsigned.{UByte, UInt}
-import org.junit.{Before, BeforeClass, Test}
 import org.junit.Assert.{assertFalse, assertTrue, _}
+import org.junit.{Before, Test}
+import sim.Utils
+import sim.s100.{S100FD400Device, S100Machine}
+import sim.unsigned.{UByte, UInt}
 
 class Z80Tests {
 
