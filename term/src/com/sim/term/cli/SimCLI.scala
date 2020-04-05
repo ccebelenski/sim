@@ -31,6 +31,8 @@ class SimCLI {
     CLIMonitor.waitForLine()
     CLIMonitor.cmdLine
   }
+
+  def getTerm: Term = t
 }
 
 
@@ -40,12 +42,15 @@ object SimCLI {
   // Main method for testing
   def main(args: Array[String]): Unit = {
 
+    var result:String = null
     val x = new SimCLI
-    x.setPrompt("> ")
-    val result = x.getline
-    System.out.println(s"\nResult> ${result}")
-    System.out.println(s"Length: ${result.length}")
-
+    System.out.println("Enter 'exit' to terminate.")
+    x.setPrompt("sim> ")
+    while(result != "exit") {
+      result = x.getline
+      System.out.println(s"\nResult> ${result}")
+      System.out.println(s"Length: ${result.length}")
+    }
   }
 }
 
