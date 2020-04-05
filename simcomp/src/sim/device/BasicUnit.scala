@@ -28,10 +28,10 @@ abstract class BasicUnit(val device: BasicDevice) extends Ordered[BasicUnit] wit
 
   def showCommand(sb:StringBuilder): Unit = {
 
-    sb.append(s"$dn  Unit $getName Active: $active\n")
+    sb.append(s"$dn  Unit $getName Active: $active\n\r")
 
 
-    sb.append(s"${dn}Unit options:\n")
+    sb.append(s"${dn}Unit options:\n\r")
     unitOptions.foreach{uo => {
       uo.showOption(sb)
     }}

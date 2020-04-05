@@ -1,16 +1,22 @@
 package sim
 
+import com.sim.term.Term
 import org.beryx.textio.{TextIoFactory, TextTerminal}
 
 import scala.collection.mutable
+import com.sim.term.cli.SimCLI
 
 class Console {
 
-  val textIO = TextIoFactory.getTextIO
+  //val textIO = TextIoFactory.getTextIO
 
   def initUI(): Unit = {
 
-    Console.textTerminal = textIO.getTextTerminal
+    //Console.textTerminal = textIO.getTextTerminal
+    Console.cli = new SimCLI
+    Console.cli.setPrompt("SIM>")
+    Console.term = Console.cli.getTerm
+
 
     // Add the "top level" simulator commands - VERSION, HELP, LOAD, EXIT, SHOW, SET, ATTACH, DETACH, etc.
     val version:Command = new VersionCommand
@@ -70,8 +76,8 @@ class Console {
   }
 
   private def readCommand(): String = {
-    val input = textIO.newStringInputReader().withMinLength(0).read("Sim> ")
-    input
+Console.cli.getline
+
   }
 
   def commandLoop() : Unit = {
@@ -99,8 +105,14 @@ class Console {
 }
 
 object Console {
+
+  var cli:SimCLI = _
+  var term:Term = _
+
+
+
   //var term: JTerminal = _
-  var textTerminal : TextTerminal[_] = _
+  //var textTerminal : TextTerminal[_] = _
 
   val commandTree : mutable.HashMap[String, Command] = new mutable.HashMap[String,Command]()
 

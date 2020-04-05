@@ -61,12 +61,14 @@ object Utils {
 
 
   def outln(msg:String) : Unit = {
-    if(sim.Console.textTerminal != null) sim.Console.textTerminal.println(msg)
-    else System.out.println(msg)
+    Console.term.println(msg)
+//    if(sim.Console.textTerminal != null) sim.Console.textTerminal.println(msg)
+//    else System.out.println(msg)
   }
   def out(msg:String): Unit = {
-    if(sim.Console.textTerminal != null) sim.Console.textTerminal.print(msg)
-    else System.out.print(msg)
+    Console.term.print(msg)
+//    if(sim.Console.textTerminal != null) sim.Console.textTerminal.print(msg)
+//    else System.out.print(msg)
   }
 
   def formatBytes(bytes:Long, si:Boolean) : String = {

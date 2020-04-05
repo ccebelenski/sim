@@ -12,7 +12,7 @@ object VT100TerminalModel {
   /**
     * The default number of rows.
     */
-  private val DEFAULT_ROWS = 25
+  private val DEFAULT_ROWS = 50
 
   /**
     * The tab width in characters.
@@ -360,22 +360,25 @@ class VT100TerminalModel(val columns: Int = VT100TerminalModel.DEFAULT_COLUMNS,
             cursorColumn = 0
             cursorRow += 1
           }
-          if (cursorRow >= bufferSize) {
+          while (cursorRow >= bufferSize -1) {
+            //System.out.print(s"SCROLL:$cursorRow")
             for (i <- 1 until bufferSize) {
               System.arraycopy(cells(i), 0, cells(i - 1), 0, columns)
             }
             for (i <- 0 until columns) {
               cells(bufferSize - 1)(i) = null
             }
-            cursorRow -= 1
+            cursorRow = cursorRow -  1
+            //System.out.println(s":$cursorRow")
           }
+          //System.out.println(s"OUTPUT:$cursorRow")
           val back = if (backgroundBold) SGRColor.COLOR_BRIGHT(backgroundColor)
           else SGRColor.COLOR_NORMAL(backgroundColor)
           val fore = if (foregroundBold) SGRColor.COLOR_BRIGHT(foregroundColor)
           else SGRColor.COLOR_NORMAL(foregroundColor)
           if(ch != '\n') cells(cursorRow)({
             cursorColumn += 1
-            cursorColumn - 1
+            cursorColumn -1
           }) = TerminalCell(ch, back, fore)
         }
       }

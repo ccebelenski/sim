@@ -44,7 +44,7 @@ trait SupportsOptions {
           // Found a valid matching option - now try and set it
           val result = o.setFromString(optionValue, sb)
           if (result) {
-            sb.append(s"SIM: ${o.optionName} set: $optionValue\n")
+            sb.append(s"SIM: ${o.optionName} set: $optionValue\n\r")
             optionsChanged = true
           }
 
@@ -53,7 +53,7 @@ trait SupportsOptions {
       optionsChanged
     } catch {
       case t: Throwable =>
-        sb.append(s"SIM: Option $optionName was not specified correctly and is ignored.\n")
+        sb.append(s"SIM: Option $optionName was not specified correctly and is ignored.\n\r")
         optionsChanged
     }
   }

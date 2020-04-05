@@ -10,7 +10,6 @@ class MemoryAddressSpace(lowAddress: UInt, highAddress: UInt) extends AddressSpa
   override val isReadOnly: Boolean = false
 
   private val M: Array[UByte] = new Array[UByte]((highAddress - lowAddress + 1))
-  private val tt = Console.textTerminal
 
   for(x <- 0 to (highAddress - lowAddress).toInt) M(x) = UByte(0)
 

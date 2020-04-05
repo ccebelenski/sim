@@ -23,7 +23,7 @@ abstract class BasicDevice(val machine:AbstractMachine) extends Named with Suppo
   override def getName: String = super.getName.toUpperCase + deviceIdentifier
 
   def init() : Unit
-  def createUnitOptions: Unit
+  def createUnitOptions(): Unit
 
   def addUnit(unit:BasicUnit) : Unit = synchronized {
     if(unit.device != this) throw new Exception("System check: Unit misconfiguration. Unit does not belong to device.")
@@ -84,20 +84,20 @@ abstract class BasicDevice(val machine:AbstractMachine) extends Named with Suppo
 
   def showCommand(sb:StringBuilder): Unit = {
     val dn = s"$getName: "
-    sb.append(s"$dn$description\n")
-    sb.append(s"${dn}Enabled: $isEnabled Units:${units.length}\n")
+    sb.append(s"$dn$description\n\r")
+    sb.append(s"${dn}Enabled: $isEnabled Units:${units.length}\n\r")
 //    sb.append(s"${dn}aWidth: ${awidth.toHexString}\n")
 
     // Output default options
-    sb.append(s"${dn}Default options:\n")
+    sb.append(s"${dn}Default options:\n\r")
     unitOptions.foreach{uo => {
       uo.showOption(sb)
     }}
 
-    sb.append(s"\n${dn}Units:\n")
-    if(units.isEmpty) sb.append("\tNo Units.\n")
+    sb.append(s"\n\r${dn}Units:\n\r")
+    if(units.isEmpty) sb.append("\tNo Units.\n\r")
     units.foreach(u => {
-      sb.append(s"  Unit: ${u.getName}\tenabled: ${u.isEnabled}\n")
+      sb.append(s"  Unit: ${u.getName}\tenabled: ${u.isEnabled}\n\r")
     })
 
   }

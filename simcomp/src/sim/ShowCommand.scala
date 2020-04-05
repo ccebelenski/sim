@@ -24,7 +24,7 @@ class ShowCommand extends Command {
 
   override def process(tokenArray: Array[String]): Boolean = {
     if (tokenArray.length == 0) {
-      sim.Console.textTerminal.println(argsErrorMsg)
+      Utils.outln(argsErrorMsg)
     } else {
       processSubCommand(tokenArray)
     }
@@ -164,17 +164,17 @@ class ShowJVMCommand extends Command {
     val jvmVendor = ManagementFactory.getRuntimeMXBean.getVmVendor
     val jvmName = ManagementFactory.getRuntimeMXBean.getVmName
 
-    sb.append(s"$jvmName $jvmVersion ($jvmVendor)\n")
-    sb.append(s"Up: ${Instant.ofEpochMilli(jvmStartTime).toString} - running for ${new SimpleDateFormat("mm:ss:SSS").format(new Date(jvmUpTime))}\n")
-    sb.append(s"\nMemory stats:\n\tTotal:\t${Utils.formatBytes(totalMemory,false)}\n\tFree:\t${Utils.formatBytes(freeMemory,false)}\n\tMax:\t${Utils.formatBytes(maxMemory,false)}\n\n")
-    sb.append(s"CPU and garbage collection stats:\n\tCPU:\t\t$processorCount\n\tGCs:\t\t$totalGarbageCollections\n\tGC Time:\t$garbageCollectionTime\n\n")
+    sb.append(s"$jvmName $jvmVersion ($jvmVendor)\n\r")
+    sb.append(s"Up: ${Instant.ofEpochMilli(jvmStartTime).toString} - running for ${new SimpleDateFormat("mm:ss:SSS").format(new Date(jvmUpTime))}\n\r")
+    sb.append(s"\n\rMemory stats:\n\r\tTotal:\t${Utils.formatBytes(totalMemory,false)}\n\r\tFree:\t${Utils.formatBytes(freeMemory,false)}\n\r\tMax:\t${Utils.formatBytes(maxMemory,false)}\n\r\n\r")
+    sb.append(s"CPU and garbage collection stats:\n\r\tCPU:\t\t$processorCount\n\r\tGCs:\t\t$totalGarbageCollections\n\r\tGC Time:\t$garbageCollectionTime\n\r\n\r")
 
-    sb.append(s"Memory pool stats:\n")
-    ManagementFactory.getMemoryPoolMXBeans().asScala.filter(_.getType == MemoryType.HEAP).foreach(x => {
-      sb.append(s"\t${x.getName}:\n\t\t${x.getUsage}\n")
-    })
+//    sb.append(s"Memory pool stats:\n\r")
+//    ManagementFactory.getMemoryPoolMXBeans().asScala.filter(_.getType == MemoryType.HEAP).foreach(x => {
+//      sb.append(s"\t${x.getName}:\n\r\t\t${x.getUsage}\n\r")
+//    })
 
-    Utils.out(sb.toString())
+    Utils.outln(sb.toString())
     false
   }
 }

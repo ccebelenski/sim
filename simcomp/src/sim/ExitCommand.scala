@@ -11,8 +11,9 @@ class ExitCommand  extends Command {
   override def process(tokenArray: Array[String]): Boolean = {
 
 
-    val bir = TextIoFactory.getTextIO.newBooleanInputReader()
-    bir.read("SIM: EXIT - Are you sure?")
+    //val bir = TextIoFactory.getTextIO.newBooleanInputReader()
+    //bir.read("SIM: EXIT - Are you sure?")
 
+    true
   }
 }

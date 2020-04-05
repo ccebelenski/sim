@@ -14,10 +14,10 @@ class HelpCommand extends Command {
         sb.append(cmd._2.explain())
       })
 
-      sim.Console.textTerminal.println(sb.toString())
+     Utils.outln(sb.toString())
     } else {
       sim.Console.commandTree.find(_._2.commandMatch(tokenArray(0))).foreach(cmd => {sb.append(cmd._2.commandHelpText)})
-      sim.Console.textTerminal.println(sb.toString())
+      Utils.outln(sb.toString())
     }
     false
   }

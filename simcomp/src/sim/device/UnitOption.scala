@@ -7,7 +7,7 @@ abstract class UnitOption(val optionName: String, val optionDescription: String)
   def formatValue: String
 
   def showOption(sb: StringBuilder): Unit = {
-    sb.append(s"  Option: ${optionName.toUpperCase} \t\t$optionDescription\t$formatValue\n")
+    sb.append(s"  Option: ${optionName.toUpperCase} \t\t$optionDescription\t$formatValue\n\r")
   }
 
   def setFromString(s: String, sb: StringBuilder): Boolean
@@ -93,8 +93,8 @@ case class EnumValueUnitOption(override val optionName: String,
 
   override def optionHelp: String = {
     val sb = new StringBuilder
-    sb.append(s"${optionName.toUpperCase} is value.  Valid values are:\n")
-    values.foreach(x => sb.append(s"${x.name}\n"))
+    sb.append(s"${optionName.toUpperCase} is value.  Valid values are:\n\r")
+    values.foreach(x => sb.append(s"${x.name}\n\r"))
 
     sb.toString()
   }

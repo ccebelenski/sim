@@ -43,10 +43,10 @@ abstract class AbstractMachine extends Named{
   def showMachine : Unit = {
 
     val sb = new StringBuilder
-    sb.append(s"SIM: Simulated Machine: ${getName} : $description\n")
-    sb.append(s"SIM: Available devices:\n")
-    if(devices.isEmpty) sb.append(s"SIM: \t No devices.\n")
-    devices.foreach(d => sb.append(s"SIM: \t ${d.getName}\tEna: ${d.isEnabled}\n"))
+    sb.append(s"SIM: Simulated Machine: ${getName} : $description\n\r")
+    sb.append(s"SIM: Available devices:\n\r")
+    if(devices.isEmpty) sb.append(s"SIM: \t No devices.\n\r")
+    devices.foreach(d => sb.append(s"SIM: \t ${d.getName}\tEna: ${d.isEnabled}\n\r"))
 
     Utils.outln(sb.toString())
   }
@@ -132,7 +132,7 @@ abstract class AbstractMachine extends Named{
 
   def showBreaks(sb:StringBuilder):Unit = {
     breakpoints.foreach(b => {
-      sb.append(f"${b.intValue}%08X\n")
+      sb.append(f"${b.intValue}%08X\n\r")
     })
   }
 
@@ -153,7 +153,7 @@ abstract class AbstractMachine extends Named{
   }
   def showMemLogs(sb:StringBuilder):Unit = {
     memlogs.foreach(b => {
-      sb.append(f"${b.intValue}%08X\n")
+      sb.append(f"${b.intValue}%08X\n\r")
     })
   }
 }

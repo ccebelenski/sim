@@ -24,13 +24,13 @@ class Term(val model: AbstractTerminalModel) extends JComponent {
     */
   private def init(): Unit = {
     setLayout(new BorderLayout(0, 0))
-    val rows = model.getRows
-    val bufferSize = model.getBufferSize
-    if (bufferSize > rows) {
-      scrollBar = Some(new JScrollBar(Adjustable.VERTICAL, 0, rows, 0, bufferSize + 1))
-      scrollBar.get.addAdjustmentListener((l) => repaint())
-      add(BorderLayout.LINE_END, scrollBar.get)
-    }
+//    val rows = model.getRows
+//    val bufferSize = model.getBufferSize
+//    if (bufferSize > rows) {
+//      scrollBar = Some(new JScrollBar(Adjustable.VERTICAL, 0, rows, 0, bufferSize + 1))
+//      scrollBar.get.addAdjustmentListener((l) => repaint())
+//      add(BorderLayout.LINE_END, scrollBar.get)
+//    }
     val term = new Terminal
     add(BorderLayout.CENTER, term)
     repaint()
@@ -66,7 +66,6 @@ class Term(val model: AbstractTerminalModel) extends JComponent {
     setFocusable(true)
     requestFocusInWindow()
 
-
     //The cell width in pixels.
     private val CELL_WIDTH = 8
 
@@ -75,10 +74,7 @@ class Term(val model: AbstractTerminalModel) extends JComponent {
     // The font.
     val font2: Font = new Font("Monospaced", Font.PLAIN, CELL_HEIGHT)
 
-    // The unique serial version id.
-    private val serialVersionUID = 3835622547820767019L
-
-    override def getMinimumSize = new Dimension(model.getColumns * CELL_WIDTH, model.getRows * CELL_HEIGHT)
+    override def getMinimumSize = new Dimension(model.getColumns * CELL_WIDTH + 5, model.getBufferSize * CELL_HEIGHT + 5)
 
     override def getMaximumSize: Dimension = getMinimumSize
 

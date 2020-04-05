@@ -6,7 +6,7 @@ class VersionCommand extends Command {
 
   override def process(tokenArray: Array[String]) = {
 
-    Console.textTerminal.println("Sim 0.1 - C. Cebelenski 2017")
+    Utils.outln("Sim 0.1 - C. Cebelenski 2017")
 
     false
   }

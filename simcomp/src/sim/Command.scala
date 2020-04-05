@@ -45,7 +45,7 @@ abstract class Command {
     sb.append(commandToken)
     sb.append("\t\t")
     sb.append(commandDescription)
-    sb.append("\n")
+    sb.append("\n\r")
 
     subCommandTree.foreach((command) => {
       explain(command._2,sb)
@@ -60,7 +60,7 @@ abstract class Command {
     sb.append(cmd.commandToken)
     sb.append("\t\t")
     sb.append(cmd.commandDescription)
-    sb.append("\n")
+    sb.append("\n\r")
 
     cmd.subCommandTree.foreach((command) => {
       explain(command._2,sb)

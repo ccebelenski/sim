@@ -12,14 +12,16 @@
         <groupId>sim</groupId>
         <version>1.0-SNAPSHOT</version>
     </parent>
-    <!--properties>
-        <scala.version>2.13.1</scala.version>
-        <maven.compiler.source>11</maven.compiler.source>
-        <maven.compiler.target>11</maven.compiler.target>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <java.version>11</java.version>
+    <properties>
         <start-class>sim.App</start-class>
-    </properties-->
+    </properties>
+    <dependencies>
+        <dependency>
+            <groupId>sim</groupId>
+            <artifactId>term</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
+    </dependencies>
     <build>
 
         <sourceDirectory>src</sourceDirectory>

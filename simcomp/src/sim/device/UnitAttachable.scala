@@ -15,7 +15,7 @@ trait UnitAttachable {
 
   def showAttachedInfo(sb: StringBuilder): Unit = {
 
-    if (supportsAttach && attachedPath.isDefined) sb.append(s"Attached: ${attachedPath.get.getFileName.toString}\n")
+    if (supportsAttach && attachedPath.isDefined) sb.append(s"Attached: ${attachedPath.get.getFileName.toString}\n\r")
   }
 
 }

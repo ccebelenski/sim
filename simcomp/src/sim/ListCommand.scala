@@ -12,7 +12,7 @@ class ListCommand extends Command {
 
   override def process(tokenArray: Array[String]): Boolean = {
     if(tokenArray.length == 0) {
-      sim.Console.textTerminal.println(argsErrorMsg)
+      Utils.outln(argsErrorMsg)
     } else {
       processSubCommand(tokenArray)
     }
@@ -39,7 +39,7 @@ class ListMachinesCommand extends Command {
       sb.append("\n")
     })
 
-    sim.Console.textTerminal.print(sb.toString())
+   Utils.outln(sb.toString())
     false
   }
 }
