@@ -40,9 +40,6 @@ abstract class BasicUnit(val device: BasicDevice) extends Ordered[BasicUnit] wit
   // device and machine names are always upper case
   def getName: String = device.getName + unitNumber
 
-
-
-
   // Action is cancelled
   def cancel(): Unit
 

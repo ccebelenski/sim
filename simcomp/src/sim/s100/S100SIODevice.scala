@@ -31,18 +31,18 @@ import sim.unsigned.{UByte, UInt}
   * @param mmu
   * @param ports List of ports this unit responds to
   */
-class S100SIODevice(machine:S100Machine, mmu: Z80MMU, ports: List[UInt]) extends PortMappedDevice(machine, mmu,ports) with MuxAware with SerialDevice {
+class S100SIODevice(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) extends PortMappedDevice(machine, mmu, ports) with SerialDevice {
 
   // Flags for read/write status
-  val CAN_READ:UByte = UByte(1)
-  val CAN_WRITE:UByte = UByte(2)
+  val CAN_READ: UByte = UByte(1)
+  val CAN_WRITE: UByte = UByte(2)
 
 
-  override val description :String = "MITS 2SIO interface card"
+  override val description: String = "MITS 2SIO interface card"
   override val name = "SIO"
 
   // We only have one unit, the main serial port.  Because of this we can take some shortcuts.
-  var SIOUnit : S100SIOUnit = _
+  var SIOUnit: S100SIOUnit = _
 
   override def init(): Unit = {
 
@@ -51,13 +51,13 @@ class S100SIODevice(machine:S100Machine, mmu: Z80MMU, ports: List[UInt]) extends
     addUnit(SIOUnit)
 
     // Register this device with the default MUX
-    machine.findDevice("MUXA") match {
-      case None => Utils.outln(s"$getName: Could not register device with MUXA.")
-      case Some(x:MuxDevice) =>
-        x.registerDevice(this)
-        this.registeredMuxDevice = Some(x)
-      case _ => Utils.outln(s"$getName: Misconfiguration - register device with MUXA.")
-    }
+    //    machine.findDevice("MUXA") match {
+    //      case None => Utils.outln(s"$getName: Could not register device with MUXA.")
+    //      case Some(x:MuxDevice) =>
+    //        x.registerDevice(this)
+    //        this.registeredMuxDevice = Some(x)
+    //      case _ => Utils.outln(s"$getName: Misconfiguration - register device with MUXA.")
+    //    }
 
   }
 
@@ -69,27 +69,27 @@ class S100SIODevice(machine:S100Machine, mmu: Z80MMU, ports: List[UInt]) extends
   override def createUnitOptions: Unit = {
     createSerialUnitOptions
 
-    unitOptions.append(BinaryUnitOption("INTERRUPT","Status port 0 creates an interrupt when a character becomes available", value = false))
-    unitOptions.append(ValueUnitOption("IOPORT","Set I/O port to IOPORT", value = 0))
+    unitOptions.append(BinaryUnitOption("INTERRUPT", "Status port 0 creates an interrupt when a character becomes available", value = false))
+    unitOptions.append(ValueUnitOption("IOPORT", "Set I/O port to IOPORT", value = 0))
 
   }
 
-  // Only one unit, so we take some shortcuts...
-  override def muxCharacterInterrupt(unit: MuxUnit, char: Int): Unit = {
-    if(!SIOUnit.inputCharacterWaiting) {
-      mmu.cpu.keyboardInterrupt = false
-      SIOUnit.inputCharacter = char
-      SIOUnit.inputCharacterWaiting = true
-      //machine.eventQueue.activate(SIOUnit, SIOUnit.waitTime)
-    }
-  }
+  //  // Only one unit, so we take some shortcuts...
+  //  override def muxCharacterInterrupt(unit: MuxUnit, char: Int): Unit = {
+  //    if(!SIOUnit.inputCharacterWaiting) {
+  //      mmu.cpu.keyboardInterrupt = false
+  //      SIOUnit.inputCharacter = char
+  //      SIOUnit.inputCharacterWaiting = true
+  //      //machine.eventQueue.activate(SIOUnit, SIOUnit.waitTime)
+  //    }
+  //  }
 
-  // Returns true when the interrupt flag for keyboard is not set.
-  override def checkDeviceReady: Boolean = {
-    !mmu.cpu.keyboardInterrupt
-  }
+  //  // Returns true when the interrupt flag for keyboard is not set.
+  //  override def checkDeviceReady: Boolean = {
+  //    !mmu.cpu.keyboardInterrupt
+  //  }
 
-  def interruptOff() : Unit = {
+  def interruptOff(): Unit = {
     mmu.cpu.keyboardInterrupt = false
     //machine.eventQueue.cancel(SIOUnit)
   }
@@ -107,33 +107,34 @@ class S100SIODevice(machine:S100Machine, mmu: Z80MMU, ports: List[UInt]) extends
         if (SIOUnit.inputCharacterWaiting) {
           //Utils.outln(s"$getName: CANREAD | CANWRITE")
           return UByte((CAN_READ | CAN_WRITE).byteValue)
-        }
-        else if(SIOUnit.attachedMuxUnit.isDefined) {
-          //Utils.outln(s"$getName: CANWRITE")
-          return CAN_WRITE
-        }
-        else {
+        } else {
           //Utils.outln(s"$getName: None")
-          return UByte(0)
+          return CAN_WRITE
         }
       }
 
       UByte(0) // writes are ignored - nothing to reset anyway.
 
-    } else if(action == 0x11) {
+    } else if (action == 0x11) {
 
-      if(isWrite) {
-        SIOUnit.writeChar(value)
+      if (isWrite) {
+        //Utils.outln(value.toString)
+        SIOUnit.getTerminal.print(s"${value.byteValue.toChar}")
         UByte(0)
       } else {
         // read char
+        val b: Byte = SIOUnit.inputBuffer.dequeue()
+        if (SIOUnit.inputBuffer.isEmpty) {
+
+          SIOUnit.inputCharacterWaiting = false
+        }
+        //Utils.outln(b.toString)
         interruptOff()
-        SIOUnit.inputCharacterWaiting = false
-        UByte(SIOUnit.inputCharacter.byteValue())
+        UByte(b)
       }
 
     } else if (action == 0x12) {
-      if(isWrite) UByte(0) // ignore
+      if (isWrite) UByte(0) // ignore
       else CAN_WRITE
     } else {
       Utils.outln(s"$getName: Misconfigured, write to port ${action.toHexString} value ${value.toHexString}")

@@ -808,7 +808,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
               else {
                 SimTimer.sim_interval = 0
                 // Only sleep if there are no interrupts pending
-                if (!keyboardInterrupt && !timerInterrupt) Thread.sleep(0, 100) // 100 uSecs
+                //if (!keyboardInterrupt && !timerInterrupt) Thread.sleep(0, 100) // 100 uSecs
               }
 
 

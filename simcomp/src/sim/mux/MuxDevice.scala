@@ -1,5 +1,6 @@
 package sim.mux
 
+import java.awt.event.{KeyEvent, KeyListener}
 import java.net.{ServerSocket, Socket, SocketTimeoutException}
 import java.util.concurrent.{ExecutorService, Executors, TimeUnit}
 

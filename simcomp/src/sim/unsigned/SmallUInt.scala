@@ -9,12 +9,14 @@ package sim.unsigned
   */
 
 trait SmallUInt[U <: Unsigned[U, UInt, Int]] extends Any with Unsigned[U, UInt, Int] {
+  @inline
   def intRep: Int = intValue
 
   override def toByte: Byte = intRep.toByte
 
   override def toShort: Short = intRep.toShort
 
+  @inline
   override def toInt: Int = intRep
 
   override def toLong: Long = intRep & 0xffffffffL

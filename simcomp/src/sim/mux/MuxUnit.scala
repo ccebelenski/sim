@@ -58,8 +58,8 @@ class MuxUnit(device: MuxDevice, var socket: Socket) extends BasicUnit(device: B
 
     sb.append(s"Connected to: $socketAddress\n")
     sb.append(s"Registered callback device: ")
-    if(callbackDevice.isEmpty) sb.append(s"${callbackDevice.get.asInstanceOf[BasicDevice].getName}\n")
-    else sb.append("None\n")
+    if(callbackDevice.isEmpty) sb.append(s"${callbackDevice.get.asInstanceOf[BasicDevice].getName}\n\r")
+    else sb.append("None\n\r")
   }
 
   override def cancel(): Unit = {}
@@ -92,7 +92,7 @@ class MuxUnit(device: MuxDevice, var socket: Socket) extends BasicUnit(device: B
       finally {
         if(socket.isClosed || char == -1 || Thread.interrupted()) {
           socket.close()
-          Utils.out(s"\n\n$getName: Telnet session terminated.\n\n")
+          Utils.out(s"\n\r\n\r$getName: Telnet session terminated.\n\r\n\r")
           device.removeUnit(this)
           device.asInstanceOf[MuxDevice].clientCount-=1
           // Perform our callback, if we need to.
