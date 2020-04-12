@@ -38,7 +38,7 @@ abstract class BasicCPU(val isBanked: Boolean, override val machine: AbstractMac
   def setClockFrquency(freq: Int): Unit = {
     clockFrequency = freq
     clockHasChanged = true
-    Utils.outln(s"$getName: Clock frequency changed to: ${clockFrequency}Khz")
+    Utils.outln(s"\r\n$getName: Clock frequency changed to: ${clockFrequency}Khz")
   }
 
   def runcpu(singleStep: Boolean = false): Unit // Main CPU execution loop
@@ -96,7 +96,7 @@ abstract class BasicCPU(val isBanked: Boolean, override val machine: AbstractMac
 
     MMU.mapRAM(UInt(0x0000), MEMORYSIZE)
 
-    Utils.outln(s"$getName: Memory size = ${Utils.formatBytes(MEMORYSIZE.toLong, false)} Banked: $isBanked")
+    Utils.outln(s"\r\n$getName: Memory size = ${Utils.formatBytes(MEMORYSIZE.toLong, false)} Banked: $isBanked")
 
   }
 
@@ -194,8 +194,8 @@ abstract class BasicCPU(val isBanked: Boolean, override val machine: AbstractMac
 
   override def showCommand(stringBuilder: StringBuilder): Unit = {
     super.showCommand(stringBuilder)
-    stringBuilder.append(s"$getName: Registers:\n" + showRegisters() + "\n")
-    stringBuilder.append(s"$getName: Flags:\n" + showFlags() + "\n")
+    stringBuilder.append(s"\n\r$getName: Registers:\n\r" + showRegisters() + "\n\r")
+    stringBuilder.append(s"$getName: Flags:\n\r" + showFlags() + "\n\r")
   }
 
   // Dissassembly
@@ -219,12 +219,12 @@ abstract class BasicCPU(val isBanked: Boolean, override val machine: AbstractMac
 
   @inline
   final def CHECK_LOG_BYTE(v: Int): Unit = {
-    if(machine.checkMemLog(UInt(v)) )Utils.outln(s"$getName: Memory Log Addr: ${v.toHexString} Value: ${MMU.get8(v).toHexString}")
+    if(machine.checkMemLog(UInt(v)) )Utils.outln(s"\r\n$getName: Memory Log Addr: ${v.toHexString} Value: ${MMU.get8(v).toHexString}")
   }
 
   @inline
   final def CHECK_LOG_WORD(addr: Int): Unit = {
-    if(machine.checkMemLog(UInt(addr))) Utils.outln(s"$getName: Memory Log Addr: ${addr.toHexString} Value: ${MMU.get16(addr).toHexString}")
+    if(machine.checkMemLog(UInt(addr))) Utils.outln(s"\r\n$getName: Memory Log Addr: ${addr.toHexString} Value: ${MMU.get16(addr).toHexString}")
   }
 
 }

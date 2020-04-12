@@ -120,7 +120,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
   resetCPU()
 
   override def showRegisters(): String = {
-    s"$PC  $SP  $AF  $BC  $DE  $HL  $IX  $IY  $R  $I\n                     $AFP $BCP $DEP $HLP\n$IFF"
+    s"$PC  $SP  $AF  $BC  $DE  $HL  $IX  $IY  $R  $I\n\r                     $AFP $BCP $DEP $HLP\n\r$IFF"
   }
 
   // Z80 Flags
@@ -141,7 +141,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
     val z = if ((AF & FLAG_Z) != 0) true else false
     val s = if ((AF & FLAG_S) != 0) true else false
     val str = f"${F.toBinaryString}%8s".replaceAll(" ", "0")
-    s"F=$str  :  S=$s  Z=$z  H=$h  P/V=$pv  N=$addsub  C=$carry"
+    s"\n\rF=$str  :  S=$s  Z=$z  H=$h  P/V=$pv  N=$addsub  C=$carry"
 
   }
 
@@ -173,7 +173,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
         if (machine.checkBreak(PC.toUInt) && lastBreak != PC.toUInt && !singleStep) {
           execute = false
           lastBreak = PC.toUInt
-          Utils.outln(f"SIM: Break at: ${PC.intValue}%05X")
+          Utils.outln(f"\n\rZ80: Break at: ${PC.intValue}%05X")
 
         } else {
           lastBreak = UInt(0)
@@ -1494,7 +1494,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
 
   override def onHalt(singleStepped: Boolean): Unit = {
     if (!singleStepped) {
-      Utils.outln(s"$getName: Halted.")
+      Utils.outln(s"\n\r$getName: Halted.")
 
       Utils.outln(showRegisters())
       Utils.outln(showFlags())

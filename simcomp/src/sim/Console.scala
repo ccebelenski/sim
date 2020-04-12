@@ -19,47 +19,50 @@ class Console {
 
 
     // Add the "top level" simulator commands - VERSION, HELP, LOAD, EXIT, SHOW, SET, ATTACH, DETACH, etc.
-    val version:Command = new VersionCommand
+    val version: Command = new VersionCommand
     Console.commandTree.put(version.commandToken, version)
 
-    val help:Command = new HelpCommand
+    val help: Command = new HelpCommand
     Console.commandTree.put(help.commandToken, help)
 
-    val list:Command = new ListCommand
+    val list: Command = new ListCommand
     Console.commandTree.put(list.commandToken, list)
 
-    val show:Command = new ShowCommand
+    val show: Command = new ShowCommand
     Console.commandTree.put(show.commandToken, show)
 
-    val set:Command = new SetCommand
+    val set: Command = new SetCommand
     Console.commandTree.put(set.commandToken, set)
 
-    val em:Command = new EM
-    Console.commandTree.put(em.commandToken,em)
+    val em: Command = new EM
+    Console.commandTree.put(em.commandToken, em)
 
-    val er:Command = new ER
-    Console.commandTree.put(er.commandToken,er)
+    val er: Command = new ER
+    Console.commandTree.put(er.commandToken, er)
 
-    val exit:Command = new ExitCommand
+    val exit: Command = new ExitCommand
     Console.commandTree.put(exit.commandToken, exit)
 
-    val boot:Command = new BootCommand
+    val boot: Command = new BootCommand
     Console.commandTree.put(boot.commandToken, boot)
 
-    val attach:Command = new AttachCommand
+    val attach: Command = new AttachCommand
     Console.commandTree.put(attach.commandToken, attach)
 
-    val disasm:DisassembleCommand = new DisassembleCommand
+    val disasm: DisassembleCommand = new DisassembleCommand
     Console.commandTree.put(disasm.commandToken, disasm)
 
-    val detach:Command = new DetachCommand
+    val detach: Command = new DetachCommand
     Console.commandTree.put(detach.commandToken, detach)
 
-    val go:GoCommand = new GoCommand
+    val go: GoCommand = new GoCommand
     Console.commandTree.put(go.commandToken, go)
 
-    val step:StepCommand = new StepCommand
+    val step: StepCommand = new StepCommand
     Console.commandTree.put(step.commandToken, step)
+
+    val halt: HaltCommand = new HaltCommand
+    Console.commandTree.put(halt.commandToken, halt)
 
     val break = new BreakCommand
     val unbreak = new UnBreakCommand
@@ -76,49 +79,47 @@ class Console {
   }
 
   private def readCommand(): String = {
-Console.cli.getline
+    Console.cli.getline
 
   }
 
-  def commandLoop() : Unit = {
-    var exiting:Boolean = false
-    while(!exiting) {
-      Console.userInterrupt = false // Reset the interrupt
+  def commandLoop(): Unit = {
+    var exiting: Boolean = false
+    while (!exiting) {
+      //Console.userInterrupt = false // Reset the interrupt
       val cmd = readCommand()
       exiting = evalCommand(cmd.trim)
     }
   }
 
-  private def evalCommand(cmd:String) : Boolean = {
+  private def evalCommand(cmd: String): Boolean = {
 
-    if(cmd == null || cmd.isEmpty) return false
+    if (cmd == null || cmd.isEmpty) return false
     val cmdTokenList = cmd.toUpperCase.split(' ')
 
     Console.commandTree.find(_._2.commandMatch(cmdTokenList(0))) match {
-      case None=>
+      case None =>
         Utils.outln("SIM: Invalid command")
         false
       case Some(x) =>
-        x._2.process(cmdTokenList.slice(1,cmdTokenList.length))
+        x._2.process(cmdTokenList.slice(1, cmdTokenList.length))
     }
   }
 }
 
 object Console {
 
-  var cli:SimCLI = _
-  var term:Term = _
+  var cli: SimCLI = _
+  var term: Term = _
 
+  @volatile
+  var cpuRunning:Boolean = false
 
-
-  //var term: JTerminal = _
-  //var textTerminal : TextTerminal[_] = _
-
-  val commandTree : mutable.HashMap[String, Command] = new mutable.HashMap[String,Command]()
+  val commandTree: mutable.HashMap[String, Command] = new mutable.HashMap[String, Command]()
 
   val simEnvironment: SimEnvironment = new SimEnvironment
 
   // This is set by the user interrupt - should be re-set when the command prompt is displayed.
   @volatile
-  var userInterrupt : Boolean = false
+  var userInterrupt: Boolean = false
 }
