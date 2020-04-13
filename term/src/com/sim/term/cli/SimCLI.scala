@@ -1,6 +1,7 @@
 package com.sim.term.cli
 
-import akka.actor.{ActorSystem, Props}
+import java.awt.Dimension
+
 import com.sim.term.{Term, VT100TerminalModel}
 import javax.swing.{JFrame, WindowConstants}
 
@@ -11,12 +12,16 @@ class SimCLI {
 
   private val frame = new JFrame()
   frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE)
-  private val t = new Term(new VT100TerminalModel(80, 24))
-  private val d = t.getSize()
-  d.setSize(d.height + 500, d.width + 500)
+  val vt100 = new VT100TerminalModel(80,25, 25)
+  private val t = new Term(vt100)
+  private val d = new Dimension(t.getWidth + 15, t.getHeight + 40)
+  //System.out.println(s"SIZE:$d, ${t.getSize()}")
   frame.setSize(d)
+  frame.setPreferredSize(d)
+  frame.setMinimumSize(d)
   frame.add(t)
   frame.pack()
+  frame.setTitle("SIM")
   frame.setVisible(true)
 
   private var prompt: Option[String] = None

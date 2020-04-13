@@ -1,9 +1,9 @@
 package sim.device
 
-import java.awt.BorderLayout
+import java.awt.{BorderLayout, Dimension}
 
 import com.sim.term.{Term, VT100TerminalModel}
-import javax.swing.{JFrame, WindowConstants}
+import javax.swing.{JFrame, JRootPane, WindowConstants}
 
 abstract class ConsoleUnit(device:BasicDevice) extends BasicUnit(device:BasicDevice) {
 
@@ -13,18 +13,23 @@ abstract class ConsoleUnit(device:BasicDevice) extends BasicUnit(device:BasicDev
   var inputCharacterWaiting:Boolean = false
 
    private val frame = new JFrame()
-  frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE)
-  private val t = new ConsoleTerminal(new VT100TerminalModel(80, 24), this)
-  private val d = t.getSize()
-  d.setSize(d.height , d.width )
+
+  //frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE)
+  private val t = new ConsoleTerminal(new VT100TerminalModel(81, 25, bufferSize = 25), this)
+  private val d = new Dimension(t.getSize())
+
+  frame.setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE)
+  frame.setUndecorated(true)
+  frame.getRootPane().setWindowDecorationStyle(JRootPane.FRAME);
   frame.setSize(d)
+  frame.setPreferredSize(d)
+  frame.setMinimumSize(d)
   frame.add(t)
   frame.add(BorderLayout.CENTER, t)
   frame.pack()
   frame.setTitle(getName)
-  frame.setVisible(true)
 
-  override def cancel(): Unit = ???
+  frame.setVisible(true)
 
   override def completeAction(): Unit = {
     if (inputCharacterWaiting) {
@@ -34,12 +39,6 @@ abstract class ConsoleUnit(device:BasicDevice) extends BasicUnit(device:BasicDev
   }
 
   def getTerminal:ConsoleTerminal = t
-
-
-  override def init(): Unit = {
-    //as each unit is created, we need a console and a keylistener that console.
-    // TODO
-  }
 
   override def optionChanged(sb: StringBuilder): Unit = ???
 }

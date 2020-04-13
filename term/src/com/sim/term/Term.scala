@@ -7,12 +7,13 @@ import javax.swing._
 
 class Term(val model: AbstractTerminalModel) extends JComponent {
 
-  init()
+  //The cell width in pixels.
+  private val CELL_WIDTH = 10
 
-  /**
-    * The unique serial version id.
-    */
-  private val serialVersionUID = 2871625194146986567L
+  //The cell height in pixels.
+  private val CELL_HEIGHT = 17
+  // The font.
+  val font2: Font = new Font("Monospaced", Font.PLAIN, CELL_HEIGHT)
 
   /**
     * The scroll bar.
@@ -22,8 +23,17 @@ class Term(val model: AbstractTerminalModel) extends JComponent {
   /**
     * Initializes the terminal.
     */
-  private def init(): Unit = {
-    setLayout(new BorderLayout(0, 0))
+  setDoubleBuffered(true)
+
+  addKeyListener(new CharacterListener(model, this))
+  setFocusTraversalKeysEnabled(false)
+  setFocusable(true)
+  requestFocusInWindow()
+  val d = new Dimension(model.getColumns * CELL_WIDTH , model.getBufferSize * CELL_HEIGHT)
+  setSize(d)
+  setMinimumSize(d)
+  setPreferredSize(d)
+  setLayout(new BorderLayout(0, 0))
 //    val rows = model.getRows
 //    val bufferSize = model.getBufferSize
 //    if (bufferSize > rows) {
@@ -31,10 +41,7 @@ class Term(val model: AbstractTerminalModel) extends JComponent {
 //      scrollBar.get.addAdjustmentListener((l) => repaint())
 //      add(BorderLayout.LINE_END, scrollBar.get)
 //    }
-    val term = new Terminal
-    add(BorderLayout.CENTER, term)
     repaint()
-  }
 
   /**
     * Prints a line to the terminal.
@@ -54,31 +61,6 @@ class Term(val model: AbstractTerminalModel) extends JComponent {
     model.print(str)
     repaint()
   }
-
-
-  // The terminal component
-  private class Terminal extends JComponent {
-
-    setDoubleBuffered(true)
-
-    addKeyListener(new CharacterListener(model, this))
-    setFocusTraversalKeysEnabled(false)
-    setFocusable(true)
-    requestFocusInWindow()
-
-    //The cell width in pixels.
-    private val CELL_WIDTH = 8
-
-    //The cell height in pixels.
-    private val CELL_HEIGHT = 12
-    // The font.
-    val font2: Font = new Font("Monospaced", Font.PLAIN, CELL_HEIGHT)
-
-    override def getMinimumSize = new Dimension(model.getColumns * CELL_WIDTH + 5, model.getBufferSize * CELL_HEIGHT + 5)
-
-    override def getMaximumSize: Dimension = getMinimumSize
-
-    override def getPreferredSize: Dimension = getMinimumSize
 
     override def paint(g: Graphics): Unit = {
       g.setFont(font2)
@@ -109,8 +91,6 @@ class Term(val model: AbstractTerminalModel) extends JComponent {
       }
     }
 
-
-  }
 
 }
 

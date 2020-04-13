@@ -13,6 +13,9 @@ class S100SIOUnit(device: S100SIODevice) extends ConsoleUnit(device: BasicDevice
     super.showCommand(sb)
   }
 
+  // TODO - Anything special here to do?
+  override def init(): Unit = {}
+
   override def optionChanged(sb: StringBuilder): Unit = ???
 
 }

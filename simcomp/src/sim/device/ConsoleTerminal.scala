@@ -1,38 +1,38 @@
 package sim.device
 
-import java.awt.{BorderLayout, Dimension, Font, Graphics}
+import java.awt.{Dimension, Font, Graphics}
 
-import com.sim.term.{AbstractTerminalModel, CharacterListener, TerminalCell}
+import com.sim.term.{AbstractTerminalModel, TerminalCell}
 import javax.swing.{JComponent, JScrollBar}
 
 class ConsoleTerminal(val model: AbstractTerminalModel, consoleUnit: ConsoleUnit) extends JComponent {
 
+  //The cell width in pixels.
+  private val CELL_WIDTH = 10
+
+  //The cell height in pixels.
+  private val CELL_HEIGHT = 17
+  // The font.
+  val font2: Font = new Font("Monospaced", Font.PLAIN, CELL_HEIGHT)
+
   setDoubleBuffered(true)
 
+  val d = new Dimension(model.getColumns * CELL_WIDTH + 15, model.getRows * CELL_HEIGHT + 40)
+
+  setSize(d)
+  setMinimumSize(d)
+  setPreferredSize(d)
   addKeyListener(new ConsoleKeyListener(consoleUnit))
   setFocusTraversalKeysEnabled(false)
   setFocusable(true)
   //add(BorderLayout.CENTER, this)
   repaint()
 
-  //The cell width in pixels.
-  private val CELL_WIDTH = 8
-
-  //The cell height in pixels.
-  private val CELL_HEIGHT = 12
-  // The font.
-  val font2: Font = new Font("Monospaced", Font.PLAIN, CELL_HEIGHT)
-
   /**
     * The scroll bar.
     */
-  private var scrollBar: Option[JScrollBar] = None
+  private val scrollBar: Option[JScrollBar] = None
 
-  override def getMinimumSize = new Dimension(model.getColumns * CELL_WIDTH + 5, model.getBufferSize * CELL_HEIGHT + 5)
-
-  override def getMaximumSize: Dimension = getMinimumSize
-
-  override def getPreferredSize: Dimension = getMinimumSize
 
   override def paint(g: Graphics): Unit = {
     g.setFont(font2)
@@ -81,7 +81,6 @@ class ConsoleTerminal(val model: AbstractTerminalModel, consoleUnit: ConsoleUnit
     model.print(str)
     repaint()
   }
-
 
 
 }

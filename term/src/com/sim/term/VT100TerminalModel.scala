@@ -12,7 +12,7 @@ object VT100TerminalModel {
   /**
     * The default number of rows.
     */
-  private val DEFAULT_ROWS = 50
+  private val DEFAULT_ROWS = 24
 
   /**
     * The tab width in characters.
@@ -20,19 +20,13 @@ object VT100TerminalModel {
   private val TAB_WIDTH = 8
 }
 
-class VT100TerminalModel(val columns: Int = VT100TerminalModel.DEFAULT_COLUMNS,
-                         val rows: Int = VT100TerminalModel.DEFAULT_ROWS,
-                         val bufferSize: Int = VT100TerminalModel.DEFAULT_ROWS) extends AbstractTerminalModel {
-
+class VT100TerminalModel(var columns: Int = VT100TerminalModel.DEFAULT_COLUMNS,
+                         var rows: Int = VT100TerminalModel.DEFAULT_ROWS,
+                         var bufferSize: Int = VT100TerminalModel.DEFAULT_ROWS) extends AbstractTerminalModel {
 
   if (columns < 0 || rows < 0 || bufferSize < 0) throw new IllegalArgumentException("Zero or positive values only allowed for columns, rows and buffer size.")
   if (bufferSize < rows) throw new IllegalArgumentException("The buffer is too small")
-  init()
-
-
-  private def init(): Unit = {
-    cells = Array.ofDim(bufferSize, columns)
-  }
+  private val cells: Array[Array[TerminalCell]] = Array.ofDim(bufferSize, columns)
 
 
   /**
@@ -68,11 +62,6 @@ class VT100TerminalModel(val columns: Int = VT100TerminalModel.DEFAULT_COLUMNS,
     * The current bell strategy.
     */
   private var bellStrategy = new BellStrategy
-
-  /**
-    * The array of cells.
-    */
-  private var cells: Array[Array[TerminalCell]] = _
 
   /**
     * The cursor row.

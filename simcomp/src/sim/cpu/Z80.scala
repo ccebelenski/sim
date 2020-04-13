@@ -120,7 +120,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
   resetCPU()
 
   override def showRegisters(): String = {
-    s"$PC  $SP  $AF  $BC  $DE  $HL  $IX  $IY  $R  $I\n\r                     $AFP $BCP $DEP $HLP\n\r$IFF"
+    s"$PC  $SP  $AF\nr\r$BC  $DE  $HL\n\r$IX  $IY  $R  $I\n\r$AFP $BCP $DEP $HLP\n\r$IFF"
   }
 
   // Z80 Flags
@@ -1724,7 +1724,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
   }
 
   @inline
-  private final def SET_PV2(x: Int, temp: Register8): UByte = SET_PV2(UByte(x.toByte), temp)
+  private final def SET_PV2(x: Int, temp: Register8): UByte = SET_PV2(x, temp.get8)
 
   @inline
   private final def SET_PV2(x: Int, temp: Int): UByte = {

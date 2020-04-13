@@ -8,8 +8,6 @@ import com.sim.term.cli.SimCLI
 
 class Console {
 
-  //val textIO = TextIoFactory.getTextIO
-
   def initUI(): Unit = {
 
     //Console.textTerminal = textIO.getTextTerminal
