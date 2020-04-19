@@ -8,10 +8,9 @@ import sim.Utils
 class ConsoleKeyListener(val unit: ConsoleUnit) extends KeyListener {
 
   private val ESC: Byte = 0x1b
-  private val CSI = ESC + "["
 
   override def keyTyped(e: KeyEvent): Unit = {
-    if (!e.isActionKey && e.getKeyChar != '\n' && e.getKeyChar != "\r") {
+    if (!e.isActionKey && e.getKeyChar != '\n' && e.getKeyChar != '\r') {
 
       unit.inputBuffer.enqueue(e.getKeyChar.toByte)
       unit.inputCharacterWaiting = true
@@ -29,23 +28,77 @@ class ConsoleKeyListener(val unit: ConsoleUnit) extends KeyListener {
 
         case KeyEvent.VK_LEFT =>
           // Output ANSI sequence to move cursor left
-          //model.print(CSI + "D")
+          // <ESC>[D
           unit.inputBuffer.enqueue(ESC)
           unit.inputBuffer.enqueue('[')
           unit.inputBuffer.enqueue('D')
           unit.inputCharacterWaiting = true
 
         case KeyEvent.VK_RIGHT =>
-        //model.print(CSI + "C")
-
+          // <ESC>[C
+          unit.inputBuffer.enqueue(ESC)
+          unit.inputBuffer.enqueue('[')
+          unit.inputBuffer.enqueue('C')
+          unit.inputCharacterWaiting = true
 
         case KeyEvent.VK_END =>
+          unit.inputBuffer.enqueue(ESC)
+          unit.inputBuffer.enqueue('[')
+          unit.inputBuffer.enqueue('F')
+          unit.inputCharacterWaiting = true
 
         case KeyEvent.VK_HOME =>
+          unit.inputBuffer.enqueue(ESC)
+          unit.inputBuffer.enqueue('[')
+          unit.inputBuffer.enqueue('H')
+          unit.inputCharacterWaiting = true
 
         case KeyEvent.VK_UP =>
+          // <ESC>[A
+          unit.inputBuffer.enqueue(ESC)
+          unit.inputBuffer.enqueue('[')
+          unit.inputBuffer.enqueue('A')
+          unit.inputCharacterWaiting = true
 
         case KeyEvent.VK_DOWN =>
+          // <ESC>[B
+          unit.inputBuffer.enqueue(ESC)
+          unit.inputBuffer.enqueue('[')
+          unit.inputBuffer.enqueue('B')
+          unit.inputCharacterWaiting = true
+
+        case KeyEvent.VK_PAGE_DOWN =>
+          // <ESC>[6~
+          unit.inputBuffer.enqueue(ESC)
+          unit.inputBuffer.enqueue('[')
+          unit.inputBuffer.enqueue('6')
+          unit.inputBuffer.enqueue('~')
+          unit.inputCharacterWaiting = true
+
+        case KeyEvent.VK_PAGE_UP =>
+          // <ESC>[5~
+          unit.inputBuffer.enqueue(ESC)
+          unit.inputBuffer.enqueue('[')
+          unit.inputBuffer.enqueue('5')
+          unit.inputBuffer.enqueue('~')
+          unit.inputCharacterWaiting = true
+
+        case KeyEvent.VK_INSERT =>
+          // <ESC>[2~
+          unit.inputBuffer.enqueue(ESC)
+          unit.inputBuffer.enqueue('[')
+          unit.inputBuffer.enqueue('2')
+          unit.inputBuffer.enqueue('~')
+          unit.inputCharacterWaiting = true
+
+        case KeyEvent.VK_DELETE =>
+          // <ESC>[3~
+          unit.inputBuffer.enqueue(ESC)
+          unit.inputBuffer.enqueue('[')
+          unit.inputBuffer.enqueue('3')
+          unit.inputBuffer.enqueue('~')
+          unit.inputCharacterWaiting = true
+
 
         case _ => // Skip everything else
       }

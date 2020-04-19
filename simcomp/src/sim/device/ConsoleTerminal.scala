@@ -54,10 +54,10 @@ class ConsoleTerminal(val model: AbstractTerminalModel, consoleUnit: ConsoleUnit
           val py = (y - start) * CELL_HEIGHT
           g.setColor(if (cursorHere) cell.foregroundColor
           else cell.backgroundColor)
-          g.fillRect(px, py, CELL_WIDTH, CELL_HEIGHT)
+          g.fillRect(px, py, CELL_WIDTH, CELL_HEIGHT - 3)
           g.setColor(if (cursorHere) cell.backgroundColor
           else cell.foregroundColor)
-          g.drawChars(Array[Char](cell.character), 0, 1, px, py + CELL_HEIGHT)
+          g.drawChars(Array[Char](cell.character), 0, 1, px, py + CELL_HEIGHT - 5)
         }
       }
     }

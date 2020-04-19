@@ -1781,14 +1781,14 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
     }
   }
 
-  //**** Utility helpers *****
+  //**** Utility helpers ***** A,W
   @inline
   private final def ADDIDX(r1: Register8, r2: Register8): Unit = {
-    val tmp: UByte = r2.get8
-    val acu: UByte = r1.get8
-    val sum: UInt = acu + tmp
-    val cbits : UInt = acu ^ tmp ^ sum
-    AF(addTable(sum & 0x1ff) | cbitsZ80Table(cbits & 0x1ff) & 0xffff)
+//    val tmp: UByte = r2.get8
+//    val acu: UByte = r1.get8
+    val sum: UInt = r1.get8 + r2.get8
+    // val cbits : UInt = acu ^ tmp ^ sum
+    AF((addTable(sum.intValue) | cbitsZ80Table( r1 ^ r2 ^ sum)) & 0xffff)
   }
 
   @inline
@@ -1874,10 +1874,10 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
 
   @inline
   private final def SUBIDX(r1: Register8): Unit = {
-    val temp: UByte = r1.get8
-    val acu: UByte = A.get8
-    val sum: UInt = acu - temp
-    AF((addTable(sum & 0xff) | cbits2Z80Table((acu ^ temp ^ sum) & 0x1ff)).intValue)
+    //val temp: UByte = r1.get8
+    //val acu: UByte = A.get8
+    val sum: UInt = A.get8 - r1.get8
+    AF((addTable(sum & 0xff) | cbits2Z80Table((A ^ r1 ^ sum) & 0x1ff)) & 0xffff )
   }
 
   @inline

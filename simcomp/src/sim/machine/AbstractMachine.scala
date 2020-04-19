@@ -156,6 +156,7 @@ abstract class AbstractMachine extends Named{
       sb.append(f"${b.intValue}%08X\n\r")
     })
   }
+
 }
 
 object AbstractMachine {
