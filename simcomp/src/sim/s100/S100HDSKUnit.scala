@@ -7,15 +7,17 @@ import java.nio.file.StandardOpenOption.{CREATE, READ, SPARSE, WRITE}
 import java.util
 
 import sim.Utils
-import sim.device.{BasicUnit, DiskUnit}
+import sim.device.{BasicUnit, DiskUnit, ImageDisk}
 
-class S100HDSKUnit(device:S100HDSKDevice) extends BasicUnit(device) with  DiskUnit {
+class S100HDSKUnit(device:S100HDSKDevice) extends BasicUnit(device) with  DiskUnit with ImageDisk {
 
   // Format type - actually the parameters for the type
   var HDSK_FORMAT_TYPE : Option[S100HDiskParamsBase] = None
 
   val HDSK_CAPACITY :Int = 2048 * 32 * 128 // Default Altair HDSK capacity
   val HDSK_MAX_SECTOR_SIZE :Int = 1024 // maximum size of a sector
+
+  var HDSK_SECTOR_SIZE :Int = 0
 
 
 
@@ -45,6 +47,7 @@ class S100HDSKUnit(device:S100HDSKDevice) extends BasicUnit(device) with  DiskUn
     val p :Path = Paths.get(fileSpec)
 
     if(isIMD(p)) {
+      //TODO
       sb.append(s"$getName: IMD disk images not yet supported.\n")
       return true
     }

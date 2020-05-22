@@ -2,12 +2,12 @@ package sim.device
 
 import sim.Utils
 
-case class DiskInfo(var ntracks: Int = 0,
+class DiskInfo(var ntracks: Int = 0,
                       var nsides: Int = 0,
                       var flags: Int = 0,
                       var debugMask: Int = 0,
                       var verbosedebugmask:Int  = 0,
-                      var track: Array[Array[TrackInfo]] ) {
+                      var track: Array[Array[TrackInfo]]  = Array.empty) {
 
   def verifyDiskInfo() : Unit = {
     if(ntracks < 1) Utils.outln("DiskInfo: WARNING: Number of tracks is 0.")
@@ -30,9 +30,9 @@ case class DiskInfo(var ntracks: Int = 0,
   }
 }
 
-case class TrackInfo(
+class TrackInfo(
                       var mode: Int, var nsects : Int, var sectsize:Int,
-                      var sectoryOffsetMap: Array[Int], var start_sector:Int,
+                      var sectorOffsetMap: Array[Int], var start_sector:Int,
                       var logicalHead: Array[Int], var logicalCyl: Array[Int]
                     ) {
 

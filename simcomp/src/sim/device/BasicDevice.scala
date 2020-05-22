@@ -18,6 +18,9 @@ abstract class BasicDevice(val machine:AbstractMachine) extends Named with Suppo
   var deviceIdentifier:String = "A"
   private var enabled : Boolean = false
 
+  // Controls if the device output debug information.
+  var debug:Boolean = false
+
 
   // device and machine names are always upper case
   override def getName: String = super.getName.toUpperCase + deviceIdentifier

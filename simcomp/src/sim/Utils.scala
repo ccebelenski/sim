@@ -1,5 +1,6 @@
 package sim
 
+import sim.device.{BasicDevice, BasicUnit}
 import sim.unsigned.UInt
 
 import scala.collection.immutable.HashMap
@@ -9,7 +10,7 @@ import scala.collection.immutable.HashMap
   */
 object Utils {
 
-  def isalnum(c: Char) : Boolean = {
+  def isalnum(c: Char): Boolean = {
     if ((c & 0x80) != 0) false else c.isLetterOrDigit
   }
 
@@ -44,14 +45,14 @@ object Utils {
   import java.util.regex.Pattern
 
   def toBytes(filesize: String): Long = {
-    var returnValue : Long = -1
+    var returnValue: Long = -1
     val patt = Pattern.compile("([\\d.]+)([GMK]B)", Pattern.CASE_INSENSITIVE)
     val matcher = patt.matcher(filesize)
-    val powerMap : Map[String,Int] = HashMap[String,Int]("GB" ->3, "MB"->2, "KB"-> 1)
+    val powerMap: Map[String, Int] = HashMap[String, Int]("GB" -> 3, "MB" -> 2, "KB" -> 1)
     if (matcher.find) {
       val number = matcher.group(1)
 
-      val pow :Int = powerMap(matcher.group(2).toUpperCase)
+      val pow: Int = powerMap(matcher.group(2).toUpperCase)
       var bytes = BigDecimal(number)
       bytes = bytes * BigDecimal(1024).pow(pow)
       returnValue = bytes.toLong
@@ -60,21 +61,38 @@ object Utils {
   }
 
 
-  def outln(msg:String) : Unit = {
-    if(Console.term != null) Console.term.println(msg) else
+  def outln(msg: String): Unit = {
+    if (Console.term != null) Console.term.println(msg) else
       System.out.println(msg)
   }
-  def out(msg:String): Unit = {
-    if(Console.term != null) Console.term.print(msg) else
+
+  def out(msg: String): Unit = {
+    if (Console.term != null) Console.term.print(msg) else
       System.out.print(msg)
   }
 
-  def formatBytes(bytes:Long, si:Boolean) : String = {
+  def outlnd(unit: BasicUnit, msg: String): Unit = {
+    outlnd(unit.device, msg)
+  }
+
+  def outlnd(device: BasicDevice, msg: String): Unit = {
+    if (device.debug) outln(msg)
+  }
+
+  def outd(unit: BasicUnit, msg: String): Unit = {
+    outd(unit.device, msg)
+  }
+
+  def outd(device: BasicDevice, msg: String): Unit = {
+    if (device.debug) out(msg)
+  }
+
+  def formatBytes(bytes: Long, si: Boolean): String = {
     val unit = if (si) 1000 else 1024
-    if (bytes < unit) return s"${bytes}B"// bytes + " B"
+    if (bytes < unit) return s"${bytes}B" // bytes + " B"
     val exp = (Math.log(bytes) / Math.log(unit)).toInt
     val pre = s"${(if (si) "kMGTPE" else "KMGTPE").charAt(exp - 1)}${if (si) "" else "i"}"
-//    val pre = (if (si) "kMGTPE" else "KMGTPE").charAt(exp - 1) + (if (si) "" else "i")
+    //    val pre = (if (si) "kMGTPE" else "KMGTPE").charAt(exp - 1) + (if (si) "" else "i")
     f"${bytes / Math.pow(unit, exp)}%.1f ${pre}B"
   }
 
