@@ -1,7 +1,6 @@
 package sim
 
 import com.sim.term.Term
-import org.beryx.textio.{TextIoFactory, TextTerminal}
 
 import scala.collection.mutable
 import com.sim.term.cli.SimCLI

@@ -552,7 +552,7 @@ trait ImageDisk {
   }
 
   /* Read a sector from an IMD image. */
-  def sectRead(unit: DiskUnit, Cyl: Int, Head: Int, Sector: Int, buf: ByteBuffer, flags: Int): (Int, Int) = {
+  def sectRead(unit: DiskUnit, Cyl: Int, Head: Int, Sector: Int, buf: ByteBuffer): (Int, Int) = {
     var readlen = 0
     var flags = 0
 

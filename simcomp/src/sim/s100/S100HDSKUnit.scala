@@ -17,9 +17,9 @@ class S100HDSKUnit(device:S100HDSKDevice) extends BasicUnit(device) with  DiskUn
   val HDSK_CAPACITY :Int = 2048 * 32 * 128 // Default Altair HDSK capacity
   val HDSK_MAX_SECTOR_SIZE :Int = 1024 // maximum size of a sector
 
-  var HDSK_SECTOR_SIZE :Int = 0
-
-
+  var HDSK_SECTOR_SIZE:Int =0 // size of sector
+  var HDSK_SECTORS_PER_TRACK:Int = 0 // sectors per track
+  var HDSK_NUMBER_OF_TRACKS:Int  = 0 //number of tracks
 
 
   override val waitTime: Long = 0L
@@ -46,7 +46,7 @@ class S100HDSKUnit(device:S100HDSKDevice) extends BasicUnit(device) with  DiskUn
     //  if doesn't exist then assume create a new file
     val p :Path = Paths.get(fileSpec)
 
-    if(isIMD(p)) {
+    if(isIMD()) {
       //TODO
       sb.append(s"$getName: IMD disk images not yet supported.\n")
       return true
@@ -77,8 +77,6 @@ class S100HDSKUnit(device:S100HDSKDevice) extends BasicUnit(device) with  DiskUn
       case Some(ft) =>
 
     }
-
-
 
     // Allocate the bytebuffer
     byteBuffer = ByteBuffer.allocate(DSK_SECTSIZE)

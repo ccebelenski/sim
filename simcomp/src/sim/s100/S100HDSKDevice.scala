@@ -1,5 +1,7 @@
 package sim.s100
 
+import java.nio.ByteBuffer
+
 import sim.Utils
 import sim.cpu.Z80MMU
 import sim.device.{BinaryUnitOption, Bootable, DiskInfo, PortMappedDiskDevice, SupportsOptions}
@@ -24,12 +26,17 @@ class S100HDSKDevice(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exten
 
   }
 
+  // Buffer for read/write - null initially
+  var hdiskBuf: ByteBuffer = _
+  var hostSector: Int = 0
+
+
   override def optionChanged(sb: StringBuilder): Unit = ???
 
   override def createUnitOptions: Unit = {
 
     unitOptions.append(BinaryUnitOption("ALTAIRROM", "Use modified Altair boot ROM", value = false))
-    S100HDSKDevice.DPB.foreach(pb => unitOptions.append(BinaryUnitOption(pb.name, pb.desc, false)))
+    S100HDSKDevice.DPB.foreach(pb => unitOptions.append(BinaryUnitOption(pb.name, pb.desc, value = false)))
   }
 
 
@@ -102,7 +109,9 @@ class S100HDSKDevice(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exten
   private def doSeek(): Unit = {
     val cd = current_disk.get
     val geom = cd.HDSK_FORMAT_TYPE.get
-    val hostSector = if (geom.skew.isEmpty) cd.current_sector else geom.skew.get(cd.current_sector)
+    hostSector = if (geom.skew.isEmpty) cd.current_sector else geom.skew.get(cd.current_sector)
+    val sectorSize = if (cd.HDSK_FORMAT_TYPE.get.physicalSectorSize == 0) cd.HDSK_SECTOR_SIZE else cd.HDSK_FORMAT_TYPE.get.physicalSectorSize
+    cd.fileChannel.position(sectorSize * cd.HDSK_SECTORS_PER_TRACK * selectedTrack + hostSector + cd.HDSK_FORMAT_TYPE.get.offset)
 
   }
 
@@ -127,12 +136,9 @@ class S100HDSKDevice(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exten
   var selectedDisk: Int = 0
   var selectedSector: Int = 0
   var selectedTrack: Int = 0
-  var selectedDMA: Int = 0
-  var hdskStatus: Int = 0
-
 
   val PARAMETER_BLOCK_SIZE = 19
-  val parameterBlock: Array[UByte] = Array(PARAMETER_BLOCK_SIZE)
+  val parameterBlock: Array[UByte] = Array.ofDim(PARAMETER_BLOCK_SIZE)
 
   def hdsk_in(port: UInt): UByte = {
     if ((hdskCommandPosition == 6) && ((hdskLastCommand == HDSK_READ) || (hdskLastCommand == HDSK_WRITE))) {
@@ -242,136 +248,103 @@ class S100HDSKDevice(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exten
 
   /* pre-condition: hdsk_checkParameters has been executed to repair any faulty parameters */
   def hdsk_read(): UByte = {
-    t_stat result;
-    int32 hostSector;
-    int32 sectorSize;
     val unit = findUnitByNumber(selectedDisk).asInstanceOf[S100HDSKUnit]
 
-
     if (unit.isIMD()) {
-      val thisDisk:DiskInfo = unit.diskInfo
-      hostSector = ((dpb[uptr -> HDSK_FORMAT_TYPE].skew == NULL) ?
-        selectedSector: dpb[uptr -> HDSK_FORMAT_TYPE].skew[selectedSector]
-      ) +thisDisk -> track[1][0].start_sector;
-      sectorSize = ((dpb[uptr -> HDSK_FORMAT_TYPE].physicalSectorSize == 0) ?
-        uptr -> HDSK_SECTOR_SIZE:
-        dpb[uptr -> HDSK_FORMAT_TYPE].physicalSectorSize
-      );
-      var flags:Int = 0
-      var readlen:Int = 0
-      var cylinder:Int  = selectedTrack
-      var head:Int  = 0
+      val thisDisk: DiskInfo = unit.diskInfo
+      hostSector = unit.HDSK_FORMAT_TYPE match {
+        case None => selectedSector
+        case Some(x) => x.skew match {
+          case None => selectedSector
+          case Some(y) => y(selectedSector)
+        }
+      }
+      +thisDisk.track(1)(0).start_sector
+
+      val sectorSize = if (unit.HDSK_FORMAT_TYPE.get.physicalSectorSize == 0) unit.HDSK_SECTOR_SIZE else
+        unit.HDSK_FORMAT_TYPE.get.physicalSectorSize
+
+      var cylinder: Int = selectedTrack
+      var head: Int = 0
       if (cylinder >= thisDisk.ntracks / thisDisk.nsides) {
         head = 1
         cylinder -= thisDisk.ntracks / thisDisk.nsides
       }
-      result = sectRead(thisDisk, cylinder, head, hostSector, hdskbuf, sectorSize,
-        & flags, & readlen);
-      if (result != SCPE_OK) {
-        for (i
-        = 0;
-        i < uptr -> HDSK_SECTOR_SIZE;
-        i ++
-        )
-        hdskbuf[i] = CPM_EMPTY;
+
+      hdiskBuf = ByteBuffer.allocate(sectorSize)
+
+      // (flags, readln)
+      val result = unit.sectRead(unit, cylinder, head, hostSector, hdiskBuf)
+      if (result._2 == 0) {
+        for (i <- 0 to unit.HDSK_SECTOR_SIZE) hdiskBuf.put(CPM_EMPTY.byteValue)
         Utils.outln(s"$getName Could not read Sector=$selectedSector Track=$selectedTrack.")
-        hdskStatus = CPM_ERROR;
-        return hdskStatus;
+       return  CPM_ERROR
       }
     } else {
-      if (doSeek()) {
-        hdskStatus = CPM_ERROR;
-        return hdskStatus;
-      }
-
-      if (sim_fread(hdskbuf, 1, uptr -> HDSK_SECTOR_SIZE, uptr -> fileref) != (size_t) (uptr -> HDSK_SECTOR_SIZE)) {
-        for (i
-        = 0;
-        i < uptr -> HDSK_SECTOR_SIZE;
-        i ++
-        )
-        hdskbuf[i] = CPM_EMPTY;
+      doSeek()
+      hdiskBuf = ByteBuffer.allocate(unit.HDSK_SECTOR_SIZE)
+      val read = unit.fileChannel.read(hdiskBuf)
+      if (read <= 0) {
+        hdiskBuf.clear()
+        for (i <- 0 to unit.HDSK_SECTOR_SIZE) hdiskBuf.put(CPM_EMPTY.byteValue)
         Utils.outln(s"$getName Could not read Sector=$selectedSector Track=$selectedTrack.")
-        hdskStatus = CPM_OK;
-        return hdskStatus; /* allows the creation of empty hard disks */
+        return CPM_OK /* allows the creation of empty hard disks */
       }
     }
-    for (i
-    = 0;
-    i < uptr -> HDSK_SECTOR_SIZE;
-    i ++
-    )
-    PutBYTEWrapper(selectedDMA + i, hdskbuf[i]);
-    hdskStatus = CPM_OK;
-    return hdskStatus;
+    for (i <- 0 to unit.HDSK_SECTOR_SIZE) machine.cpu.MMU.put8(selectedDMA + i, UByte(hdiskBuf.get(i)))
+
+    CPM_OK
   }
 
   /* pre-condition: hdsk_checkParameters has been executed to repair any faulty parameters */
   def hdsk_write(): UByte = {
-    int32 i;
-    t_stat result;
-    DISK_INFO * thisDisk;
-    int32 hostSector;
-    int32 sectorSize;
-    uint32 flags;
-    uint32 writelen;
-    uint32 cylinder;
-    uint32 head;
-    size_t rtn;
-    val unit = findUnitByNumber(selectedDisk)
+    val unit = findUnitByNumber(selectedDisk).get.asInstanceOf[S100HDSKUnit]
 
-    if (((uptr -> flags) & UNIT_HDSK_WLK) == 0) {
+    // TODO Check for write enabled
+    if (unit.isEnabled) {
       /* write enabled */
-      for (i
-      = 0;
-      i < uptr -> HDSK_SECTOR_SIZE;
-      i ++
-      )
-      hdskbuf[i] = GetBYTEWrapper(selectedDMA + i);
-      if (is_imd(uptr)) {
-        thisDisk = hdsk_imd[selectedDisk];
-        hostSector = ((dpb[uptr -> HDSK_FORMAT_TYPE].skew == NULL) ?
-          selectedSector: dpb[uptr -> HDSK_FORMAT_TYPE].skew[selectedSector]
-        ) +thisDisk -> track[1][0].start_sector;
-        sectorSize = ((dpb[uptr -> HDSK_FORMAT_TYPE].physicalSectorSize == 0) ?
-          uptr -> HDSK_SECTOR_SIZE:
-          dpb[uptr -> HDSK_FORMAT_TYPE].physicalSectorSize
-        );
-        flags = 0;
-        writelen = 0;
-        cylinder = selectedTrack;
-        head = 0;
-        if (cylinder >= thisDisk -> ntracks / thisDisk -> nsides) {
-          head = 1;
-          cylinder -= thisDisk -> ntracks / thisDisk -> nsides;
+      hdiskBuf = ByteBuffer.allocate(unit.HDSK_SECTOR_SIZE)
+      for (i <- 0 to unit.HDSK_SECTOR_SIZE) hdiskBuf.put(machine.cpu.MMU.get8(selectedDMA + i).byteValue)
+      if (unit.isIMD()) {
+        val thisDisk: DiskInfo = unit.diskInfo
+        hostSector = unit.HDSK_FORMAT_TYPE match {
+          case None => selectedSector
+          case Some(x) => x.skew match {
+            case None => selectedSector
+            case Some(y) => y(selectedSector)
+          }
         }
-        result = sectWrite(thisDisk, cylinder, head, hostSector, hdskbuf,
-          sectorSize, & flags, & writelen);
-        if (result != SCPE_OK) {
+        +thisDisk.track(1)(0).start_sector
+        val sectorSize = if (unit.HDSK_FORMAT_TYPE.get.physicalSectorSize == 0) unit.HDSK_SECTOR_SIZE else
+          unit.HDSK_FORMAT_TYPE.get.physicalSectorSize
+
+
+        var cylinder = selectedTrack
+        var head = 0
+        if (cylinder >= thisDisk.ntracks / thisDisk.nsides) {
+          head = 1
+          cylinder = cylinder - thisDisk.ntracks / thisDisk.nsides
+        }
+        val result = unit.sectWrite(unit, 0, cylinder, head, hostSector, hdiskBuf)
+        if (result._1 != 0) {
           Utils.outln(s"$getName  Could not write Sector=$selectedSector Track=$selectedTrack.")
-          hdskStatus = CPM_ERROR
-          return hdskStatus
+          return CPM_ERROR
         }
       } else {
-        if (doSeek()) {
-          hdskStatus = CPM_ERROR
-          return hdskStatus
-        }
-        rtn = sim_fwrite(hdskbuf, 1, uptr -> HDSK_SECTOR_SIZE, uptr -> fileref);
-        if (rtn != (size_t) (uptr -> HDSK_SECTOR_SIZE)) {
+        doSeek()
+        val rtn = unit.fileChannel.write(hdiskBuf)
+
+        if (rtn != unit.HDSK_SECTOR_SIZE) {
           Utils.outln(s"$getName Could not write Sector=$selectedSector Track=$selectedTrack Result=$rtn.")
-          hdskStatus = CPM_ERROR
-          return hdskStatus
+          return CPM_ERROR
         }
       }
     }
     else {
       Utils.outln(s"$getName Could not write to locked disk Sector=$selectedSector Track=$selectedTrack.")
-      hdskStatus = CPM_ERROR
-      return hdskStatus
+      return CPM_ERROR
     }
-    hdskStatus = CPM_OK
-    return hdskStatus;
+    CPM_OK
   }
 
   /* flush all attached drives. Returns CPM_OK if everything fine, otherwise CPM_ERROR */
