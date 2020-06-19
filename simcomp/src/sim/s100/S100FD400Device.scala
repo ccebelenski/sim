@@ -85,7 +85,7 @@ class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exte
   override val supportsBoot: Boolean = true
 
   /* NUM_OF_DSK must be power of two              */
-  val NUM_OF_DSK: Int = 16
+  val NUM_OF_DSK: Int = 8
   val NUM_OF_DSK_MASK: Int = NUM_OF_DSK - 1
 
   // 8 inch or minidisk.  0 = 8 inch, 1 = minidisk

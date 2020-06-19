@@ -30,6 +30,8 @@ class IMDTests {
     override def init(): Unit = ???
 
     override def optionChanged(sb: StringBuilder): Unit = ???
+
+    override def attach(filespec: String, sb: StringBuilder): Boolean = ???
   }
 
 }

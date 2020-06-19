@@ -25,6 +25,8 @@ class ConsoleTerminal(val model: AbstractTerminalModel, consoleUnit: ConsoleUnit
   addKeyListener(new ConsoleKeyListener(consoleUnit))
   setFocusTraversalKeysEnabled(false)
   setFocusable(true)
+  // TODO Make this smarter
+  setLocation(200,200)
   //add(BorderLayout.CENTER, this)
   repaint()
 

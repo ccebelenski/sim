@@ -93,16 +93,21 @@ class S100HDSKDevice(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exten
       Utils.outln(s"$getName: Unit is not available.")
       return false
     }
-    if (cd.current_sector < 0 || cd.current_sector >= cd.DSK_SECT) {
-      Utils.outln(s"$getName: Constraint violation 0 <= Sector=${cd.current_sector} < ${cd.DSK_SECT}, will use sector 0 instead.")
+    if (cd.current_sector < 0 || cd.current_sector >= cd.HDSK_SECTORS_PER_TRACK) {
+      Utils.outln(s"$getName: Constraint violation 0 < Sector=${cd.current_sector} >= ${cd.HDSK_SECTORS_PER_TRACK}, will use sector 0 instead.")
       cd.current_sector = 0
     }
-    if (cd.current_track < 0 || cd.current_track >= cd.MAX_TRACKS) {
-      Utils.outln(s"$getName: Constraint violation 0 <= Track=${cd.current_track} < ${cd.MAX_TRACKS}, will use sector 0 instead.")
+    if (cd.current_track < 0 || cd.current_track >= cd.HDSK_NUMBER_OF_TRACKS) {
+      Utils.outln(s"$getName: Constraint violation 0 < Track=${cd.current_track} >= ${cd.HDSK_NUMBER_OF_TRACKS}, will use sector 0 instead.")
       cd.current_track = 0
 
     }
 
+    if(hdskLastCommand == HDSK_READ) {
+      Utils.outlnd(current_disk.get, s"Read Track=$selectedTrack Sector=$selectedSector Len=${current_disk.get.HDSK_SECTOR_SIZE} DMA=${selectedDMA}")
+    } else if(hdskLastCommand == HDSK_WRITE) {
+      Utils.outlnd(current_disk.get, s"Write Track=$selectedTrack Sector=$selectedSector Len=${current_disk.get.HDSK_SECTOR_SIZE} DMA=${selectedDMA}")
+    }
     true
   }
 
@@ -200,9 +205,7 @@ class S100HDSKDevice(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exten
         parameterBlock(15) = UByte(current.psh.byteValue())
         parameterBlock(16) = UByte(current.phm.byteValue())
 
-      case HDSK_READ =>
-
-      case HDSK_WRITE =>
+      case HDSK_WRITE | HDSK_READ =>
         hdskCommandPosition match {
 
           case 0 =>
@@ -398,7 +401,7 @@ class S100HDSKDevice(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exten
       return false
     } // No such unit?
 
-    val cd = unit.get
+    //val cd = unit.get
     val useAltairROM = getBinaryOption("ALTAIRROM") | machine.getCPU.isBanked
 
     if (machine.cpu.getMemorySize < UInt(24 * 1024)) {
@@ -429,7 +432,7 @@ class S100HDSKDevice(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exten
 
 object S100HDSKDevice {
   val HDSK_CAPACITY: Long = 2048 * 32 * 128 //Default Altair HDSK Capacity
-  val HDSK_NUMBER: Int = 16 //number of hard disks
+  val HDSK_NUMBER: Int = 8 //number of HDSK
   val SPT16: Int = 16
   val SPT32: Int = 32
   val SPT26: Int = 26

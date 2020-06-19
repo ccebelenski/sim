@@ -40,7 +40,7 @@ trait DiskUnit extends BasicUnit with UnitAttachable with SupportsOptions {
   var isIdleEligible: Boolean = true
 
   // Capacity
-  var capacity: Int = 0
+  var capacity: Long = 0
 
   // I/O Start time
   var ioStartTime: Long = 0L
@@ -118,44 +118,6 @@ trait DiskUnit extends BasicUnit with UnitAttachable with SupportsOptions {
     Files.size(p)
   }
 
-
-  override def attach(fileSpec: String, sb: StringBuilder): Boolean = {
-
-    if (isAvailable) {
-      sb.append(s"$getName: Unit is still attached.   DETACH first.\n")
-      return true
-    }
-
-    //  if doesn't exist then assume create a new file
-    val p :Path = Paths.get(fileSpec)
-    val options = new util.HashSet[OpenOption]
-    options.add(SPARSE)
-    options.add(CREATE)
-    options.add(WRITE)
-    options.add(READ)
-
-    // Optionally set up some drive parameters basic on the file.
-    setDriveAttributes(p)
-
-    fileChannel = FileChannel.open(p, options)
-
-
-
-    // Allocate the bytebuffer
-    byteBuffer = ByteBuffer.allocate(DSK_SECTSIZE)
-
-
-    attachedPath = Some(p)
-    capacity = DSK_SECTSIZE * DSK_SECT * MAX_TRACKS
-    dirty = false
-
-    sb.append(s"$getName: Attached: ${attachedPath.get.getFileName}\n")
-    sb.append(s"$getName: Capacity: ${Utils.formatBytes(capacity, false)}")
-    // Attaching enabled the device implicitly
-    setEnable(true)
-
-    false
-  }
 
   // Override this to set drive attributes during attach()
   def setDriveAttributes(path:Path) : Unit = {}

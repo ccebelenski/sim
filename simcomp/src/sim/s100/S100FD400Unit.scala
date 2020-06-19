@@ -1,7 +1,12 @@
 package sim.s100
 
-import java.nio.file.{Files, Path}
+import java.nio.ByteBuffer
+import java.nio.channels.FileChannel
+import java.nio.file.StandardOpenOption.{CREATE, READ, SPARSE, WRITE}
+import java.nio.file.{Files, OpenOption, Path, Paths}
+import java.util
 
+import sim.Utils
 import sim.device.{BasicUnit, DiskUnit}
 
 class S100FD400Unit(device:S100FD400Device) extends BasicUnit(device) with  DiskUnit {
@@ -44,4 +49,39 @@ class S100FD400Unit(device:S100FD400Device) extends BasicUnit(device) with  Disk
 
   override def optionChanged(sb: StringBuilder): Unit = ???
 
+  override def attach(fileSpec: String, sb: StringBuilder): Boolean = {
+
+    if (isAvailable) {
+      sb.append(s"$getName: Unit is still attached.   DETACH first.\n")
+      return true
+    }
+
+    //  if doesn't exist then assume create a new file
+    val p :Path = Paths.get(fileSpec)
+    val options = new util.HashSet[OpenOption]
+    options.add(SPARSE)
+    options.add(CREATE)
+    options.add(WRITE)
+    options.add(READ)
+
+    // Optionally set up some drive parameters basic on the file.
+    setDriveAttributes(p)
+
+    fileChannel = FileChannel.open(p, options)
+
+    // Allocate the bytebuffer
+    byteBuffer = ByteBuffer.allocate(DSK_SECTSIZE)
+
+
+    attachedPath = Some(p)
+    capacity = DSK_SECTSIZE * DSK_SECT * MAX_TRACKS
+    dirty = false
+
+    sb.append(s"$getName: Attached: ${attachedPath.get.getFileName}\r\n")
+    sb.append(s"$getName: Capacity: ${Utils.formatBytes(capacity, false)}\n\r")
+    // Attaching enabled the device implicitly
+    setEnable(true)
+
+    false
+  }
 }
