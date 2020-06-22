@@ -204,7 +204,7 @@ abstract class BasicCPU(val isBanked: Boolean, override val machine: AbstractMac
   def DAsm(addr: Int, toAddr: Int, sb: StringBuilder): Int = {
     var pc = addr
     while (pc <= toAddr) {
-      sb.append(f"\n$pc%08x: ")
+      sb.append(f"\n\r$pc%08x: ")
       pc = DAsm(pc, sb)
     }
     pc

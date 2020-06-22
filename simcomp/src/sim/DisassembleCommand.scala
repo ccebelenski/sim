@@ -10,10 +10,10 @@ class DisassembleCommand extends Command {
 
   override def process(tokenArray: Array[String]): Boolean = {
     val sb: StringBuilder = new StringBuilder
-    if (tokenArray.length < 1 || tokenArray.length > 2) sb.append("SIM: Requires a start address, optional end address.")
+    if (tokenArray.length < 1 || tokenArray.length > 2) sb.append("SIM: Requires a start address, optional end address.\n\r")
 
     else Console.simEnvironment.simMachine match {
-      case None => sb.append("SIM: No machine.  SET a MACHINE.")
+      case None => sb.append("SIM: No machine.  SET a MACHINE.\n\r")
       case Some(m: AbstractMachine) =>
         val cpu = m.getCPU
         try {
@@ -24,7 +24,7 @@ class DisassembleCommand extends Command {
           if (end == -1) cpu.DAsm(start, sb) else cpu.DAsm(start, end, sb)
         } catch {
           case nfe: NumberFormatException =>
-            sb.append("SIM: Illegal start or end address.")
+            sb.append("SIM: Illegal start or end address.\n\r")
         }
 
     }

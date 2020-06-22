@@ -21,7 +21,6 @@ class S100HDSKUnit(device:S100HDSKDevice) extends BasicUnit(device) with  DiskUn
   var HDSK_SECTORS_PER_TRACK:Int = 0 // sectors per track
   var HDSK_NUMBER_OF_TRACKS:Int  = 0 //number of tracks
 
-
   override val waitTime: Long = 0L
 
   override def cancel(): Unit = ???
@@ -42,13 +41,7 @@ class S100HDSKUnit(device:S100HDSKDevice) extends BasicUnit(device) with  DiskUn
       return true
     }
 
-
-    //  if doesn't exist then assume create a new file
     val p :Path = Paths.get(fileSpec)
-
-
-
-
     val options = new util.HashSet[OpenOption]
     options.add(SPARSE)
     options.add(CREATE)
@@ -77,7 +70,6 @@ class S100HDSKUnit(device:S100HDSKDevice) extends BasicUnit(device) with  DiskUn
     sb.append(s"\n\rChecking format... (${Utils.formatBytes(capacity,si=false)})\n\r")
     assignFormat(fileChannel.size())
 
-
     HDSK_FORMAT_TYPE match {
       case None =>
         // No disk parameter block found
@@ -90,12 +82,8 @@ class S100HDSKUnit(device:S100HDSKDevice) extends BasicUnit(device) with  DiskUn
 
     // Set number of sectors per track and sector size
 
-
-
-
-
     attachedPath = Some(p)
-//    capacity = DSK_SECTSIZE * DSK_SECT * MAX_TRACKS
+
     dirty = false
 
     HDSK_FORMAT_TYPE match {
@@ -103,6 +91,7 @@ class S100HDSKUnit(device:S100HDSKDevice) extends BasicUnit(device) with  DiskUn
         sb.append (s"$getName: Disk: ${x.desc}\n\r")
         HDSK_SECTORS_PER_TRACK = x.spt >> x.psh
         HDSK_SECTOR_SIZE = (128 << x.psh)
+        HDSK_NUMBER_OF_TRACKS = ((capacity + HDSK_SECTORS_PER_TRACK * HDSK_SECTOR_SIZE -1) / (HDSK_SECTORS_PER_TRACK * HDSK_SECTOR_SIZE)).intValue()
 
       }
       case _ => {
@@ -116,10 +105,9 @@ class S100HDSKUnit(device:S100HDSKDevice) extends BasicUnit(device) with  DiskUn
     }
     sb.append(s"$getName: Attached: ${attachedPath.get.getFileName}\n\r")
     sb.append(s"$getName: Capacity: ${Utils.formatBytes(capacity, si = false)}\n\r")
+    sb.append(s"$getName: Sectors/Track: $HDSK_SECTORS_PER_TRACK, Tracks: $HDSK_NUMBER_OF_TRACKS Sector Size:$HDSK_SECTOR_SIZE\n\r")
     // Attaching enabled the device implicitly
     setEnable(true)
-
-    HDSK_NUMBER_OF_TRACKS = ((capacity + HDSK_SECTORS_PER_TRACK * HDSK_SECTOR_SIZE -1) / (HDSK_SECTORS_PER_TRACK * HDSK_SECTOR_SIZE)).intValue()
     // Allocate the bytebuffer
     byteBuffer = ByteBuffer.allocate(HDSK_SECTOR_SIZE)
 

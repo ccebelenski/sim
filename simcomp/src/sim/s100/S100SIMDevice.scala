@@ -41,19 +41,19 @@ class S100SIMDevice(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) extend
     getClockZSDOSCmd,           /*  7 get the current time in ZSDOS format                              */
     setClockZSDOSCmd,           /*  8 set the current time in ZSDOS format                              */
     getClockCPM3Cmd,            /*  9 get the current time in CP/M 3 format                             */
-    setClockCPM3Cmd,            /* 10 set the current time in CP/M 3 format                             */
-    getBankSelectCmd,           /* 11 get the selected bank                                             */
-    setBankSelectCmd,           /* 12 set the selected bank                                             */
-    getCommonCmd,               /* 13 get the base address of the common memory segment                 */
-    resetSIMHInterfaceCmd,      /* 14 reset the SIMH pseudo device                                      */
-    showTimerCmd,               /* 15 show time difference to timer on top of stack                     */
-    attachPTPCmd,               /* 16 attach PTP to the file with name at beginning of CP/M command line*/
-    detachPTPCmd,               /* 17 detach PTP                                                        */
-    hasBankedMemoryCmd,         /* 18 determines whether machine has banked memory                      */
-    setZ80CPUCmd,               /* 19 set the CPU to a Z80                                              */
-    set8080CPUCmd,              /* 20 set the CPU to an 8080                                            */
-    startTimerInterruptsCmd,    /* 21 start timer interrupts                                            */
-    stopTimerInterruptsCmd,     /* 22 stop timer interrupts                                             */
+    setClockCPM3Cmd,            /* 0x0a set the current time in CP/M 3 format                             */
+    getBankSelectCmd,           /* 11 0x0b get the selected bank                                             */
+    setBankSelectCmd,           /* 12 0x0c set the selected bank                                             */
+    getCommonCmd,               /* 13 0x0d get the base address of the common memory segment                 */
+    resetSIMHInterfaceCmd,      /* 14 0x0e reset the SIMH pseudo device                                      */
+    showTimerCmd,               /* 15 0x0f show time difference to timer on top of stack                     */
+    attachPTPCmd,               /* 16 0x10 attach PTP to the file with name at beginning of CP/M command line*/
+    detachPTPCmd,               /* 17 0x11 detach PTP                                                        */
+    hasBankedMemoryCmd,         /* 18 0x12 determines whether machine has banked memory                      */
+    setZ80CPUCmd,               /* 19 0x13 set the CPU to a Z80                                              */
+    set8080CPUCmd,              /* 20 0x14 set the CPU to an 8080                                            */
+    startTimerInterruptsCmd,    /* 21 0x15 start timer interrupts                                            */
+    stopTimerInterruptsCmd,     /* 22 0x16 stop timer interrupts                                             */
     setTimerDeltaCmd,           /* 23 set the timer interval in which interrupts occur                  */
     setTimerInterruptAdrCmd,    /* 24 set the address to call by timer interrupts                       */
     resetStopWatchCmd,          /* 25 reset the millisecond stop watch                                  */
@@ -66,6 +66,44 @@ class S100SIMDevice(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) extend
     setCPUClockFrequency, /* 32 set the clock frequency of the CPU                                */
    */
 
+  /*  Z80 or 8080 programs communicate with the SIMH pseudo device via port 0xfe.
+        The following principles apply:
+    1)  For commands that do not require parameters and do not return results
+        ld  a,<cmd>
+        out (0feh),a
+        Special case is the reset command which needs to be send 128 times to make
+        sure that the internal state is properly reset.
+    2)  For commands that require parameters and do not return results
+        ld  a,<cmd>
+        out (0feh),a
+        ld  a,<p1>
+        out (0feh),a
+        ld  a,<p2>
+        out (0feh),a
+        ...
+        Note: The calling program must send all parameter bytes. Otherwise
+        the pseudo device is left in an undefined state.
+    3)  For commands that do not require parameters and return results
+        ld  a,<cmd>
+        out (0feh),a
+        in  a,(0feh)    ; <A> contains first byte of result
+        in  a,(0feh)    ; <A> contains second byte of result
+        ...
+        Note: The calling program must request all bytes of the result. Otherwise
+        the pseudo device is left in an undefined state.
+    4)  For commands that do require parameters and return results
+        ld  a,<cmd>
+        out (0feh),a
+        ld  a,<p1>
+        out (0feh),a
+        ld  a,<p2>
+        out (0feh),a
+        ...             ; send all parameters
+        in  a,(0feh)    ; <A> contains first byte of result
+        in  a,(0feh)    ; <A> contains second byte of result
+        ...
+*/
+
   private def simh_out(byte: UByte): UByte = {
     //Utils.outln(s"Write 0xfe - $byte")
     byte.toInt match {
@@ -74,9 +112,13 @@ class S100SIMDevice(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) extend
         // Print current time in ms
         Utils.outln(s"$getName: Current time in ms = ${System.currentTimeMillis()}")
 
-      case (14) =>
+      case (0x0e) =>
         //   Reset the SIM Pseudo Device
         // Nothing to do
+
+      case 0x12 =>
+        // Determine if there is banked memory
+        // TODO
 
       case (22) =>
         // Stop timer Interrupts
