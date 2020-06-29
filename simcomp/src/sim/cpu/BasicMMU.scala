@@ -29,7 +29,7 @@ abstract class BasicMMU(val cpu: BasicCPU) {
 
   val COMMON = 0xc000 // Addreses greater than common are in the same memory.
 
-  val mtab: Array[Option[MMU_ENTRY]] = new Array[Option[MMU_ENTRY]](1+(MAXMEMORY >> LOG2PAGESIZE).toInt)
+  val mtab: Array[Option[MMU_ENTRY]] = new Array[Option[MMU_ENTRY]](1 + (MAXMEMORY >> LOG2PAGESIZE).toInt)
   for (x <- mtab.indices) mtab(x) = None
 
   // 256 Ports
@@ -53,22 +53,32 @@ abstract class BasicMMU(val cpu: BasicCPU) {
 
   }
 
-  def mapROM(baseAddress:UInt, size:UInt, image:Array[Int]): Unit = {
+  def mapROM(baseAddress: UInt, size: UInt, image: Array[Int]): Unit = {
+    mapAS(baseAddress, size, image, true)
+  }
+
+  def mapRAM(baseAddress: UInt, size: UInt, image: Array[Int]): Unit = {
+    mapAS(baseAddress, size, image, false)
+
+  }
+
+  def mapAS(baseAddress: UInt, size: UInt, image: Array[Int], asROM: Boolean): Unit = {
     for (i <- 0 to (size >> LOG2PAGESIZE).toInt) {
       var addr = (baseAddress & 0xfff00) + (i << LOG2PAGESIZE.toInt)
       val pageaddr = if (cpu.isBanked && addr < COMMON) addr | (bankSelect << MAXBANKSIZELOG2.toInt) else addr
       val page = pageaddr >> LOG2PAGESIZE.toInt
-      val as = new ROMAddressSpace(UInt(addr), UInt(addr) + PAGESIZE - UInt(1))
-
+      val as: AddressSpace = {
+        if (asROM) new ROMAddressSpace(UInt(addr), UInt(addr) + PAGESIZE - UInt(1))
+        else new MemoryAddressSpace(UInt(addr), UInt(addr) + PAGESIZE - UInt(1))
+      }
       val imgIdx = i << LOG2PAGESIZE.toInt
       val imgSize = PAGESIZE - UInt(1)
-      for(x <- imgIdx to imgSize.toInt) as.load8(UInt(addr + x), UByte(image(x).byteValue()))
+      for (x <- imgIdx to imgSize.toInt) as.load8(UInt(addr + x), UByte(image(x).byteValue()))
 
-      val entry = MMU_ENTRY(memory = Some(as))
+      val entry = MMU_ENTRY(None, memory = Some(as))
       mtab(page) = Some(entry)
-      //Utils.outln(f"MMU: Mapped ROM memory space.  Page: 0x$page%04X, Addr: 0x$addr%04X - 0x${as.highAddress.intValue}%04X")
+      Utils.outln(f"MMU: Mapped ROM memory space.  Page: 0x$page%04X, Addr: 0x$addr%04X - 0x${as.highAddress.intValue}%04X")
     }
-
 
   }
 
@@ -121,10 +131,13 @@ abstract class BasicMMU(val cpu: BasicCPU) {
 
   }
 
-  def installROM(image:Array[Int], size:Int, baseAddr:UInt) : Unit = {
-    mapROM(baseAddr,UInt(image.size - 1),image)
+  def installROM(image: Array[Int], size: Int, baseAddr: UInt): Unit = {
+    mapROM(baseAddr, UInt(image.size - 1), image)
   }
 
+  def installRAM(image: Array[Int], size: Int, baseAddr: UInt): Unit = {
+    mapRAM(baseAddr, UInt(image.size - 1), image)
+  }
 
   @inline
   def put8(register16: Register16, value: Register8): Unit = {
@@ -137,8 +150,8 @@ abstract class BasicMMU(val cpu: BasicCPU) {
   }
 
   @inline
-  def put8(register16:Register16, value: Int) : Unit = {
-    put8(register16.get16,UByte(value.byteValue()))
+  def put8(register16: Register16, value: Int): Unit = {
+    put8(register16.get16, UByte(value.byteValue()))
   }
 
   @inline
@@ -179,11 +192,11 @@ abstract class BasicMMU(val cpu: BasicCPU) {
 
   }
 
-  def out8(r1:Register8, value: UByte) : Unit = {
-    out8(r1.intValue,value)
+  def out8(r1: Register8, value: UByte): Unit = {
+    out8(r1.intValue, value)
   }
 
-  def out8(r1:Register8, value:Int) : Unit = {
+  def out8(r1: Register8, value: Int): Unit = {
     out8(r1.intValue, UByte(value.byteValue()))
   }
 
@@ -256,7 +269,7 @@ abstract class BasicMMU(val cpu: BasicCPU) {
 
 
   @inline
-  def get16(address:UShort) : UShort = {
+  def get16(address: UShort): UShort = {
     get16(address.intValue)
   }
 

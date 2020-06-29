@@ -629,7 +629,7 @@ trait ImageDisk {
     Utils.outln("Writing C:$Cyl/H:$Head/S:$Sector, len=$buflen")
 
 
-    if (sectSeek(Cyl, Head) != 0) {
+    if (!sectSeek(Cyl, Head)) {
       return (IMD_DISK_IO_ERROR_GENERAL, 0)
     }
 
@@ -720,7 +720,7 @@ trait ImageDisk {
     }
 
     /* Check to make sure the Cyl / Head is not already formatted. */
-    if (sectSeek(Cyl, Head) == 0) {
+    if (!sectSeek(Cyl, Head)) {
       Utils.outln(s"IMD: ERROR: Not Formatting C:$Cyl/H:$Head, track already exists.")
       return IMD_DISK_IO_ERROR_GENERAL
     }

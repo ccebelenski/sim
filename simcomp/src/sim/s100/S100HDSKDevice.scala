@@ -117,8 +117,8 @@ class S100HDSKDevice(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exten
     hostSector = if (geom.skew.isEmpty) cd.current_sector else geom.skew.get(cd.current_sector)
     val sectorSize = if (cd.HDSK_FORMAT_TYPE.get.physicalSectorSize == 0) cd.HDSK_SECTOR_SIZE else cd.HDSK_FORMAT_TYPE.get.physicalSectorSize
     val pos = sectorSize * (cd.HDSK_SECTORS_PER_TRACK * cd.current_track + hostSector) + cd.HDSK_FORMAT_TYPE.get.offset
-    System.out.println(s"SEEK: hostSector:$hostSector sectorSize:$sectorSize track:${cd.current_track} CurrentSector:${cd.current_sector}")
-    System.out.println(s"SEEK: $pos")
+    //System.out.println(s"SEEK: hostSector:$hostSector sectorSize:$sectorSize track:${cd.current_track} CurrentSector:${cd.current_sector}")
+    //System.out.println(s"SEEK: $pos")
     cd.fileChannel.position(pos)
 
   }
@@ -151,17 +151,17 @@ class S100HDSKDevice(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exten
     System.out.println(s"IN POS:$hdskCommandPosition L:$hdskLastCommand P:$hdskCommandPosition")
     if ((hdskCommandPosition == 6) && ((hdskLastCommand == HDSK_READ) || (hdskLastCommand == HDSK_WRITE))) {
       val result = if (hdsk_checkParameters()) {
-        System.out.println("Going to READ/WRITE")
+        //System.out.println("Going to READ/WRITE")
         if (hdskLastCommand == HDSK_READ) hdsk_read() else hdsk_write()
       }
       else CPM_ERROR
-      System.out.println("DONE Read/Write")
+      //System.out.println("DONE Read/Write")
       hdskLastCommand = HDSK_NONE
       hdskCommandPosition = 0
       return result
     }
     if (hdskLastCommand == HDSK_PARAM) {
-      System.out.println(s"PARAM RETURN $parameterCount")
+      //System.out.println(s"PARAM RETURN $parameterCount")
       parameterCount += 1
       if (parameterCount >= PARAMETER_BLOCK_SIZE)
         hdskLastCommand = HDSK_NONE
@@ -180,7 +180,7 @@ class S100HDSKDevice(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exten
     hdskLastCommand match {
 
       case HDSK_PARAM =>
-        System.out.println("PARAM")
+        //System.out.println("PARAM")
         parameterCount = 0
         val thisDisk = if ((0 <= data) && (data < S100HDSKDevice.HDSK_NUMBER)) data.intValue else 0
         val unit = findUnitByNumber(thisDisk).asInstanceOf[Option[S100HDSKUnit]]
@@ -212,40 +212,40 @@ class S100HDSKDevice(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exten
         parameterBlock(15) = UByte(current.psh.byteValue())
         parameterBlock(16) = UByte(current.phm.byteValue())
 
-      case (HDSK_WRITE | HDSK_READ) =>
-        System.out.println("READ/WRITE")
+      case HDSK_WRITE | HDSK_READ =>
+        //System.out.println("READ/WRITE")
         hdskCommandPosition match {
 
           case 0 =>
             //selectedDisk = data.intValue
             hdskCommandPosition += 1
             current_disk = findUnitByNumber(data.intValue).asInstanceOf[Option[S100HDSKUnit]]
-            System.out.println(s"SET DISK: ${data.intValue}")
+            //System.out.println(s"SET DISK: ${data.intValue}")
 
           case 1 =>
             current_disk.get.current_sector = data.intValue
             hdskCommandPosition += 1
-            System.out.println(s"SET SECTOR: ${current_disk.get.current_sector}")
+            //System.out.println(s"SET SECTOR: ${current_disk.get.current_sector}")
 
           case 2 =>
             current_disk.get.current_track = data.intValue
             hdskCommandPosition += 1
-            System.out.println(s"SET TRACK 2: ${current_disk.get.current_track}")
+            //System.out.println(s"SET TRACK 2: ${current_disk.get.current_track}")
 
           case 3 =>
             current_disk.get.current_track += (data.intValue << 8)
             hdskCommandPosition += 1
-            System.out.println(s"SET TRACK 3: ${current_disk.get.current_track}")
+            //System.out.println(s"SET TRACK 3: ${current_disk.get.current_track}")
 
           case 4 =>
             selectedDMA = data.intValue
             hdskCommandPosition += 1
-            System.out.println(s"Set DMA 4: $selectedDMA")
+            //System.out.println(s"Set DMA 4: $selectedDMA")
 
           case 5 =>
             selectedDMA += (data.intValue << 8)
             hdskCommandPosition += 1
-            System.out.println(s"Set DMA 5: $selectedDMA")
+            //System.out.println(s"Set DMA 5: $selectedDMA")
 
           case _ =>
             hdskLastCommand = HDSK_NONE
@@ -260,8 +260,6 @@ class S100HDSKDevice(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exten
           hdskLastCommand = HDSK_RESET
         }
         hdskCommandPosition = 0
-
-
     }
 
     UByte(0) /* ignored, since OUT */
@@ -301,12 +299,12 @@ class S100HDSKDevice(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exten
         return CPM_ERROR
       }
     } else {
-      System.out.println("GOING SEEK")
+      //System.out.println("GOING SEEK")
       doSeek()
-      System.out.println(s"ALLOC BUFFER ${unit.HDSK_SECTOR_SIZE}")
+      //System.out.println(s"ALLOC BUFFER ${unit.HDSK_SECTOR_SIZE}")
       hdiskBuf = ByteBuffer.allocate(unit.HDSK_SECTOR_SIZE)
       val read = unit.fileChannel.read(hdiskBuf)
-      System.out.println(s"Read $read")
+      //System.out.println(s"Read $read")
       if (read <= 0) {
         hdiskBuf.clear()
         for (i <- 0 to unit.HDSK_SECTOR_SIZE) hdiskBuf.put(CPM_EMPTY.byteValue)
@@ -314,13 +312,13 @@ class S100HDSKDevice(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exten
         return CPM_OK /* allows the creation of empty hard disks */
       }
     }
-    System.out.println(s"DMA XFER $selectedDMA Buf:${hdiskBuf.remaining()}")
+    //System.out.println(s"DMA XFER $selectedDMA Buf:${hdiskBuf.remaining()}")
     for (i <- 0 until unit.HDSK_SECTOR_SIZE) {
       val b = UByte(hdiskBuf.get(i))
-      System.out.print(s"${b.intValue} ")
+      //System.out.print(s"${b.intValue} ")
       machine.cpu.MMU.put8(selectedDMA + i, b)
     }
-    System.out.println("\n\r")
+    //System.out.println("\n\r")
 
     CPM_OK
   }
@@ -428,20 +426,12 @@ class S100HDSKDevice(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exten
     } // No such unit?
 
     //val cd = unit.get
-    val useAltairROM = getBinaryOption("ALTAIRROM") | machine.getCPU.isBanked
+    //val useAltairROM = getBinaryOption("ALTAIRROM") | machine.getCPU.isBanked
 
     if (machine.cpu.getMemorySize < UInt(24 * 1024)) {
-      sb.append(s"$getName: Need at least 24KB RAM to boot from hard disk.")
+      Utils.outln(s"$getName: Need at least 24KB RAM to boot from hard disk.")
       return false
     }
-
-    if (useAltairROM) {
-      sb.append(s"$getName: Device not supported by ALTAIRROM option.")
-      return false
-    }
-
-    mmu.installROM(bootrom_hdsk.toArray,
-      bootrom_hdsk.size, UInt(HDSK_BOOT_ADDRESS))
 
     /* op-code for LD A,<8-bit value> instruction   */
     val LDA_INSTRUCTION = 0x3e
@@ -458,22 +448,29 @@ class S100HDSKDevice(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exten
     /* op-code for SUB <8-bit-value> */
     val SUB_INSTRUCTION  =       0xd6
 
+    //if(mmu.getBank != 0) System.out.println("\nWrongBank\n")
     // check whether we are really modifying an LD A,<> instruction
     if (S100FD400Device.bootrom_dsk(UNIT_NO_OFFSET_1 - 1) == LDA_INSTRUCTION &&
-      S100FD400Device.bootrom_dsk(UNIT_NO_OFFSET_2 - 1) == LDA_INSTRUCTION) {
-      bootrom_hdsk(HDSK_BOOT_ALTAIR_DISKS - HDSK_BOOT_ADDRESS - 1) == SUB_INSTRUCTION
+      bootrom_hdsk(HDSK_BOOT_ALTAIR_DISKS - HDSK_BOOT_ADDRESS - 1) == SUB_INSTRUCTION) {
+
+      //System.out.println(s"\n\nDISK=${S100FD400Device.bootrom_dsk(UNIT_NO_OFFSET_1)}")
+      //System.out.println(s"\n\nSETDISK=${(unitno + bootrom_hdsk(HDSK_BOOT_ALTAIR_DISKS - HDSK_BOOT_ADDRESS)) & 0xff}")
+
       S100FD400Device.bootrom_dsk(UNIT_NO_OFFSET_1) = (unitno + bootrom_hdsk(HDSK_BOOT_ALTAIR_DISKS - HDSK_BOOT_ADDRESS)) & 0xff
-      S100FD400Device.bootrom_dsk(UNIT_NO_OFFSET_2) = 0x80 | (unitno & 0xff)
+      //System.out.println(s"\nSETTO: ${S100FD400Device.bootrom_dsk(UNIT_NO_OFFSET_1)}\n")
     } else {
       // Attempt to modify non LD A,<> instruction is refused.
-      sb.append(s"$getName: Incorrect boot ROM offsets detected.")
+      Utils.outln(s"$getName: Incorrect boot ROM offsets detected.")
       return false
     }
     // install modified ROM
     mmu.installROM(S100FD400Device.bootrom_dsk.toArray,
       S100FD400Device.bootrom_dsk.size, UInt(S100FD400Device.ALTAIR_ROM_LOW))
 
+    mmu.installRAM(bootrom_hdsk.toArray,
+      bootrom_hdsk.size, UInt(HDSK_BOOT_ADDRESS))
 
+    //if(mmu.get8(S100FD400Device.ALTAIR_ROM_LOW + UNIT_NO_OFFSET_1) != 8) System.out.println(s"\nUNIT WAS NOT SET\n")
     machine.getCPU.PC(HDSK_BOOT_ADDRESS)
     Utils.outln(f"$getName: Boot ROM start: $HDSK_BOOT_ADDRESS%04x\n\r")
     machine.getCPU.runcpu()

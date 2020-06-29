@@ -25,4 +25,7 @@ abstract class AddressSpace(val lowAddress: UInt, val highAddress: UInt) {
 
   def get8(address: UInt): UByte
 
+  def load8(address:UInt, value:UByte) : Unit
+
+
 }

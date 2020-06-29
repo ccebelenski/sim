@@ -30,7 +30,10 @@ class MemoryAddressSpace(lowAddress: UInt, highAddress: UInt) extends AddressSpa
       M(scaleAddress(address))
     }
   }
-
+  // One-time load
+  override def load8(address:UInt, value:UByte) : Unit = {
+    put8(address,value)
+  }
   @inline
   private def scaleAddress(address:UInt) : Int = {
     M.length - (highAddress - address) - 1
@@ -42,12 +45,12 @@ class ROMAddressSpace(lowAddress: UInt, highAddress: UInt) extends MemoryAddress
   override val isReadOnly: Boolean = true
 
   override def put8(address:UInt, value:UByte): Unit = {
-      Utils.outln(s"Memory: Illegal ROM write access. Addr: ${address.toHexString}")
+      //Utils.outln(s"Memory: Illegal ROM write access. Addr: ${address.toHexString}")
   }
-
   // One-time load for ROM's
-  def load8(address:UInt, value:UByte) : Unit = {
+  override def load8(address:UInt, value:UByte) : Unit = {
     super.put8(address,value)
   }
+
 
 }
