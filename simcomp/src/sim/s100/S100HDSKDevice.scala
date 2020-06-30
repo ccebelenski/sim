@@ -115,8 +115,8 @@ class S100HDSKDevice(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exten
     val cd = current_disk.get
     val geom = cd.HDSK_FORMAT_TYPE.get
     hostSector = if (geom.skew.isEmpty) cd.current_sector else geom.skew.get(cd.current_sector)
-    val sectorSize = if (cd.HDSK_FORMAT_TYPE.get.physicalSectorSize == 0) cd.HDSK_SECTOR_SIZE else cd.HDSK_FORMAT_TYPE.get.physicalSectorSize
-    val pos = sectorSize * (cd.HDSK_SECTORS_PER_TRACK * cd.current_track + hostSector) + cd.HDSK_FORMAT_TYPE.get.offset
+    val sectorSize = if (geom.physicalSectorSize == 0) cd.HDSK_SECTOR_SIZE else geom.physicalSectorSize
+    val pos = sectorSize * (cd.HDSK_SECTORS_PER_TRACK * cd.current_track + hostSector) + geom.offset
     //System.out.println(s"SEEK: hostSector:$hostSector sectorSize:$sectorSize track:${cd.current_track} CurrentSector:${cd.current_sector}")
     //System.out.println(s"SEEK: $pos")
     cd.fileChannel.position(pos)
@@ -148,14 +148,14 @@ class S100HDSKDevice(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exten
   val parameterBlock: Array[UByte] = Array.ofDim(PARAMETER_BLOCK_SIZE)
 
   def hdsk_in(port: UInt): UByte = {
-    System.out.println(s"IN POS:$hdskCommandPosition L:$hdskLastCommand P:$hdskCommandPosition")
+    //System.out.println(s"IN POS:$hdskCommandPosition L:$hdskLastCommand P:$hdskCommandPosition C/F:${machine.getCPU.PC.intValue.toHexString}")
     if ((hdskCommandPosition == 6) && ((hdskLastCommand == HDSK_READ) || (hdskLastCommand == HDSK_WRITE))) {
       val result = if (hdsk_checkParameters()) {
         //System.out.println("Going to READ/WRITE")
         if (hdskLastCommand == HDSK_READ) hdsk_read() else hdsk_write()
       }
       else CPM_ERROR
-      //System.out.println("DONE Read/Write")
+      //System.out.println(s"DONE Read/Write result=$result")
       hdskLastCommand = HDSK_NONE
       hdskCommandPosition = 0
       return result
@@ -174,7 +174,7 @@ class S100HDSKDevice(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exten
 
   def hdsk_out(port: UInt, data: UByte): UByte = {
 
-    System.out.println(s"OUT DATA:${data.intValue} L:$hdskLastCommand P:$hdskCommandPosition")
+    //System.out.println(s"OUT DATA:${data.intValue} L:$hdskLastCommand P:$hdskCommandPosition C/F:${machine.getCPU.PC.intValue.toHexString}")
     var current: S100HDiskParamsBase = null
 
     hdskLastCommand match {
@@ -217,7 +217,6 @@ class S100HDSKDevice(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exten
         hdskCommandPosition match {
 
           case 0 =>
-            //selectedDisk = data.intValue
             hdskCommandPosition += 1
             current_disk = findUnitByNumber(data.intValue).asInstanceOf[Option[S100HDSKUnit]]
             //System.out.println(s"SET DISK: ${data.intValue}")

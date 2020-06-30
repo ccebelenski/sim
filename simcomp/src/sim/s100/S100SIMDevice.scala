@@ -231,7 +231,7 @@ class S100SIMDevice(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) extend
   }
 
   private def simh_out(data: UByte): UByte = {
-    if(data != 27 && data != 14) Utils.outln(s"Write 0xfe - $data lastCommand = $lastCommand")
+    //if(data != 27 && data != 14) Utils.outln(s"Write 0xfe - $data lastCommand = $lastCommand")
     lastCommand match {
       case `readURLCmd` =>
         // Not Supported
@@ -423,7 +423,7 @@ class S100SIMDevice(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) extend
   }
 
   private def simh_in(byte: UByte): UByte = {
-    Utils.outln(s"Read 0xfe - $byte lastCommand = $lastCommand")
+    //Utils.outln(s"Read 0xfe - $byte lastCommand = $lastCommand")
     var result = 0
     lastCommand match {
       case `readURLCmd` =>
@@ -561,7 +561,7 @@ class S100SIMDevice(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) extend
         result = 0
         lastCommand = 0
     }
-    Utils.outln(s"Read 0xfe - result: ${result.byteValue()}")
+    //Utils.outln(s"Read 0xfe - result: ${result.byteValue()}")
     UByte(result.byteValue())
   }
 }
