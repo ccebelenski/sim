@@ -162,8 +162,11 @@ abstract class BasicMMU(val cpu: BasicCPU) {
   def put8(address: Int, value: UByte): Unit = {
 
     var addr: Int = address & ADDRMASK
-    val pageaddr = if (cpu.isBanked && (addr < COMMON)) (addr | bankSelect << MAXBANKSIZELOG2.toInt) else addr
-    if(cpu.isBanked && (addr < COMMON)) addr = addr | bankSelect << MAXBANKSIZELOG2.toInt
+    var pageaddr = addr
+    if(cpu.isBanked && (addr < COMMON)) {
+      pageaddr = addr | bankSelect << MAXBANKSIZELOG2.toInt
+      addr = addr | bankSelect << MAXBANKSIZELOG2.toInt
+    }
     val m = mtab(pageaddr >> LOG2PAGESIZE.toInt)
     m match {
       case None => Utils.outln(f"MMU: Write to non-existent memory.  Addr: 0x$addr%04X")
@@ -229,9 +232,12 @@ abstract class BasicMMU(val cpu: BasicCPU) {
 
   @inline
   def get8(address: Int): UByte = {
-    var addr: Int = (address & ADDRMASK).toInt
-    val pageaddr = if (cpu.isBanked && (addr < COMMON)) addr | bankSelect << MAXBANKSIZELOG2.toInt else addr
-    if(cpu.isBanked && (addr < COMMON)) addr = addr | bankSelect << MAXBANKSIZELOG2.toInt
+    var addr: Int = (address & ADDRMASK)
+    var pageaddr = addr
+    if(cpu.isBanked && (addr < COMMON)) {
+      pageaddr = addr | bankSelect << MAXBANKSIZELOG2.toInt
+      addr = addr | bankSelect << MAXBANKSIZELOG2.toInt
+    }
     val m = mtab(pageaddr >> LOG2PAGESIZE.toInt)
     m match {
       case None =>

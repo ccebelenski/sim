@@ -10,25 +10,16 @@ class MemoryAddressSpace(lowAddress: UInt, highAddress: UInt) extends AddressSpa
   override val isReadOnly: Boolean = false
 
   private val M: Array[UByte] = new Array[UByte]((highAddress - lowAddress + 1))
+  private val mlen = M.length
 
   for(x <- 0 to (highAddress - lowAddress).toInt) M(x) = UByte(0)
 
   override def put8(address: UInt, value: UByte): Unit = {
-    if (address < lowAddress || address > highAddress) {
-      Utils.outln(s"Memory: Illegal memory write access. Addr: ${address.toHexString}")
-    } else {
       M(scaleAddress(address)) = value
-
-    }
   }
 
   override def get8(address: UInt): UByte = {
-    if (address < lowAddress || address > highAddress) {
-      Utils.outln(s"Memory: Illegal memory read access. Addr: ${address.toHexString}")
-      UByte(0)
-    } else {
       M(scaleAddress(address))
-    }
   }
   // One-time load
   override def load8(address:UInt, value:UByte) : Unit = {
@@ -36,7 +27,7 @@ class MemoryAddressSpace(lowAddress: UInt, highAddress: UInt) extends AddressSpa
   }
   @inline
   private def scaleAddress(address:UInt) : Int = {
-    M.length - (highAddress - address) - 1
+    mlen - (highAddress - address) - 1
   }
 
 }
