@@ -1,11 +1,13 @@
 package com.sim.term
 
 import java.awt._
+import java.awt.event.{AdjustmentEvent, AdjustmentListener}
 
-import akka.actor.ActorRef
 import javax.swing._
 
 class Term(val model: AbstractTerminalModel) extends JComponent {
+
+  private var lastRepaintTime:Long = 0L
 
   //The cell width in pixels.
   private val CELL_WIDTH = 10
@@ -29,19 +31,24 @@ class Term(val model: AbstractTerminalModel) extends JComponent {
   setFocusTraversalKeysEnabled(false)
   setFocusable(true)
   requestFocusInWindow()
-  val d = new Dimension(model.getColumns * CELL_WIDTH , model.getBufferSize * CELL_HEIGHT)
+  val d = new Dimension(model.getColumns * CELL_WIDTH  , model.getRows * CELL_HEIGHT)
   setSize(d)
   setMinimumSize(d)
   setPreferredSize(d)
   setLayout(new BorderLayout(0, 0))
-//    val rows = model.getRows
-//    val bufferSize = model.getBufferSize
-//    if (bufferSize > rows) {
-//      scrollBar = Some(new JScrollBar(Adjustable.VERTICAL, 0, rows, 0, bufferSize + 1))
-//      scrollBar.get.addAdjustmentListener((l) => repaint())
-//      add(BorderLayout.LINE_END, scrollBar.get)
-//    }
-    repaint()
+    val rows = model.getRows
+    val bufferSize = model.getBufferSize
+    if (bufferSize > rows) {
+      scrollBar = Some(new JScrollBar(Adjustable.VERTICAL, 0, rows, 0, bufferSize + 1))
+      scrollBar.get.addAdjustmentListener(new AdjustmentListener() {
+        override def adjustmentValueChanged(e: AdjustmentEvent): Unit = {
+          repaint()
+        }
+      })
+
+      add(scrollBar.get, BorderLayout.LINE_END)
+    }
+    //repaint()
 
   /**
     * Prints a line to the terminal.
@@ -59,7 +66,11 @@ class Term(val model: AbstractTerminalModel) extends JComponent {
     */
   def print(str: String): Unit = {
     model.print(str)
-    repaint()
+    // Refresh no faster than 30fps
+    if(System.currentTimeMillis() > (lastRepaintTime + 33)  ) {
+      repaint()
+      lastRepaintTime = System.currentTimeMillis()
+    }
   }
 
     override def paint(g: Graphics): Unit = {
@@ -100,12 +111,16 @@ object Term {
     val frame = new JFrame()
     frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE)
 
-    val t = new Term(new VT100TerminalModel(80, 24))
+    val t = new Term(new VT100TerminalModel(80, 24, 50))
+    val d = new Dimension(t.getWidth + 15, t.getHeight + 40)
+    frame.setPreferredSize(d)
+    frame.setMinimumSize(d)
     frame.add(t)
     frame.pack()
+    frame.setTitle("TEST")
     frame.setVisible(true)
 
-    t.print("Test")
+    t.println("Test")
     Thread.sleep(4000)
     t.print("Test2")
   }

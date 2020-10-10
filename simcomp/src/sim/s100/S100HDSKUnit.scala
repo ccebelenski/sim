@@ -57,7 +57,7 @@ class S100HDSKUnit(device:S100HDSKDevice) extends BasicUnit(device) with  DiskUn
     if(capacity == 0) capacity = HDSK_CAPACITY
 
     if(isIMD()) {
-      if(fileChannel.size() == 0) {
+      if(capacity == 0) {
         Utils.outln(s"$getName: No image specified.")
         return false
       }
@@ -68,7 +68,7 @@ class S100HDSKUnit(device:S100HDSKDevice) extends BasicUnit(device) with  DiskUn
     }
 
     sb.append(s"\n\rChecking format... (${Utils.formatBytes(capacity,si=false)})\n\r")
-    assignFormat(fileChannel.size())
+    assignFormat(capacity)
 
     HDSK_FORMAT_TYPE match {
       case None =>
@@ -90,7 +90,7 @@ class S100HDSKUnit(device:S100HDSKDevice) extends BasicUnit(device) with  DiskUn
       case Some(x) => {
         sb.append (s"$getName: Disk: ${x.desc}\n\r")
         HDSK_SECTORS_PER_TRACK = x.spt >> x.psh
-        HDSK_SECTOR_SIZE = (128 << x.psh)
+        HDSK_SECTOR_SIZE = if(x.physicalSectorSize != 0) x.physicalSectorSize else (128 << x.psh)
         HDSK_NUMBER_OF_TRACKS = ((capacity + HDSK_SECTORS_PER_TRACK * HDSK_SECTOR_SIZE -1) / (HDSK_SECTORS_PER_TRACK * HDSK_SECTOR_SIZE)).intValue()
 
       }
@@ -100,6 +100,7 @@ class S100HDSKUnit(device:S100HDSKDevice) extends BasicUnit(device) with  DiskUn
           sb.append(s"$getName: Fixing geometry.\n\r")
           if(HDSK_SECTORS_PER_TRACK == 0) HDSK_SECTORS_PER_TRACK = 32
           if(HDSK_SECTOR_SIZE == 0) HDSK_SECTOR_SIZE = 128
+          if(HDSK_NUMBER_OF_TRACKS == 0) HDSK_NUMBER_OF_TRACKS = 2048
         }
       }
     }
@@ -124,10 +125,10 @@ class S100HDSKUnit(device:S100HDSKDevice) extends BasicUnit(device) with  DiskUn
 
   private def assignFormat(size:Long):Unit = {
     HDSK_FORMAT_TYPE = None
-    Utils.outlnd(this, s"Looking for spec with capacity $capacity")
+    Utils.outlnd(this, s"Looking for spec with capacity $size ${Utils.formatBytes(size,false)}")
     S100HDSKDevice.DPB.find(p => p.capac == size) match {
-      case x => HDSK_FORMAT_TYPE = x
-      case _ => {}
+      case x: Some[S100HDiskParamsBase] => HDSK_FORMAT_TYPE = x
+      case _ => Utils.outlnd(this, "Did not find spec.")
     }
   }
 }

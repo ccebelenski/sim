@@ -9,7 +9,6 @@ class Console {
 
   def initUI(): Unit = {
 
-    //Console.textTerminal = textIO.getTextTerminal
     Console.cli = new SimCLI
     Console.cli.setPrompt("SIM>")
     Console.term = Console.cli.getTerm
@@ -72,6 +71,7 @@ class Console {
     Console.commandTree.put(unmlog.commandToken, unmlog)
 
 
+    Utils.outln("\n\r")
     version.process(null)
   }
 

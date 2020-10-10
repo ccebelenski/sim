@@ -8,6 +8,8 @@ import sim.cpu.Z80MMU
 import sim.device.PortMappedDevice
 import sim.unsigned.{UByte, UInt}
 
+import scala.annotation.switch
+
 /**
   * A pseudo device for communication between the S100 and the simulator
   * Sits on Port 0xfe
@@ -23,6 +25,9 @@ class S100SIMDevice(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) extend
       case _ => UByte(0)
     }
   }
+
+  //Debug control
+  debug = false
 
   override val description: String = "SIM Device"
   override val name = "SIM"
@@ -231,8 +236,9 @@ class S100SIMDevice(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) extend
   }
 
   private def simh_out(data: UByte): UByte = {
-    //if(data != 27 && data != 14) Utils.outln(s"Write 0xfe - $data lastCommand = $lastCommand")
-    lastCommand match {
+    if(data != 27 && data != 14) Utils.outlnd(this,s"Write 0xfe - $data lastCommand = $lastCommand")
+
+    (lastCommand) match {
       case `readURLCmd` =>
         // Not Supported
         lastCommand = 0
@@ -268,8 +274,10 @@ class S100SIMDevice(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) extend
         return UByte(0x00)
 
       case `setBankSelectCmd` =>
+        val bnk = data & machine.getCPU.MMU.BANKMASK.intValue
+        Utils.outlnd(this,s"setBankSelectCMD: $bnk")
         if (machine.getCPU.isBanked)
-          machine.getCPU.MMU.selectBank(data & machine.getCPU.MMU.BANKMASK.intValue)
+          machine.getCPU.MMU.selectBank(bnk)
         lastCommand = 0
         return UByte(0x00)
 
@@ -423,16 +431,16 @@ class S100SIMDevice(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) extend
   }
 
   private def simh_in(byte: UByte): UByte = {
-    //Utils.outln(s"Read 0xfe - $byte lastCommand = $lastCommand")
+    Utils.outlnd(this,s"Read 0xfe - $byte lastCommand = $lastCommand")
     var result = 0
-    lastCommand match {
+
+    (lastCommand)  match {
       case `readURLCmd` =>
         // Not supported
         lastCommand = 0
 
       case `getHostFilenamesCmd` =>
       // Not implemented right now
-
 
       case `attachPTRCmd` =>
         result = lastCPMStatus
@@ -525,6 +533,7 @@ class S100SIMDevice(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) extend
         if (machine.getCPU.isBanked)
           result = machine.getCPU.MMU.getBank
         else result = 0
+        Utils.outlnd(this, s"getBankSelectCmd: $result")
         lastCommand = 0
 
       case `getCommonCmd` =>
@@ -542,6 +551,7 @@ class S100SIMDevice(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) extend
 
       case `hasBankedMemoryCmd` =>
         result = if (machine.getCPU.isBanked) machine.getCPU.MMU.MAXBANKS.intValue else 0
+        Utils.outlnd(this,s"hasBankedMemoryCmd: $result")
         lastCommand = 0
 
       case `readStopWatchCmd` =>
@@ -561,7 +571,7 @@ class S100SIMDevice(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) extend
         result = 0
         lastCommand = 0
     }
-    //Utils.outln(s"Read 0xfe - result: ${result.byteValue()}")
+    Utils.outlnd(this,s"Read 0xfe - result: ${result.byteValue()}")
     UByte(result.byteValue())
   }
 }

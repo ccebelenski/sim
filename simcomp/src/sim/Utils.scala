@@ -61,28 +61,34 @@ object Utils {
   }
 
 
+  @inline
   def outln(msg: String): Unit = {
     if (Console.term != null) Console.term.println(msg) else
       System.out.println(msg)
   }
 
+  @inline
   def out(msg: String): Unit = {
     if (Console.term != null) Console.term.print(msg) else
       System.out.print(msg)
   }
 
+  @inline
   def outlnd(unit: BasicUnit, msg: String): Unit = {
     outlnd(unit.device, msg)
   }
 
+  @inline
   def outlnd(device: BasicDevice, msg: String): Unit = {
-    if (device.debug) outln(msg)
+    if (device.debug) outln(s"DEBUG: ${device.name} : $msg")
   }
 
+  @inline
   def outd(unit: BasicUnit, msg: String): Unit = {
     outd(unit.device, msg)
   }
 
+  @inline
   def outd(device: BasicDevice, msg: String): Unit = {
     if (device.debug) out(msg)
   }

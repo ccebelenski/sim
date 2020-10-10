@@ -1,6 +1,6 @@
 package com.sim.term.cli
 
-import java.awt.Dimension
+import java.awt.{BorderLayout, Dimension}
 
 import com.sim.term.{Term, VT100TerminalModel}
 import javax.swing.{JFrame, WindowConstants}
@@ -12,9 +12,9 @@ class SimCLI {
 
   private val frame = new JFrame()
   frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE)
-  val vt100 = new VT100TerminalModel(80,25, 25)
+  val vt100 = new VT100TerminalModel(80,25, 500)
   private val t = new Term(vt100)
-  private val d = new Dimension(t.getWidth + 15, t.getHeight + 40)
+  private val d = new Dimension(t.getWidth + 35, t.getHeight + 40)
   //System.out.println(s"SIZE:$d, ${t.getSize()}")
   frame.setSize(d)
   frame.setPreferredSize(d)

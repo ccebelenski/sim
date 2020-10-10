@@ -1487,7 +1487,8 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
       onHalt(singleStep | lastBreak != 0)
     } catch {
       case t: Throwable =>
-        Utils.outln(s"SIM: Exception: ${t.getMessage}\n\t")
+        Utils.outln(s"SIM: Exception: ${t.getMessage}\n\r")
+        t.getCause.getStackTrace.foreach(x => Utils.outln(msg = s"${x.toString}\n\r"))
         onHalt(singleStep | lastBreak != 0)
         throw t
     }
