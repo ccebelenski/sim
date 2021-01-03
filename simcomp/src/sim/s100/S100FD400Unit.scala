@@ -20,6 +20,7 @@ class S100FD400Unit(device:S100FD400Device) extends BasicUnit(device) with  Disk
 
   var sector_true :Int = 0
 
+
   MAX_TRACKS = if(device.DRIVE_TYPE != 0) D5_MAX_TRACKS else D8_MAX_TRACKS
 
   DSK_SECT = if(device.DRIVE_TYPE !=0) D5_DSK_SECT else D8_DSK_SECT

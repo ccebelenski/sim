@@ -70,7 +70,7 @@ class S100HDiskTests {
   def testReadConsist():Unit = {
 
     val units = hdsk.getUnits.asInstanceOf[Iterator[S100HDSKUnit]]
-    val unit = units.next()
+    val unit : S100HDSKUnit = units.next()
     Utils.outln(s"Unit: ${unit.getName}")
 
     // No easy way to check return from this right now
@@ -89,15 +89,34 @@ class S100HDiskTests {
     Utils.outln("cpm image attach to both controllers, testing we get the same bytes for both")
 
     fdsk.current_disk = Some(funit)
-    funit.current_sector = 4
-    funit.current_track = 4
+    funit.current_sector = 6
+    funit.current_track = 7
     funit.seek()
     funit.readSector()  // should have read track 4, sector 4
     val fposition = funit.fileChannel.position()
     Utils.outln(s"FUNIT POSITION AFTER READ = $fposition")
 
 
+    hdsk.current_disk = Some(unit)
+    unit.current_track = 7
+    unit.current_sector =6
+    hdsk.selectedDMA = 0 // write to 0
+    hdsk.hdsk_read()
+    val position = unit.fileChannel.position()
+    Utils.outln(s"UNIT POSITION AFTER READ = $position")
 
+    assertTrue(s"Position should be the same after both reads.", fposition == position)
+
+    val a1 = funit.byteBuffer.array()
+    assertTrue(s"Should have read 137 bytes", a1.length == 137)
+
+    for(x <- 0 until a1.length) {
+      val b = z80.MMU.get8(x).byteValue
+      assertTrue(s"Byte mismatch at position $x : $b : ${a1(x)}", b == a1(x))
+      Utils.out(s"$b:${a1(x)} ")
+    }
+
+    Utils.outln("\n\rDone checking read.")
 
     sb.clear()
     funit.detach(sb)
@@ -107,5 +126,6 @@ class S100HDiskTests {
     unit.detach(sb)
     Utils.outln(sb.toString())
 
+    assertTrue(s"Position should be the same after both reads.", fposition == position)
   }
 }

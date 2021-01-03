@@ -111,6 +111,7 @@ class S100FD400Device(machine: S100Machine, mmu: Z80MMU, ports: List[UInt]) exte
   /* LD a,80h | <unitno>                          */
   private def UNIT_NO_OFFSET_2 = 0xb4
 
+  debug = false
 
 
   override def init(): Unit = {
