@@ -183,17 +183,41 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
     0x66 -> fn0x66, 0x67 -> fn0x67, 0x68 -> fn0x68, 0x69 -> fn0x69, 0x6a -> fn0x6a, 0x6b -> fn0x6b,
     0x6c -> fn0x6c, 0x6d -> fn0x6d, 0x6e -> fn0x6e, 0x6f -> fn0x6f,
 
-  0x70 -> fn0x70, 0x71 -> fn0x71, 0x72 -> fn0x72, 0x73 -> fn0x73, 0x74 -> fn0x74, 0x75 -> fn0x75,
-  0x76 -> fn0x76, 0x77 -> fn0x77, 0x78 -> fn0x78, 0x79 -> fn0x79, 0x7a -> fn0x7a, 0x7b -> fn0x7b,
-  0x7c -> fn0x7c, 0x7d -> fn0x7d, 0x7e -> fn0x7e, 0x7f -> fn0x7f,
+    0x70 -> fn0x70, 0x71 -> fn0x71, 0x72 -> fn0x72, 0x73 -> fn0x73, 0x74 -> fn0x74, 0x75 -> fn0x75,
+    0x76 -> fn0x76, 0x77 -> fn0x77, 0x78 -> fn0x78, 0x79 -> fn0x79, 0x7a -> fn0x7a, 0x7b -> fn0x7b,
+    0x7c -> fn0x7c, 0x7d -> fn0x7d, 0x7e -> fn0x7e, 0x7f -> fn0x7f,
 
-  0x80 -> fn0x80, 0x81 -> fn0x81, 0x82 -> fn0x82, 0x83 -> fn0x83, 0x84 -> fn0x84, 0x85 -> fn0x85,
-  0x86 -> fn0x86, 0x87 -> fn0x87, 0x88 -> fn0x88, 0x89 -> fn0x89, 0x8a -> fn0x8a, 0x8b -> fn0x8b,
-  0x8c -> fn0x8c, 0x8d -> fn0x8d, 0x8e -> fn0x8e, 0x8f -> fn0x8f,
+    0x80 -> fn0x80, 0x81 -> fn0x81, 0x82 -> fn0x82, 0x83 -> fn0x83, 0x84 -> fn0x84, 0x85 -> fn0x85,
+    0x86 -> fn0x86, 0x87 -> fn0x87, 0x88 -> fn0x88, 0x89 -> fn0x89, 0x8a -> fn0x8a, 0x8b -> fn0x8b,
+    0x8c -> fn0x8c, 0x8d -> fn0x8d, 0x8e -> fn0x8e, 0x8f -> fn0x8f,
 
-  0x90 -> fn0x90, 0x91 -> fn0x91, 0x92 -> fn0x92, 0x93 -> fn0x93, 0x94 -> fn0x94, 0x95 -> fn0x95,
-  0x96 -> fn0x96, 0x97 -> fn0x97, 0x98 -> fn0x98, 0x99 -> fn0x99, 0x9a -> fn0x9a, 0x9b -> fn0x9b,
-  0x9c -> fn0x9c, 0x9d -> fn0x9d, 0x9e -> fn0x9e, 0x9f -> fn0x9f
+    0x90 -> fn0x90, 0x91 -> fn0x91, 0x92 -> fn0x92, 0x93 -> fn0x93, 0x94 -> fn0x94, 0x95 -> fn0x95,
+    0x96 -> fn0x96, 0x97 -> fn0x97, 0x98 -> fn0x98, 0x99 -> fn0x99, 0x9a -> fn0x9a, 0x9b -> fn0x9b,
+    0x9c -> fn0x9c, 0x9d -> fn0x9d, 0x9e -> fn0x9e, 0x9f -> fn0x9f,
+
+    0xa0 -> fn0xa0, 0xa1 -> fn0xa1, 0xa2 -> fn0xa2, 0xa3 -> fn0xa3, 0xa4 -> fn0xa4, 0xa5 -> fn0xa5,
+    0xa6 -> fn0xa6, 0xa7 -> fn0xa7, 0xa8 -> fn0xa8, 0xa9 -> fn0xa9, 0xaa -> fn0xaa, 0xab -> fn0xab,
+    0xac -> fn0xac, 0xad -> fn0xad, 0xae -> fn0xae, 0xaf -> fn0xaf,
+
+    0xb0 -> fn0xb0, 0xb1 -> fn0xb1, 0xb2 -> fn0xb2, 0xb3 -> fn0xb3, 0xb4 -> fn0xb4, 0xb5 -> fn0xb5,
+    0xb6 -> fn0xb6, 0xb7 -> fn0xb7, 0xb8 -> fn0xb8, 0xb9 -> fn0xb9, 0xba -> fn0xba, 0xbb -> fn0xbb,
+    0xbc -> fn0xbc, 0xbd -> fn0xbd, 0xbe -> fn0xbe, 0xbf -> fn0xbf,
+
+    0xc0 -> fn0xc0, 0xc1 -> fn0xc1, 0xc2 -> fn0xc2, 0xc3 -> fn0xc3, 0xc4 -> fn0xc4, 0xc5 -> fn0xc5,
+    0xc6 -> fn0xc6, 0xc7 -> fn0xc7, 0xc8 -> fn0xc8, 0xc9 -> fn0xc9, 0xca -> fn0xca, 0xcb -> fn0xcb,
+    0xcc -> fn0xcc, 0xcd -> fn0xcd, 0xce -> fn0xce, 0xcf -> fn0xcf,
+
+    0xd0 -> fn0xd0, 0xd1 -> fn0xd1, 0xd2 -> fn0xd2, 0xd3 -> fn0xd3, 0xd4 -> fn0xd4, 0xd5 -> fn0xd5,
+    0xd6 -> fn0xd6, 0xd7 -> fn0xd7, 0xd8 -> fn0xd8, 0xd9 -> fn0xd9, 0xda -> fn0xda, 0xdb -> fn0xdb,
+    0xdc -> fn0xdc, 0xdd -> fn0xdd, 0xde -> fn0xde, 0xdf -> fn0xdf,
+
+    0xe0 -> fn0xe0, 0xe1 -> fn0xe1, 0xe2 -> fn0xe2, 0xe3 -> fn0xe3, 0xe4 -> fn0xe4, 0xe5 -> fn0xe5,
+    0xe6 -> fn0xe6, 0xe7 -> fn0xe7, 0xe8 -> fn0xe8, 0xe9 -> fn0xe9, 0xea -> fn0xea, 0xeb -> fn0xeb,
+    0xec -> fn0xec, 0xed -> fn0xed, 0xee -> fn0xee, 0xef -> fn0xef,
+
+    0xf0 -> fn0xf0, 0xf1 -> fn0xf1, 0xf2 -> fn0xf2, 0xf3 -> fn0xf3, 0xf4 -> fn0xf4, 0xf5 -> fn0xf5,
+    0xf6 -> fn0xf6, 0xf7 -> fn0xf7, 0xf8 -> fn0xf8, 0xf9 -> fn0xf9, 0xfa -> fn0xfa, 0xfb -> fn0xfb,
+    0xfc -> fn0xfc, 0xfd -> fn0xfd, 0xfe -> fn0xfe, 0xff -> fn0xff
   )
 
   // NOP
@@ -408,13 +432,13 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
 
   // JR NZ,dd
   private final def fn0x20(x: Int): Unit = {
-      if ((F & FLAG_Z) != 0) { // Z flag
-        addTStates(7)
-        PC.increment()
-      } else {
-        PC(PC + MMU.get8(PC) + 1)
-        addTStates(12)
-      }
+    if ((F & FLAG_Z) != 0) { // Z flag
+      addTStates(7)
+      PC.increment()
+    } else {
+      PC(PC + MMU.get8(PC) + 1)
+      addTStates(12)
+    }
   }
 
   // LD HL, nnnn
@@ -513,8 +537,8 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
 
   // DEC HL
   private final def fn0x2b(x: Int): Unit = {
-      addTStates(6)
-      HL.decrement()
+    addTStates(6)
+    HL.decrement()
   }
 
   // INC L
@@ -667,7 +691,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
 
   // LD B,B
   private final def fn0x40(x: Int): Unit = {
-      addTStates(4)
+    addTStates(4)
   }
 
   // LD B,C
@@ -1273,6 +1297,709 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
     AF(subTable(cbits & 0xff) | cbitsTable(cbits & 0x1ff) | SET_PV(cbits))
   }
 
+  // AND B
+  private final def fn0xa0(x: Int): Unit = {
+    addTStates(4)
+    AF(andTable(A.get8 & B.get8))
+  }
+
+  // AND C
+  private final def fn0xa1(x: Int): Unit = {
+    addTStates(4)
+    AF(andTable(A.get8 & C.get8))
+  }
+
+  // AND D
+  private final def fn0xa2(x: Int): Unit = {
+
+    addTStates(4)
+    AF(andTable(A.get8 & D.get8))
+  }
+
+  // AND E
+  private final def fn0xa3(x: Int): Unit = {
+
+    addTStates(4)
+    AF(andTable(A.get8 & E.get8))
+  }
+
+  // AND H
+  private final def fn0xa4(x: Int): Unit = {
+    addTStates(4)
+    AF(andTable(A.get8 & H.get8))
+  }
+
+  // AND L
+  private final def fn0xa5(x: Int): Unit = {
+
+    addTStates(4)
+    AF(andTable(A.get8 & L.get8))
+  }
+
+  // AND (HL)
+  private final def fn0xa6(x: Int): Unit = {
+    addTStates(7)
+    CHECK_LOG_BYTE(HL)
+    AF(andTable(A.get8 & MMU.get8(HL)))
+  }
+
+  // AND A
+  private final def fn0xa7(x: Int): Unit = {
+    addTStates(4)
+    AF(andTable(A.get8))
+  }
+
+  // XOR B
+  private final def fn0xa8(x: Int): Unit = {
+    addTStates(4)
+    AF(xororTable(A.get8 ^ B.get8))
+  }
+
+  // XOR C
+  private final def fn0xa9(x: Int): Unit = {
+    addTStates(4)
+    AF(xororTable(A.get8 ^ C.get8))
+  }
+
+  // XOR D
+  private final def fn0xaa(x: Int): Unit = {
+
+    addTStates(4)
+    AF(xororTable(A.get8 ^ D.get8))
+  }
+
+  // XOR E
+  private final def fn0xab(x: Int): Unit = {
+
+    addTStates(4)
+    AF(xororTable(A.get8 ^ E.get8))
+  }
+
+  // XOR H
+  private final def fn0xac(x: Int): Unit = {
+
+    addTStates(4)
+    AF(xororTable(A.get8 ^ H.get8))
+
+  }
+
+  // XOR L
+  private final def fn0xad(x: Int): Unit = {
+
+    addTStates(4)
+    AF(xororTable(A.get8 ^ L.get8))
+  }
+
+  // XOR (HL)
+  private final def fn0xae(x: Int): Unit = {
+    addTStates(7)
+    CHECK_LOG_BYTE(HL)
+    AF(xororTable(A.get8 ^ MMU.get8(HL)))
+  }
+
+  // XOR A
+  private final def fn0xaf(x: Int): Unit = {
+    addTStates(4)
+    AF(0x44)
+  }
+
+  // OR B
+  private final def fn0xb0(x: Int): Unit = {
+    addTStates(4)
+    AF(xororTable(A.get8 | B.get8))
+  }
+
+  // OR C
+  private final def fn0xb1(x: Int): Unit = {
+
+    addTStates(4)
+    AF(xororTable(A.get8 | C.get8))
+  }
+
+  // OR D
+  private final def fn0xb2(x: Int): Unit = {
+
+    addTStates(4)
+    AF(xororTable(A.get8 | D.get8))
+  }
+
+  // OR E
+  private final def fn0xb3(x: Int): Unit = {
+
+    addTStates(4)
+    AF(xororTable(A.get8 | E.get8))
+  }
+
+  // OR H
+  private final def fn0xb4(x: Int): Unit = {
+
+    addTStates(4)
+    AF(xororTable(A.get8 | H.get8))
+  }
+
+  // OR L
+  private final def fn0xb5(x: Int): Unit = {
+
+    addTStates(4)
+    AF(xororTable(A.get8 | L.get8))
+  }
+
+  // OR (HL)
+  private final def fn0xb6(x: Int): Unit = {
+
+    addTStates(7)
+    CHECK_LOG_BYTE(HL)
+    AF(xororTable((AF >> 8) | MMU.get8(HL) & 0xff))
+  }
+
+  // OR A
+  private final def fn0xb7(x: Int): Unit = {
+
+    addTStates(4)
+    AF(xororTable((AF >> 8) & 0xff))
+
+  }
+
+  // CP B
+  private final def fn0xb8(x: Int): Unit = {
+    addTStates(4)
+    ICP(B)
+  }
+
+  // CP C
+  private final def fn0xb9(x: Int): Unit = {
+    addTStates(4)
+    ICP(C)
+  }
+
+  // CP D
+  private final def fn0xba(x: Int): Unit = {
+
+    addTStates(4)
+    ICP(D)
+  }
+
+  // CP E
+  private final def fn0xbb(x: Int): Unit = {
+
+    addTStates(4)
+    ICP(E)
+  }
+
+  // CP H
+  private final def fn0xbc(x: Int): Unit = {
+
+    addTStates(4)
+    ICP(H)
+  }
+
+  // CP L
+  private final def fn0xbd(x: Int): Unit = {
+    addTStates(4)
+    ICP(L)
+  }
+
+  // CP (HL)
+  private final def fn0xbe(x: Int): Unit = {
+
+    addTStates(7)
+    CHECK_LOG_BYTE(HL)
+    val temp: UByte = MMU.get8(HL)
+    AF((AF & ~0x28) | (temp & 0x28))
+    val acu: UByte = A.get8
+    val sum: UInt = acu - temp
+    val cbits: UInt = acu ^ temp ^ sum
+    AF((AF & ~0xff) | cpTable(sum & 0xff) | (temp & 0x28) | SET_PV(cbits) | cbits2Table(cbits & 0x1ff))
+  }
+
+  // CP A
+  private final def fn0xbf(x: Int): Unit = {
+
+    addTStates(4)
+    F((A & 0x28) | 0x42)
+  }
+
+  // RET NZ
+  private final def fn0xc0(x: Int): Unit = {
+
+    if (testFlag(F, FLAG_Z)) addTStates(5)
+    else {
+      CHECK_LOG_WORD(SP)
+      addTStates(11)
+      POP(PC)
+    }
+  }
+
+  // POP BC
+  private final def fn0xc1(x: Int): Unit = {
+    addTStates(10)
+    CHECK_LOG_WORD(SP)
+    POP(BC)
+  }
+
+  // JP NZ,nnnn
+  private final def fn0xc2(x: Int): Unit = {
+    JPC(!testFlag(F, FLAG_Z))
+  }
+
+  // JP nnnn
+  private final def fn0xc3(x: Int): Unit = {
+    JPC(true)
+  }
+
+  // CALL NZ,nnnn
+  private final def fn0xc4(x: Int): Unit = {
+      CALLC(!testFlag(F, FLAG_Z))
+  }
+
+  // PUSH BC
+  private final def fn0xc5(x: Int): Unit = {
+    addTStates(11)
+    CHECK_LOG_WORD(SP - 2)
+    PUSH(BC)
+  }
+
+  // ADD A,nn
+  private final def fn0xc6(x: Int): Unit = {
+    addTStates(7)
+    W(MMU.get8(PC))
+    PC.increment()
+    ADD(A, W)
+  }
+
+  // RST 0
+  private final def fn0xc7(x: Int): Unit = {
+
+    addTStates(11)
+    CHECK_LOG_WORD(SP - 2)
+    PUSH(PC)
+    PC(0x0000)
+  }
+
+  // RET Z
+  private final def fn0xc8(x: Int): Unit = {
+    if (testFlag(F, FLAG_Z)) {
+      CHECK_LOG_WORD(SP)
+      POP(PC)
+      addTStates(11)
+    } else {
+      addTStates(5)
+    }
+  }
+
+  // RET
+  private final def fn0xc9(x: Int): Unit = {
+
+    addTStates(10)
+    CHECK_LOG_WORD(SP)
+    POP(PC)
+  }
+
+  // JP Z,nnnn
+  private final def fn0xca(x: Int): Unit = {
+
+    JPC(testFlag(F, FLAG_Z))
+  }
+
+  // CB prefix
+  private final def fn0xcb(x: Int): Unit = {
+    // ******************************************************************************** CB
+    INCR(1)
+    val adr: Int = HL.get16
+    val op: Int = MMU.get8(PC)
+    cbprefix(op, adr)
+  }
+
+  // CALL Z,nnnn
+  private final def fn0xcc(x: Int): Unit = {
+    CALLC(testFlag(F, FLAG_Z))
+  }
+
+  // CALL nnnn
+  private final def fn0xcd(x: Int): Unit = {
+    CALLC(true)
+  }
+
+  // ADC A,nn
+  private final def fn0xce(x: Int): Unit = {
+      addTStates(7)
+      W(MMU.get8(PC))
+      PC.increment()
+      ADC(A, W)
+  }
+
+  // RST 8
+  private final def fn0xcf(x: Int): Unit = {
+    addTStates(11)
+    CHECK_LOG_WORD(SP - 2)
+    PUSH(PC)
+    PC(0x0008)
+  }
+
+  // RET NC
+  private final def fn0xd0(x: Int): Unit = {
+    if (testFlag(F, FLAG_C)) addTStates(5)
+    else {
+      CHECK_LOG_WORD(SP)
+      POP(PC)
+      addTStates(11)
+    }
+  }
+
+  // POP DE
+  private final def fn0xd1(x: Int): Unit = {
+    addTStates(10)
+    CHECK_LOG_WORD(SP)
+    POP(DE)
+  }
+
+  // JP NC,nnnn
+  private final def fn0xd2(x: Int): Unit = {
+    JPC(!testFlag(F, FLAG_C))
+  }
+
+  // OUT (nn),A
+  private final def fn0xd3(x: Int): Unit = {
+    addTStates(11)
+    MMU.out8(MMU.get8(PC), A)
+    PC.increment()
+  }
+
+  // CALL NC, nnnn
+  private final def fn0xd4(x: Int): Unit = {
+    CALLC(!testFlag(F, FLAG_C))
+  }
+
+  // PUSH DE
+  private final def fn0xd5(x: Int): Unit = {
+    addTStates(11)
+    CHECK_LOG_WORD(SP - 2)
+    PUSH(DE)
+  }
+
+  // SUB nn
+  private final def fn0xd6(x: Int): Unit = {
+    addTStates(7)
+    W(MMU.get8(PC))
+    PC.increment()
+    SUB(W)
+  }
+
+  // RST 10H
+  private final def fn0xd7(x: Int): Unit = {
+    addTStates(11)
+    CHECK_LOG_WORD(SP - 2)
+    PUSH(PC)
+    PC(0x0010)
+  }
+
+  // RET C
+  private final def fn0xd8(x: Int): Unit = {
+    if (testFlag(F, FLAG_C)) {
+      CHECK_LOG_WORD(SP)
+      POP(PC)
+      addTStates(11)
+    } else addTStates(5)
+  }
+
+  // EXX
+  private final def fn0xd9(x: Int): Unit = {
+    addTStates(4)
+    var temp = BC.get16
+    BC(BCP.get16)
+    BCP(temp)
+    temp = DE.get16
+    DE(DEP.get16)
+    DEP(temp)
+    temp = HL.get16
+    HL(HLP.get16)
+    HLP(temp)
+  }
+
+  // JP C,nnnn
+  private final def fn0xda(x: Int): Unit = {
+    JPC(testFlag(F, FLAG_C))
+  }
+
+  // IN A,(nn)
+  private final def fn0xdb(x: Int): Unit = {
+    addTStates(11)
+    A(MMU.in8(MMU.get8(PC)))
+    PC.increment()
+  }
+
+  // CALL C,nnnn
+  private final def fn0xdc(x: Int): Unit = {
+
+    CALLC(testFlag(F, FLAG_C))
+  }
+
+  // DD Prefix
+  private final def fn0xdd(x: Int): Unit = {
+    // ************************************************************************************** DD
+    INCR(1)
+    val op: Int = MMU.get8(PC)
+    PC.increment()
+    ddprefix(op)
+  }
+
+  // SBC A,nn  #4580
+  private final def fn0xde(x: Int): Unit = {
+    addTStates(7)
+    W(MMU.get8(PC))
+    PC.increment()
+    SBC(A, W)
+  }
+
+  // RST 18H
+  private final def fn0xdf(x: Int): Unit = {
+    addTStates(18)
+    CHECK_LOG_WORD(SP - 2)
+    PUSH(PC)
+    PC(0x18)
+  }
+
+  // RET PO
+  private final def fn0xe0(x: Int): Unit = {
+    if (testFlag(F, FLAG_P)) addTStates(5)
+    else {
+      CHECK_LOG_WORD(SP)
+      POP(PC)
+      addTStates(11)
+    }
+  }
+
+  // POP HL
+  private final def fn0xe1(x: Int): Unit = {
+
+    addTStates(10)
+    CHECK_LOG_WORD(SP)
+    POP(HL)
+  }
+
+  // JP PO,nnnn
+  private final def fn0xe2(x: Int): Unit = {
+
+    JPC(!testFlag(F, FLAG_P))
+  }
+
+  //  EX (SP),HL
+  private final def fn0xe3(x: Int): Unit = {
+
+    addTStates(19)
+    CHECK_LOG_WORD(SP)
+    val temp: Int = HL.get16
+    POP(HL)
+    PUSH(temp)
+  }
+
+  // CALL PO,nnnn
+  private final def fn0xe4(x: Int): Unit = {
+
+    CALLC(!testFlag(F, FLAG_P))
+  }
+
+  // PUSH HL
+  private final def fn0xe5(x: Int): Unit = {
+
+    addTStates(11)
+    CHECK_LOG_WORD(SP - 2)
+    PUSH(HL)
+  }
+
+  // AND nn
+  private final def fn0xe6(x: Int): Unit = {
+
+    addTStates(7)
+    AF(andTable(((AF >> 8) & MMU.get8(PC)) & 0xff))
+    PC.increment()
+  }
+
+  // RST 20H
+  private final def fn0xe7(x: Int): Unit = {
+
+    addTStates(11)
+    CHECK_LOG_WORD(SP - 2)
+    PUSH(PC)
+    PC(0x20)
+  }
+
+  // RET PE
+  private final def fn0xe8(x: Int): Unit = {
+    if (testFlag(F, FLAG_P)) {
+      CHECK_LOG_WORD(SP)
+      POP(PC)
+      addTStates(11)
+    } else {
+      addTStates(5)
+    }
+  }
+
+  // JP (HL)
+  private final def fn0xe9(x: Int): Unit = {
+    addTStates(4)
+    PC(HL)
+  }
+
+  // JP PE,nnnn
+  private final def fn0xea(x: Int): Unit = {
+    JPC(testFlag(F, FLAG_P))
+  }
+
+  // EX DE,HL
+  private final def fn0xeb(x: Int): Unit = {
+    addTStates(4)
+    val temp: Int = HL
+    HL(DE)
+    DE(temp)
+  }
+
+  // CALL PE,nnnn
+  private final def fn0xec(x: Int): Unit = {
+    CALLC(testFlag(F, FLAG_P))
+  }
+
+  // ED PREFIX
+  private final def fn0xed(x: Int): Unit = {
+    // *************************************************************************************** ED
+    INCR(1)
+    val op: Int = MMU.get8(PC)
+    PC.increment()
+    edprefix(op)
+  }
+
+  // XOR nn
+  private final def fn0xee(x: Int): Unit = {
+    addTStates(7)
+    AF(xororTable(((AF >> 8) ^ MMU.get8(PC)) & 0xff))
+    PC.increment()
+  }
+
+  // RST 28H
+  private final def fn0xef(x: Int): Unit = {
+    addTStates(11)
+    CHECK_LOG_WORD(SP - 2)
+    PUSH(PC)
+    PC(0x28)
+  }
+
+  // RET P
+  private final def fn0xf0(x: Int): Unit = {
+    if (testFlag(F, FLAG_S)) {
+      addTStates(5)
+    } else {
+      CHECK_LOG_WORD(SP)
+      POP(PC)
+      addTStates(11)
+    }
+  }
+
+  // POP AF
+  private final def fn0xf1(x: Int): Unit = {
+
+    addTStates(10)
+    CHECK_LOG_WORD(SP)
+    POP(AF)
+  }
+
+  // JP P,nnnn
+  private final def fn0xf2(x: Int): Unit = {
+    JPC(!testFlag(F, FLAG_S))
+  }
+
+  // DI
+  private final def fn0xf3(x: Int): Unit = {
+    addTStates(4)
+    IFF(0)
+  }
+
+  // CALL P,nnnn
+  private final def fn0xf4(x: Int): Unit = {
+    CALLC(!testFlag(F, FLAG_S))
+  }
+
+  // PUSH AF
+  private final def fn0xf5(x: Int): Unit = {
+    addTStates(11)
+    CHECK_LOG_WORD(SP - 2)
+    PUSH(AF)
+  }
+
+  // OR nn
+  private final def fn0xf6(x: Int): Unit = {
+    addTStates(7)
+    AF(xororTable(((AF >> 8) | MMU.get8(PC)) & 0xff))
+    PC.increment()
+  }
+
+  // RST 30H
+  private final def fn0xf7(x: Int): Unit = {
+    addTStates(11)
+    CHECK_LOG_WORD(SP - 2)
+    PUSH(PC)
+    PC(0x30)
+  }
+
+  // RET M
+  private final def fn0xf8(x: Int): Unit = {
+    if (testFlag(F, FLAG_S)) {
+      CHECK_LOG_WORD(SP)
+      POP(PC)
+      addTStates(11)
+    } else {
+      addTStates(5)
+    }
+  }
+
+  // LD SP,HL
+  private final def fn0xf9(x: Int): Unit = {
+    addTStates(6)
+    SP(HL)
+  }
+
+  // JP M,nnnn
+  private final def fn0xfa(x: Int): Unit = {
+    JPC(testFlag(F, FLAG_S))
+  }
+
+  // EI
+  private final def fn0xfb(x: Int): Unit = {
+    addTStates(4)
+    IFF(3)
+  }
+
+  // CALL M, nnnn
+  private final def fn0xfc(x: Int): Unit = {
+    CALLC(testFlag(F, FLAG_S))
+  }
+
+  // FD Prefix
+  private final def fn0xfd(x: Int): Unit = {
+
+    // ************************************************************************************ FD
+
+    INCR(1)
+    val op: Int = MMU.get8(PC)
+    PC.increment()
+    fdprefix(op)
+  }
+
+  // CP nn
+  private final def fn0xfe(x: Int): Unit = {
+    addTStates(7)
+    W(MMU.get8(PC))
+    PC.increment()
+    ICP(W)
+  }
+
+  // RST 38H
+  private final def fn0xff(x: Int): Unit = {
+    addTStates(11)
+    CHECK_LOG_WORD(SP - 2)
+    PUSH(PC)
+    PC(0x38)
+  }
+
   /** ***********************************************************************************************************
     *
     * Main  CPU running here...
@@ -1280,6 +2007,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
     * @param singleStep
     */
   private var execute: Boolean = true
+
   override def runcpu(singleStep: Boolean = false): Unit = {
 
     try {
@@ -1364,489 +2092,6 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
             case Some(x) => x(instr)
             case None =>
 
-              (instr: @switch) match {
-
-
-                case (0xa0) => // AND B
-                  addTStates(4)
-                  AF(andTable(A.get8 & B.get8))
-
-                case (0xa1) => // AND C
-                  addTStates(4)
-                  AF(andTable(A.get8 & C.get8))
-
-                case (0xa2) => // AND D
-                  addTStates(4)
-                  AF(andTable(A.get8 & D.get8))
-
-                case (0xa3) => // AND E
-                  addTStates(4)
-                  AF(andTable(A.get8 & E.get8))
-
-                case (0xa4) => // AND H
-                  addTStates(4)
-                  AF(andTable(A.get8 & H.get8))
-
-                case (0xa5) => // AND L
-                  addTStates(4)
-                  AF(andTable(A.get8 & L.get8))
-
-                case (0xa6) => // AND (HL)
-                  addTStates(7)
-                  CHECK_LOG_BYTE(HL)
-                  AF(andTable(A.get8 & MMU.get8(HL)))
-
-                case (0xa7) => // AND A
-                  addTStates(4)
-                  AF(andTable(A.get8))
-
-                case (0xa8) => // XOR B
-                  addTStates(4)
-                  AF(xororTable(A.get8 ^ B.get8))
-
-                case (0xa9) => // XOR C
-                  addTStates(4)
-                  AF(xororTable(A.get8 ^ C.get8))
-
-                case (0xaa) => // XOR D
-                  addTStates(4)
-                  AF(xororTable(A.get8 ^ D.get8))
-
-                case (0xab) => // XOR E
-                  addTStates(4)
-                  AF(xororTable(A.get8 ^ E.get8))
-
-                case (0xac) => // XOR H
-                  addTStates(4)
-                  AF(xororTable(A.get8 ^ H.get8))
-
-                case (0xad) => // XOR L
-                  addTStates(4)
-                  AF(xororTable(A.get8 ^ L.get8))
-
-                case (0xae) => // XOR (HL)
-                  addTStates(7)
-                  CHECK_LOG_BYTE(HL)
-                  AF(xororTable(A.get8 ^ MMU.get8(HL)))
-
-                case (0xaf) => // XOR A
-                  addTStates(4)
-                  AF(0x44)
-
-                case (0xb0) => // OR B
-                  addTStates(4)
-                  AF(xororTable(A.get8 | B.get8))
-
-                case (0xb1) => // OR C
-                  addTStates(4)
-                  AF(xororTable(A.get8 | C.get8))
-
-                case (0xb2) => // OR D
-                  addTStates(4)
-                  AF(xororTable(A.get8 | D.get8))
-
-                case (0xb3) => // OR E
-                  addTStates(4)
-                  AF(xororTable(A.get8 | E.get8))
-
-                case (0xb4) => // OR H
-                  addTStates(4)
-                  AF(xororTable(A.get8 | H.get8))
-
-                case (0xb5) => // OR L
-                  addTStates(4)
-                  AF(xororTable(A.get8 | L.get8))
-
-                case (0xb6) => // OR (HL)
-                  addTStates(7)
-                  CHECK_LOG_BYTE(HL)
-                  AF(xororTable((AF >> 8) | MMU.get8(HL) & 0xff))
-
-                case (0xb7) => // OR A
-                  addTStates(4)
-                  AF(xororTable((AF >> 8) & 0xff))
-
-                case (0xb8) => // CP B
-                  addTStates(4)
-                  ICP(B)
-
-                case (0xb9) => // CP C
-                  addTStates(4)
-                  ICP(C)
-
-                case (0xba) => // CP D
-                  addTStates(4)
-                  ICP(D)
-
-                case (0xbb) => // CP E
-                  addTStates(4)
-                  ICP(E)
-
-                case (0xbc) => // CP H
-                  addTStates(4)
-                  ICP(H)
-
-                case (0xbd) => // CP L
-                  addTStates(4)
-                  ICP(L)
-
-                case (0xbe) => // CP (HL)
-                  addTStates(7)
-                  CHECK_LOG_BYTE(HL)
-                  val temp: UByte = MMU.get8(HL)
-                  AF((AF & ~0x28) | (temp & 0x28))
-                  val acu: UByte = A.get8
-                  val sum: UInt = acu - temp
-                  val cbits: UInt = acu ^ temp ^ sum
-                  AF((AF & ~0xff) | cpTable(sum & 0xff) | (temp & 0x28) | SET_PV(cbits) | cbits2Table(cbits & 0x1ff))
-
-                case (0xbf) => // CP A
-                  addTStates(4)
-                  F((A & 0x28) | 0x42)
-
-                case (0xc0) => // RET NZ
-                  if (testFlag(F, FLAG_Z)) addTStates(5)
-                  else {
-                    CHECK_LOG_WORD(SP)
-                    addTStates(11)
-                    POP(PC)
-                  }
-
-                case (0xc1) => // POP BC
-                  addTStates(10)
-                  CHECK_LOG_WORD(SP)
-                  POP(BC)
-
-                case (0xc2) => // JP NZ,nnnn
-                  JPC(!testFlag(F, FLAG_Z))
-
-                case (0xc3) => // JP nnnn
-                  JPC(true)
-
-                case (0xc4) => // CALL NZ,nnnn
-                  CALLC(!testFlag(F, FLAG_Z))
-
-                case (0xc5) => // PUSH BC
-                  addTStates(11)
-                  CHECK_LOG_WORD(SP - 2)
-                  PUSH(BC)
-
-                case (0xc6) => // ADD A,nn
-                  addTStates(7)
-                  W(MMU.get8(PC))
-                  PC.increment()
-                  ADD(A, W)
-
-                case (0xc7) => // RST 0
-                  addTStates(11)
-                  CHECK_LOG_WORD(SP - 2)
-                  PUSH(PC)
-                  PC(0x0000)
-
-                case (0xc8) => // RET Z
-                  if (testFlag(F, FLAG_Z)) {
-                    CHECK_LOG_WORD(SP)
-                    POP(PC)
-                    addTStates(11)
-                  } else {
-                    addTStates(5)
-                  }
-
-                case (0xc9) => // RET
-                  addTStates(10)
-                  CHECK_LOG_WORD(SP)
-                  POP(PC)
-
-                case (0xca) => // JP Z,nnnn
-                  JPC(testFlag(F, FLAG_Z))
-
-                // ******************************************************************************** CB
-                case (0xcb) => // CB prefix
-                  INCR(1)
-                  val adr: Int = HL.get16
-                  val op: Int = MMU.get8(PC)
-                  cbprefix(op, adr)
-
-                case (0xcc) => // CALL Z,nnnn
-                  CALLC(testFlag(F, FLAG_Z))
-
-                case (0xcd) => // CALL nnnn
-                  CALLC(true)
-
-                case (0xce) => // ADC A,nn
-                  addTStates(7)
-                  W(MMU.get8(PC))
-                  PC.increment()
-                  ADC(A, W)
-
-                case (0xcf) => // RST 8
-                  addTStates(11)
-                  CHECK_LOG_WORD(SP - 2)
-                  PUSH(PC)
-                  PC(0x0008)
-
-                case (0xd0) => // RET NC
-                  if (testFlag(F, FLAG_C)) addTStates(5)
-                  else {
-                    CHECK_LOG_WORD(SP)
-                    POP(PC)
-                    addTStates(11)
-                  }
-
-                case (0xd1) => // POP DE
-                  addTStates(10)
-                  CHECK_LOG_WORD(SP)
-                  POP(DE)
-
-                case (0xd2) => // JP NC,nnnn
-                  JPC(!testFlag(F, FLAG_C))
-
-                case (0xd3) => // OUT (nn),A
-                  addTStates(11)
-                  MMU.out8(MMU.get8(PC), A)
-                  PC.increment()
-
-                case (0xd4) => // CALL NC, nnnn
-                  CALLC(!testFlag(F, FLAG_C))
-
-                case (0xd5) => // PUSH DE
-                  addTStates(11)
-                  CHECK_LOG_WORD(SP - 2)
-                  PUSH(DE)
-
-                case (0xd6) => // SUB nn
-                  addTStates(7)
-                  W(MMU.get8(PC))
-                  PC.increment()
-                  SUB(W)
-
-                case (0xd7) => // RST 10H
-                  addTStates(11)
-                  CHECK_LOG_WORD(SP - 2)
-                  PUSH(PC)
-                  PC(0x0010)
-
-                case (0xd8) => // RET C
-                  if (testFlag(F, FLAG_C)) {
-                    CHECK_LOG_WORD(SP)
-                    POP(PC)
-                    addTStates(11)
-                  } else addTStates(5)
-
-                case (0xd9) => // EXX
-                  addTStates(4)
-                  var temp = BC.get16
-                  BC(BCP.get16)
-                  BCP(temp)
-                  temp = DE.get16
-                  DE(DEP.get16)
-                  DEP(temp)
-                  temp = HL.get16
-                  HL(HLP.get16)
-                  HLP(temp)
-
-                case (0xda) => // JP C,nnnn
-                  JPC(testFlag(F, FLAG_C))
-
-                case (0xdb) => // IN A,(nn)
-                  addTStates(11)
-                  A(MMU.in8(MMU.get8(PC)))
-                  PC.increment()
-
-                case (0xdc) => // CALL C,nnnn
-                  CALLC(testFlag(F, FLAG_C))
-
-
-                // ************************************************************************************** DD
-                case (0xdd) => // DD Prefix
-                  INCR(1)
-                  val op: Int = MMU.get8(PC)
-                  PC.increment()
-                  ddprefix(op)
-
-                case (0xde) => // SBC A,nn  #4580
-                  addTStates(7)
-                  W(MMU.get8(PC))
-                  PC.increment()
-                  SBC(A, W)
-
-                case (0xdf) => // RST 18H
-                  addTStates(18)
-                  CHECK_LOG_WORD(SP - 2)
-                  PUSH(PC)
-                  PC(0x18)
-
-                case (0xe0) => // RET PO
-                  if (testFlag(F, FLAG_P)) addTStates(5)
-                  else {
-                    CHECK_LOG_WORD(SP)
-                    POP(PC)
-                    addTStates(11)
-                  }
-
-                case (0xe1) => // POP HL
-                  addTStates(10)
-                  CHECK_LOG_WORD(SP)
-                  POP(HL)
-
-                case (0xe2) => // JP PO,nnnn
-                  JPC(!testFlag(F, FLAG_P))
-
-                case (0xe3) => //  EX (SP),HL
-                  addTStates(19)
-                  CHECK_LOG_WORD(SP)
-                  val temp: Int = HL.get16
-                  POP(HL)
-                  PUSH(temp)
-
-                case (0xe4) => // CALL PO,nnnn
-                  CALLC(!testFlag(F, FLAG_P))
-
-                case (0xe5) => // PUSH HL
-                  addTStates(11)
-                  CHECK_LOG_WORD(SP - 2)
-                  PUSH(HL)
-
-                case (0xe6) => // AND nn
-                  addTStates(7)
-                  AF(andTable(((AF >> 8) & MMU.get8(PC)) & 0xff))
-                  PC.increment()
-
-                case (0xe7) => // RST 20H
-                  addTStates(11)
-                  CHECK_LOG_WORD(SP - 2)
-                  PUSH(PC)
-                  PC(0x20)
-
-                case (0xe8) => // RET PE
-                  if (testFlag(F, FLAG_P)) {
-                    CHECK_LOG_WORD(SP)
-                    POP(PC)
-                    addTStates(11)
-                  } else {
-                    addTStates(5)
-                  }
-
-                case (0xe9) => // JP (HL)
-                  addTStates(4)
-                  PC(HL)
-
-                case (0xea) => // JP PE,nnnn
-                  JPC(testFlag(F, FLAG_P))
-
-                case (0xeb) => // EX DE,HL
-                  addTStates(4)
-                  val temp: Int = HL
-                  HL(DE)
-                  DE(temp)
-
-                case (0xec) => // CALL PE,nnnn
-                  CALLC(testFlag(F, FLAG_P))
-
-                // *************************************************************************************** ED
-                case (0xed) => // ED PREFIX
-                  INCR(1)
-                  val op: Int = MMU.get8(PC)
-                  PC.increment()
-                  edprefix(op)
-
-
-                case (0xee) => // XOR nn
-                  addTStates(7)
-                  AF(xororTable(((AF >> 8) ^ MMU.get8(PC)) & 0xff))
-                  PC.increment()
-
-                case (0xef) => // RST 28H
-                  addTStates(11)
-                  CHECK_LOG_WORD(SP - 2)
-                  PUSH(PC)
-                  PC(0x28)
-
-                case (0xf0) => // RET P
-                  if (testFlag(F, FLAG_S)) {
-                    addTStates(5)
-                  } else {
-                    CHECK_LOG_WORD(SP)
-                    POP(PC)
-                    addTStates(11)
-                  }
-
-                case (0xf1) => // POP AF
-                  addTStates(10)
-                  CHECK_LOG_WORD(SP)
-                  POP(AF)
-
-                case (0xf2) => // JP P,nnnn
-                  JPC(!testFlag(F, FLAG_S))
-
-                case (0xf3) => // DI
-                  addTStates(4)
-                  IFF(0)
-
-                case (0xf4) => // CALL P,nnnn
-                  CALLC(!testFlag(F, FLAG_S))
-
-                case (0xf5) => // PUSH AF
-                  addTStates(11)
-                  CHECK_LOG_WORD(SP - 2)
-                  PUSH(AF)
-
-                case (0xf6) => // OR nn
-                  addTStates(7)
-                  AF(xororTable(((AF >> 8) | MMU.get8(PC)) & 0xff))
-                  PC.increment()
-
-                case (0xf7) => // RST 30H
-                  addTStates(11)
-                  CHECK_LOG_WORD(SP - 2)
-                  PUSH(PC)
-                  PC(0x30)
-
-                case (0xf8) => // RET M
-                  if (testFlag(F, FLAG_S)) {
-                    CHECK_LOG_WORD(SP)
-                    POP(PC)
-                    addTStates(11)
-                  } else {
-                    addTStates(5)
-                  }
-
-                case (0xf9) => // LD SP,HL
-                  addTStates(6)
-                  SP(HL)
-
-                case (0xfa) => // JP M,nnnn
-                  JPC(testFlag(F, FLAG_S))
-
-                case (0xfb) => // EI
-                  addTStates(4)
-                  IFF(3)
-
-                case (0xfc) => // CALL M, nnnn
-                  CALLC(testFlag(F, FLAG_S))
-
-
-                // ************************************************************************************ FD
-                case (0xfd) => // FD Prefix
-                  INCR(1)
-                  val op: Int = MMU.get8(PC)
-                  PC.increment()
-                  fdprefix(op)
-
-
-                case (0xfe) => // CP nn
-                  addTStates(7)
-                  W(MMU.get8(PC))
-                  PC.increment()
-                  ICP(W)
-
-                case (0xff) => // RST 38H
-                  addTStates(11)
-                  CHECK_LOG_WORD(SP - 2)
-                  PUSH(PC)
-                  PC(0x38)
-
-              }
           }
 
 
