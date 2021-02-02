@@ -1549,7 +1549,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
 
   // CALL NZ,nnnn
   private final def fn0xc4(x: Int): Unit = {
-      CALLC(!testFlag(F, FLAG_Z))
+    CALLC(!testFlag(F, FLAG_Z))
   }
 
   // PUSH BC
@@ -1622,10 +1622,10 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
 
   // ADC A,nn
   private final def fn0xce(x: Int): Unit = {
-      addTStates(7)
-      W(MMU.get8(PC))
-      PC.increment()
-      ADC(A, W)
+    addTStates(7)
+    W(MMU.get8(PC))
+    PC.increment()
+    ADC(A, W)
   }
 
   // RST 8
@@ -2004,7 +2004,6 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
     *
     * Main  CPU running here...
     *
-    * @param singleStep
     */
   private var execute: Boolean = true
 
@@ -2644,7 +2643,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
   }
 
   @inline
-  private final def NEG: Unit = {
+  private final def NEG(): Unit = {
     addTStates(8)
     val temp: UByte = A.get8
     AF((~(AF & 0xff00) + 1) & 0xff00)
@@ -2655,7 +2654,7 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
   }
 
   @inline
-  private final def RETN: Unit = {
+  private final def RETN(): Unit = {
     addTStates(14)
     IFF(IFF | (IFF >> 1))
     CHECK_LOG_WORD(SP)
@@ -2708,19 +2707,14 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
 
 
   override def DAsm(addr: Int, sb: StringBuilder): Int = {
-
     var pc = addr
-
     var T: String = null
     var J = false
     var Offset = 0
-
     var C: Char = 0x00
-
     val op = MMU.get8(pc).intValue
 
     op match {
-
       case (0xcb) =>
         pc += 1
         T = Z80.MnemonicsCB(MMU.get8(pc).intValue)
@@ -2948,404 +2942,541 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
     }
   }
 
+  private val ddexecMap: Map[Int, Function[Int, Unit]] = Map[Int, (Int) => Unit](
+    0x09 -> fn0xdd0x09, 0x19 -> fn0xdd0x19, 0x21 -> fn0xdd0x21,
+    0x22 -> fn0xdd0x22, 0x23 -> fn0xdd0x23, 0x24 -> fn0xdd0x24, 0x25 -> fn0xdd0x25, 0x26 -> fn0xdd0x26,
+    0x29 -> fn0xdd0x29, 0x2a -> fn0xdd0x2a, 0x2b -> fn0xdd0x2b, 0x2c -> fn0xdd0x2c, 0x2d -> fn0xdd0x2d,
+    0x2e -> fn0xdd0x2e, 0x34 -> fn0xdd0x34, 0x35 -> fn0xdd0x35, 0x36 -> fn0xdd0x36, 0x39 -> fn0xdd0x39,
+    0x44 -> fn0xdd0x44, 0x45 -> fn0xdd0x45, 0x46 -> fn0xdd0x46, 0x4c -> fn0xdd0x4c, 0x4d -> fn0xdd0x4d,
+    0x4e -> fn0xdd0x4e, 0x54 -> fn0xdd0x54, 0x55 -> fn0xdd0x55, 0x56 -> fn0xdd0x56, 0x5c -> fn0xdd0x5c,
+    0x5d -> fn0xdd0x5d, 0x5e -> fn0xdd0x5e, 0x60 -> fn0xdd0x60, 0x61 -> fn0xdd0x61, 0x62 -> fn0xdd0x62,
+    0x63 -> fn0xdd0x63, 0x64 -> fn0xdd0x64, 0x65 -> fn0xdd0x65, 0x66 -> fn0xdd0x66, 0x67 -> fn0xdd0x67,
+    0x68 -> fn0xdd0x68, 0x69 -> fn0xdd0x69, 0x6a -> fn0xdd0x6a, 0x6b -> fn0xdd0x6b, 0x6c -> fn0xdd0x6c,
+    0x6d -> fn0xdd0x6d, 0x6e -> fn0xdd0x6e, 0x6f -> fn0xdd0x6f, 0x70 -> fn0xdd0x70, 0x71 -> fn0xdd0x71,
+    0x72 -> fn0xdd0x72, 0x73 -> fn0xdd0x73, 0x74 -> fn0xdd0x74, 0x75 -> fn0xdd0x75, 0x77 -> fn0xdd0x77,
+    0x7c -> fn0xdd0x7c, 0x7d -> fn0xdd0x7d, 0x7e -> fn0xdd0x7e, 0x84 -> fn0xdd0x84, 0x85 -> fn0xdd0x85,
+    0x86 -> fn0xdd0x86, 0x8c -> fn0xdd0x8c, 0x8d -> fn0xdd0x8d, 0x8e -> fn0xdd0x8e, 0x94 -> fn0xdd0x94,
+    0x95 -> fn0xdd0x95, 0x96 -> fn0xdd0x96, 0x9c -> fn0xdd0x9c, 0x9d -> fn0xdd0x9d, 0x9e -> fn0xdd0x9e,
+    0xa4 -> fn0xdd0xa4, 0xa5 -> fn0xdd0xa5, 0xa6 -> fn0xdd0xa6, 0xac -> fn0xdd0xac, 0xad -> fn0xdd0xad,
+    0xae -> fn0xdd0xae, 0xb4 -> fn0xdd0xb4, 0xb5 -> fn0xdd0xb5, 0xb6 -> fn0xdd0xb6, 0xbc -> fn0xdd0xbc,
+    0xbd -> fn0xdd0xbd, 0xbe -> fn0xdd0xbe, 0xcb -> fn0xdd0xcb, 0xe1 -> fn0xdd0xe1, 0xe3 -> fn0xdd0xe3,
+    0xe5 -> fn0xdd0xe5, 0xe9 -> fn0xdd0xe9, 0xf9 -> fn0xdd0xf9
+  )
+
+  // ADD IX,BC
+  private final def fn0xdd0x09(x: Int): Unit = {
+    addTStates(15)
+    ADD(IX, BC)
+  }
+
+  // ADD IX,DE
+  private final def fn0xdd0x19(x: Int): Unit = {
+    addTStates(15)
+    ADD(IX, DE)
+  }
+
+  // LD IX,nnnn
+  private final def fn0xdd0x21(x: Int): Unit = {
+    addTStates(14)
+    IX(MMU.get16(PC))
+    PC(PC + 2)
+  }
+
+  // LD (nnnn),IX
+  private final def fn0xdd0x22(x: Int): Unit = {
+    addTStates(20)
+    val temp: Int = MMU.get16(PC)
+    CHECK_LOG_WORD(temp)
+    MMU.put16(temp, IX.get16)
+    PC(PC + 2)
+  }
+
+  // INC IX
+  private final def fn0xdd0x23(x: Int): Unit = {
+    addTStates(10)
+    IX.increment()
+  }
+
+  // INC IXH
+  private final def fn0xdd0x24(x: Int): Unit = {
+    addTStates(9)
+    IXH.increment()
+    AF((AF & ~0xfe) | incZ80Table(IXH.get8))
+  }
+
+  // DEC IXH
+  private final def fn0xdd0x25(x: Int): Unit = {
+    addTStates(9)
+    IXH.decrement()
+    AF((AF & ~0xfe) | decZ80Table(IXH))
+  }
+
+  // LD IXH,nn
+  private final def fn0xdd0x26(x: Int): Unit = {
+    addTStates(9)
+    IXH(MMU.get8(PC))
+    PC.increment()
+  }
+  // ADD IX,IX
+  private final def fn0xdd0x29(x: Int): Unit = {
+      addTStates(15)
+      ADD(IX, IX)
+  }
+
+  // LD IX,(nnnn)
+  private final def fn0xdd0x2a(x: Int): Unit = {
+      addTStates(15)
+      val tmp: Int = MMU.get16(PC)
+      CHECK_LOG_WORD(tmp)
+      IX(MMU.get16(tmp))
+      PC(PC + 2)
+  }
+  // DEC IX
+  private final def fn0xdd0x2b(x: Int): Unit = {
+      addTStates(9)
+      IX.decrement()
+  }
+  // INC IXL
+  private final def fn0xdd0x2c(x: Int): Unit = {
+      addTStates(9)
+      IXL.increment()
+      AF((AF & ~0xfe) | incZ80Table(IXL.get8))
+  }
+
+  // DEC IXL
+  private final def fn0xdd0x2d(x: Int): Unit = {
+      addTStates(9)
+      IXL.decrement()
+      AF((AF & ~0xfe) | decZ80Table(IXL & 0xff))
+  }
+  // LD IXL,nn
+  private final def fn0xdd0x2e(x: Int): Unit = {
+      addTStates(9)
+      IXL(MMU.get8(PC))
+      PC.increment()
+  }
+  // INC (IX+dd)
+  private final def fn0xdd0x34(x: Int): Unit = {
+      addTStates(23)
+      INCIDXdd(IX)
+  }
+  // DEC (IX+dd)
+  private final def fn0xdd0x35(x: Int): Unit = {
+      addTStates(23)
+      DECIDXdd(IX)
+  }
+  // LD (IX+dd),nn
+  private final def fn0xdd0x36(x: Int): Unit = {
+      addTStates(19)
+      val adr: Int = IX + MMU.get8(PC)
+      PC.increment()
+      CHECK_LOG_BYTE(adr)
+      MMU.put8(adr, MMU.get8(PC))
+      PC.increment()
+  }
+  // ADD IX,SP
+  private final def fn0xdd0x39(x: Int): Unit = {
+      addTStates(11)
+      ADD(IX, SP)
+  }
+  // LD B,IXH
+  private final def fn0xdd0x44(x: Int): Unit = {
+      addTStates(9)
+      B(IXH)
+  }
+  // LD B,IXL
+  private final def fn0xdd0x45(x: Int): Unit = {
+      addTStates(9)
+      B(IXL)
+  }
+  // LD B,(IX+dd)
+  private final def fn0xdd0x46(x: Int): Unit = {
+      addTStates(19)
+      LDIDXdd(B, IX)
+  }
+  // LD C,IXH
+  private final def fn0xdd0x4c(x: Int): Unit = {
+      addTStates(9)
+      C(IXH)
+  }
+  // LD C,IXL
+  private final def fn0xdd0x4d(x: Int): Unit = {
+      addTStates(9)
+      C(IXL)
+  }
+  // LD C,(IX+dd)
+  private final def fn0xdd0x4e(x: Int): Unit = {
+      addTStates(19)
+      LDIDXdd(C, IX)
+  }
+  // LD D,IXH
+  private final def fn0xdd0x54(x: Int): Unit = {
+      addTStates(9)
+      D(IXH)
+  }
+  // LD D,IXL
+  private final def fn0xdd0x55(x: Int): Unit = {
+      addTStates(9)
+      D(IXL)
+  }
+  // LD D,(IX+dd)
+  private final def fn0xdd0x56(x: Int): Unit = {
+      addTStates(19)
+      LDIDXdd(D, IX)
+  }
+  // LD E,IXH
+  private final def fn0xdd0x5c(x: Int): Unit = {
+      addTStates(9)
+      E(IXH)
+  }
+  // LD E,IXL
+  private final def fn0xdd0x5d(x: Int): Unit = {
+      addTStates(9)
+      E(IXL)
+  }
+  // LD E,(IX+dd)
+  private final def fn0xdd0x5e(x: Int): Unit = {
+      addTStates(19)
+      LDIDXdd(E, IX)
+  }
+  // LD IXH,B
+  private final def fn0xdd0x60(x: Int): Unit = {
+      addTStates(9)
+      IXH(B)
+  }
+  // LD IXH,C
+  private final def fn0xdd0x61(x: Int): Unit = {
+      addTStates(9)
+      IXH(C)
+  }
+  // LD IXH,D
+  private final def fn0xdd0x62(x: Int): Unit = {
+      addTStates(9)
+      IXH(D)
+  }
+  // LD IXH,E
+  private final def fn0xdd0x63(x: Int): Unit = {
+      addTStates(9)
+      IXH(E)
+  }
+  // LD IXH,IXH
+  private final def fn0xdd0x64(x: Int): Unit = {
+      addTStates(9)
+  }
+  // LD IXH,IXL
+  private final def fn0xdd0x65(x: Int): Unit = {
+      addTStates(9)
+      IXH(IXL)
+  }
+  // LD H,(IX+dd)
+  private final def fn0xdd0x66(x: Int): Unit = {
+      addTStates(19)
+      LDIDXdd(H, IX)
+  }
+  // LD IXH,A
+  private final def fn0xdd0x67(x: Int): Unit = {
+      addTStates(9)
+      IXH(A)
+  }
+  // LD IXL,B
+  private final def fn0xdd0x68(x: Int): Unit = {
+      addTStates(9)
+      IXL(B)
+  }
+  // LD IXL,C
+  private final def fn0xdd0x69(x: Int): Unit = {
+      addTStates(9)
+      IXL(C)
+  }
+  // LD IXL,D
+  private final def fn0xdd0x6a(x: Int): Unit = {
+      addTStates(9)
+      IXL(D)
+  }
+  // LD IXL,E
+  private final def fn0xdd0x6b(x: Int): Unit = {
+      addTStates(9)
+      IXL(E)
+  }
+  // LD IXL,IXH
+  private final def fn0xdd0x6c(x: Int): Unit = {
+      addTStates(9)
+      IXL(IXH)
+  }
+  // LD IXL,IXL
+  private final def fn0xdd0x6d(x: Int): Unit = {
+      addTStates(9)
+  }
+  // LD L,(IX+dd)
+  private final def fn0xdd0x6e(x: Int): Unit = {
+      addTStates(19)
+      LDIDXdd(L, IX)
+  }
+  // LD IXL,A
+  private final def fn0xdd0x6f(x: Int): Unit = {
+      addTStates(9)
+      IXL(A)
+  }
+  // LD (IX+dd),B
+  private final def fn0xdd0x70(x: Int): Unit = {
+      addTStates(19)
+      LDIDXdd(IX, B)
+  }
+  // LD (IX+dd),C
+  private final def fn0xdd0x71(x: Int): Unit = {
+      addTStates(19)
+      LDIDXdd(IX, C)
+  }
+  // LD (IX+dd),D
+  private final def fn0xdd0x72(x: Int): Unit = {
+      addTStates(19)
+      LDIDXdd(IX, D)
+  }
+  // LD (IX+dd),E
+  private final def fn0xdd0x73(x: Int): Unit = {
+      addTStates(19)
+      LDIDXdd(IX, E)
+  }
+  // LD (IX+dd),H
+  private final def fn0xdd0x74(x: Int): Unit = {
+      addTStates(19)
+      LDIDXdd(IX, H)
+  }
+  // LD (IX+dd),L
+  private final def fn0xdd0x75(x: Int): Unit = {
+      addTStates(19)
+      LDIDXdd(IX, L)
+  }
+  // LD (IX+dd),A
+  private final def fn0xdd0x77(x: Int): Unit = {
+      addTStates(19)
+      LDIDXdd(IX, A)
+  }
+  // LD A,IXH
+  private final def fn0xdd0x7c(x: Int): Unit = {
+      addTStates(9)
+      A(IXH)
+  }
+  // LD A,IXL
+  private final def fn0xdd0x7d(x: Int): Unit = {
+      addTStates(9)
+      A(IXL)
+  }
+  // LD A,(IX+dd)
+  private final def fn0xdd0x7e(x: Int): Unit = {
+      addTStates(19)
+      LDIDXdd(A, IX)
+  }
+  // ADD A,IXH
+  private final def fn0xdd0x84(x: Int): Unit = {
+      addTStates(4)
+      ADDIDX(A, IXH)
+  }
+  // ADD A,IXL
+  private final def fn0xdd0x85(x: Int): Unit = {
+      addTStates(9)
+      ADDIDX(A, IXL)
+  }
+  // ADD A,(IX+dd)
+  private final def fn0xdd0x86(x: Int): Unit = {
+      addTStates(19)
+      val adr: Int = IX.get16 + MMU.get8(PC).intValue
+      PC.increment()
+      CHECK_LOG_BYTE(adr)
+      W(MMU.get8(adr))
+      ADDIDX(A, W)
+  }
+  // ADC A,IXH
+  private final def fn0xdd0x8c(x: Int): Unit = {
+      addTStates(9)
+      ADCIDX(A, IXH)
+  }
+  // ADC A,IXL
+  private final def fn0xdd0x8d(x: Int): Unit = {
+      addTStates(9)
+      ADCIDX(A, IXL)
+  }
+  // ADC A,(IX+dd)
+  private final def fn0xdd0x8e(x: Int): Unit = {
+      addTStates(19)
+      val adr: Int = IX + MMU.get8(PC)
+      CHECK_LOG_BYTE(adr)
+      W(MMU.get8(adr))
+      ADCIDX(A, W)
+  }
+  // SUB (IX+dd)
+  private final def fn0xdd0x96(x: Int): Unit = {
+      addTStates(19)
+      val adr: Int = IX + MMU.get8(PC)
+      CHECK_LOG_BYTE(adr)
+      val temp: UByte = MMU.get8(adr)
+      val acu: UByte = A.get8
+      val sum: UInt = acu - temp
+      AF((addTable(sum & 0xff) | cbits2Z80Table((acu ^ temp ^ sum) & 0x1ff)).intValue)
+  }
+  // SUB IXH
+  private final def fn0xdd0x94(x: Int): Unit = {
+      addTStates(9)
+      setFlag(FLAG_C, clear = true)
+      SUBIDX(IXH)
+  }
+  // SBC A,IXH
+  private final def fn0xdd0x9c(x: Int): Unit = {
+      addTStates(9)
+      SBCAIDX(A, IXH)
+  }
+  // SUB IXL
+  private final def fn0xdd0x95(x: Int): Unit = {
+      addTStates(9)
+      setFlag(FLAG_C, clear = true)
+      SUBIDX(IXL)
+  }
+  // SBC A,IXL
+  private final def fn0xdd0x9d(x: Int): Unit = {
+      addTStates(9)
+      SBCAIDX(A, IXL)
+  }
+  // SBC A,(IX+dd)
+  private final def fn0xdd0x9e(x: Int): Unit = {
+      addTStates(19)
+      val adr: Int = IX + MMU.get8(PC)
+      PC.increment()
+      CHECK_LOG_BYTE(adr)
+      W(MMU.get8(adr))
+      SBCAIDX(A, W)
+  }
+  // AND IXH
+  private final def fn0xdd0xa4(x: Int): Unit = {
+      addTStates(9)
+      AF(andTable((AF.get16 & IX.get16) >> 8 & 0xff))
+  }
+  // AND IXL
+  private final def fn0xdd0xa5(x: Int): Unit = {
+      addTStates(9)
+      AF(andTable(((AF.get16 >> 8) & IX.get16) & 0xff))
+  }
+  // AND (IX+dd)
+  private final def fn0xdd0xa6(x: Int): Unit = {
+      addTStates(19)
+      ANDIDXdd(IX)
+  }
+  // XOR IXH
+  private final def fn0xdd0xac(x: Int): Unit = {
+      addTStates(9)
+      AF(xororTable(((AF.get16 ^ IX.get16) >> 8) & 0xff))
+  }
+  // XOR IXL
+  private final def fn0xdd0xad(x: Int): Unit = {
+      addTStates(9)
+      AF(xororTable(((AF.get16 >> 8) ^ IX.get16) & 0xff))
+  }
+  // XOR (IX+DD)
+  private final def fn0xdd0xae(x: Int): Unit = {
+      addTStates(19)
+      XORIDXdd(IX)
+  }
+  // OR IXH
+  private final def fn0xdd0xb4(x: Int): Unit = {
+      addTStates(9)
+      AF(xororTable(((AF.get16 | IX.get16) >> 8) & 0xff))
+  }
+  // OR IXL
+  private final def fn0xdd0xb5(x: Int): Unit = {
+      addTStates(9)
+      AF(xororTable(((AF.get16 >> 8) | IX.get16) & 0xff))
+  }
+  // OR (IX+dd)
+  private final def fn0xdd0xb6(x: Int): Unit = {
+      addTStates(19)
+      ORIDXdd(IX)
+  }
+  // CP IXH
+  private final def fn0xdd0xbc(x: Int): Unit = {
+      addTStates(9)
+      CPIX8(IXH)
+  }
+  // CP IXL
+  private final def fn0xdd0xbd(x: Int): Unit = {
+      addTStates(9)
+      CPIX8(IXL)
+  }
+  // CP (IX+dd)
+  private final def fn0xdd0xbe(x: Int): Unit = {
+      addTStates(19)
+      CPIDXdd(IX)
+  }
+  //  DD CB PREFIX
+  private final def fn0xdd0xcb(x: Int): Unit = {
+      val adr: Int = IX.get16.intValue + MMU.get8(PC)
+      PC.increment()
+      INCR(1)
+      val op: Int = MMU.get8(PC)
+      ddcbprefix(op, adr)
+  }
+  // POP IX
+  private final def fn0xdd0xe1(x: Int): Unit = {
+      addTStates(14)
+      CHECK_LOG_WORD(SP)
+      POP(IX)
+  }
+  // EX (SP),IX
+  private final def fn0xdd0xe3(x: Int): Unit = {
+      addTStates(23)
+      CHECK_LOG_WORD(SP)
+      val tmp: UInt = IX.get16
+      POP(IX)
+      PUSH(tmp.intValue)
+  }
+  // PUSH IX
+  private final def fn0xdd0xe5(x: Int): Unit = {
+      addTStates(15)
+      CHECK_LOG_WORD(SP - 2)
+      PUSH(IX)
+  }
+  // JP (IX)
+  private final def fn0xdd0xe9(x: Int): Unit = {
+      addTStates(8)
+      PC(IX)
+  }
+  // LD SP,IX
+  private final def fn0xdd0xf9(x: Int): Unit = {
+      addTStates(10)
+      SP(IX)
+  }
+
+  //**************************
   /**
     * DD Prefix
     *
     */
   private def ddprefix(op: Int): Unit = {
-    op match {
-      case (0x09) => // ADD IX,BC
-        addTStates(15)
-        ADD(IX, BC)
-
-      case (0x19) => // ADD IX,DE
-        addTStates(15)
-        ADD(IX, DE)
-
-      case (0x21) => // LD IX,nnnn
-        addTStates(14)
-        IX(MMU.get16(PC))
-        PC(PC + 2)
-
-      case (0x22) => // LD (nnnn),IX
-        addTStates(20)
-        val temp: Int = MMU.get16(PC)
-        CHECK_LOG_WORD(temp)
-        MMU.put16(temp, IX.get16)
-        PC(PC + 2)
-
-      case (0x23) => // INC IX
-        addTStates(10)
-        IX.increment()
-
-      case (0x24) => // INC IXH
-        addTStates(9)
-        IXH.increment()
-        AF((AF & ~0xfe) | incZ80Table(IXH.get8))
-
-      case (0x25) => // DEC IXH
-        addTStates(9)
-        IXH.decrement()
-        AF((AF & ~0xfe) | decZ80Table(IXH))
-
-      case (0x26) => // LD IXH,nn
-        addTStates(9)
-        IXH(MMU.get8(PC))
-        PC.increment()
-
-      case (0x29) => // ADD IX,IX
-        addTStates(15)
-        ADD(IX, IX)
-
-      case (0x2a) => // LD IX,(nnnn)
-        addTStates(15)
-        val tmp: Int = MMU.get16(PC)
-        CHECK_LOG_WORD(tmp)
-        IX(MMU.get16(tmp))
-        PC(PC + 2)
-
-      case (0x2b) => // DEC IX
-        addTStates(9)
-        IX.decrement()
-
-      case (0x2c) => // INC IXL
-        addTStates(9)
-        IXL.increment()
-        AF((AF & ~0xfe) | incZ80Table(IXL.get8))
-
-      case (0x2d) => // DEC IXL
-        addTStates(9)
-        IXL.decrement()
-        AF((AF & ~0xfe) | decZ80Table(IXL & 0xff))
-
-      case (0x2e) => // LD IXL,nn
-        addTStates(9)
-        IXL(MMU.get8(PC))
-        PC.increment()
-
-      case (0x34) => // INC (IX+dd)
-        addTStates(23)
-        INCIDXdd(IX)
-
-      case (0x35) => // DEC (IX+dd)
-        addTStates(23)
-        DECIDXdd(IX)
-
-      case (0x36) => // LD (IX+dd),nn
-        addTStates(19)
-        val adr: Int = IX + MMU.get8(PC)
-        PC.increment()
-        CHECK_LOG_BYTE(adr)
-        MMU.put8(adr, MMU.get8(PC))
-        PC.increment()
-
-      case (0x39) => // ADD IX,SP
-        addTStates(11)
-        ADD(IX, SP)
-
-      case (0x44) => // LD B,IXH
-        addTStates(9)
-        B(IXH)
-
-      case (0x45) => // LD B,IXL
-        addTStates(9)
-        B(IXL)
-
-      case (0x46) => // LD B,(IX+dd)
-        addTStates(19)
-        LDIDXdd(B, IX)
-
-      case (0x4c) => // LD C,IXH
-        addTStates(9)
-        C(IXH)
-
-      case (0x4d) => // LD C,IXL
-        addTStates(9)
-        C(IXL)
-
-      case (0x4e) => // LD C,(IX+dd)
-        addTStates(19)
-        LDIDXdd(C, IX)
-
-      case (0x54) => // LD D,IXH
-        addTStates(9)
-        D(IXH)
-
-      case (0x55) => // LD D,IXL
-        addTStates(9)
-        D(IXL)
-
-      case (0x56) => // LD D,(IX+dd)
-        addTStates(19)
-        LDIDXdd(D, IX)
-
-      case (0x5c) => // LD E,IXH
-        addTStates(9)
-        E(IXH)
-
-      case (0x5d) => // LD E,IXL
-        addTStates(9)
-        E(IXL)
-
-      case (0x5e) => // LD E,(IX+dd)
-        addTStates(19)
-        LDIDXdd(E, IX)
-
-      case (0x60) => // LD IXH,B
-        addTStates(9)
-        IXH(B)
-
-      case (0x61) => // LD IXH,C
-        addTStates(9)
-        IXH(C)
-
-      case (0x62) => // LD IXH,D
-        addTStates(9)
-        IXH(D)
-
-      case (0x63) => // LD IXH,E
-        addTStates(9)
-        IXH(E)
-
-      case (0x64) => // LD IXH,IXH
-        addTStates(9)
-
-      case (0x65) => // LD IXH,IXL
-        addTStates(9)
-        IXH(IXL)
-
-      case (0x66) => // LD H,(IX+dd)
-        addTStates(19)
-        LDIDXdd(H, IX)
-
-      case (0x67) => // LD IXH,A
-        addTStates(9)
-        IXH(A)
-
-      case (0x68) => // LD IXL,B
-        addTStates(9)
-        IXL(B)
-
-      case (0x69) => // LD IXL,C
-        addTStates(9)
-        IXL(C)
-
-      case (0x6a) => // LD IXL,D
-        addTStates(9)
-        IXL(D)
-
-      case (0x6b) => // LD IXL,E
-        addTStates(9)
-        IXL(E)
-
-      case (0x6c) => // LD IXL,IXH
-        addTStates(9)
-        IXL(IXH)
-
-      case (0x6d) => // LD IXL,IXL
-        addTStates(9)
-
-      case (0x6e) => // LD L,(IX+dd)
-        addTStates(19)
-        LDIDXdd(L, IX)
-
-      case (0x6f) => // LD IXL,A
-        addTStates(9)
-        IXL(A)
-
-      case (0x70) => // LD (IX+dd),B
-        addTStates(19)
-        LDIDXdd(IX, B)
-
-      case (0x71) => // LD (IX+dd),C
-        addTStates(19)
-        LDIDXdd(IX, C)
-
-      case (0x72) => // LD (IX+dd),D
-        addTStates(19)
-        LDIDXdd(IX, D)
-
-      case (0x73) => // LD (IX+dd),E
-        addTStates(19)
-        LDIDXdd(IX, E)
-
-      case (0x74) => // LD (IX+dd),H
-        addTStates(19)
-        LDIDXdd(IX, H)
-
-      case (0x75) => // LD (IX+dd),L
-        addTStates(19)
-        LDIDXdd(IX, L)
-
-      case (0x77) => // LD (IX+dd),A
-        addTStates(19)
-        LDIDXdd(IX, A)
-
-      case (0x7c) => // LD A,IXH
-        addTStates(9)
-        A(IXH)
-
-      case (0x7d) => // LD A,IXL
-        addTStates(9)
-        A(IXL)
-
-      case (0x7e) => // LD A,(IX+dd)
-        addTStates(19)
-        LDIDXdd(A, IX)
-
-      case (0x84) => // ADD A,IXH
-        addTStates(4)
-        ADDIDX(A, IXH)
-
-      case (0x85) => // ADD A,IXL
-        addTStates(9)
-        ADDIDX(A, IXL)
-
-      case (0x86) => // ADD A,(IX+dd)
-        addTStates(19)
-        val adr: Int = IX.get16 + MMU.get8(PC).intValue
-        PC.increment()
-        CHECK_LOG_BYTE(adr)
-        W(MMU.get8(adr))
-        ADDIDX(A, W)
-
-      case (0x8c) => // ADC A,IXH
-        addTStates(9)
-        ADCIDX(A, IXH)
-
-      case (0x8d) => // ADC A,IXL
-        addTStates(9)
-        ADCIDX(A, IXL)
-
-      case (0x8e) => // ADC A,(IX+dd)
-        addTStates(19)
-        val adr: Int = IX + MMU.get8(PC)
-        CHECK_LOG_BYTE(adr)
-        W(MMU.get8(adr))
-        ADCIDX(A, W)
-
-      case (0x96) => // SUB (IX+dd)
-        addTStates(19)
-        val adr: Int = IX + MMU.get8(PC)
-        CHECK_LOG_BYTE(adr)
-        val temp: UByte = MMU.get8(adr)
-        val acu: UByte = A.get8
-        val sum: UInt = acu - temp
-        AF((addTable(sum & 0xff) | cbits2Z80Table((acu ^ temp ^ sum) & 0x1ff)).intValue)
-
-      case (0x94) => // SUB IXH
-        addTStates(9)
-        setFlag(FLAG_C, clear = true)
-        SUBIDX(IXH)
-
-      case (0x9c) => // SBC A,IXH
-        addTStates(9)
-        SBCAIDX(A, IXH)
-
-      case (0x95) => // SUB IXL
-        addTStates(9)
-        setFlag(FLAG_C, clear = true)
-        SUBIDX(IXL)
-
-      case (0x9d) => // SBC A,IXL
-        addTStates(9)
-        SBCAIDX(A, IXL)
-
-      case (0x9e) => // SBC A,(IX+dd)
-        addTStates(19)
-        val adr: Int = IX + MMU.get8(PC)
-        PC.increment()
-        CHECK_LOG_BYTE(adr)
-        W(MMU.get8(adr))
-        SBCAIDX(A, W)
-
-      case (0xa4) => // AND IXH
-        addTStates(9)
-        AF(andTable((AF.get16 & IX.get16) >> 8 & 0xff))
-
-      case (0xa5) => // AND IXL
-        addTStates(9)
-        AF(andTable(((AF.get16 >> 8) & IX.get16) & 0xff))
-
-      case (0xa6) => // AND (IX+dd)
-        addTStates(19)
-        ANDIDXdd(IX)
-
-      case (0xac) => // XOR IXH
-        addTStates(9)
-        AF(xororTable(((AF.get16 ^ IX.get16) >> 8) & 0xff))
-
-      case (0xad) => // XOR IXL
-        addTStates(9)
-        AF(xororTable(((AF.get16 >> 8) ^ IX.get16) & 0xff))
-
-      case (0xae) => // XOR (IX+DD)
-        addTStates(19)
-        XORIDXdd(IX)
-
-      case (0xb4) => // OR IXH
-        addTStates(9)
-        AF(xororTable(((AF.get16 | IX.get16) >> 8) & 0xff))
-
-      case (0xb5) => // OR IXL
-        addTStates(9)
-        AF(xororTable(((AF.get16 >> 8) | IX.get16) & 0xff))
-
-      case (0xb6) => // OR (IX+dd)
-        addTStates(19)
-        ORIDXdd(IX)
-
-      case (0xbc) => // CP IXH
-        addTStates(9)
-        CPIX8(IXH)
-
-      case (0xbd) => // CP IXL
-        addTStates(9)
-        CPIX8(IXL)
-
-      case (0xbe) => // CP (IX+dd)
-        addTStates(19)
-        CPIDXdd(IX)
-
-      // ******************************************************************************** DD CB PREFIX
-      case (0xcb) =>
-        //  DD CB PREFIX
-        val adr: Int = IX.get16.intValue + MMU.get8(PC)
-        PC.increment()
-        INCR(1)
-        val op: Int = MMU.get8(PC)
-        ddcbprefix(op, adr)
-
-      case (0xe1) => // POP IX
-        addTStates(14)
-        CHECK_LOG_WORD(SP)
-        POP(IX)
-
-      case (0xe3) => // EX (SP),IX
-        addTStates(23)
-        CHECK_LOG_WORD(SP)
-        val tmp: UInt = IX.get16
-        POP(IX)
-        PUSH(tmp.intValue)
-
-      case (0xe5) => // PUSH IX
-        addTStates(15)
-        CHECK_LOG_WORD(SP - 2)
-        PUSH(IX)
-
-      case (0xe9) => // JP (IX)
-        addTStates(8)
-        PC(IX)
-
-      case (0xf9) => // LD SP,IX
-        addTStates(10)
-        SP(IX)
-
-      case _ =>
-        // Ignore DD
-        PC.decrement()
+    ddexecMap.get(op) match {
+      case Some(x) => x(op)
+      case None =>
+            // Ignore DD
+            PC.decrement()
+        }
     }
-  }
+
+  private val edexecMap: Map[Int, Function[Int, Unit]] = Map[Int, (Int) => Unit](
+    0x40 -> fn0xed0x40, 0x41 -> fn0xed0x41, 0x42 -> fn0xed0x42, 0x43 -> fn0xed0x43,
+    0x44 -> fn0xed0xxx1, 0x4c -> fn0xed0xxx1, 0x54 -> fn0xed0xxx1, 0x64 -> fn0xed0xxx1,
+    0x6c -> fn0xed0xxx1, 0x74 -> fn0xed0xxx1, 0x7c -> fn0xed0xxx1,
+    0x45 -> fn0xed0xxx2, 0x55 -> fn0xed0xxx2, 0x5d -> fn0xed0xxx2, 0x65 -> fn0xed0xxx2, 0x6d -> fn0xed0xxx2,
+    0x75 -> fn0xed0xxx2, 0x7d -> fn0xed0xxx2,
+    0x46 -> fn0xed0x46, 0x47 -> fn0xed0x47, 0x49 -> fn0xed0x49, 0x4a -> fn0xed0x4a, 0x4b -> fn0xed0x4b,
+    0x4d -> fn0xed0x4d, 0x4f -> fn0xed0x4f, 0x50 -> fn0xed0x50, 0x51 -> fn0xed0x51, 0x52 -> fn0xed0x52,
+    0x53 -> fn0xed0x53, 0x56 -> fn0xed0x56, 0x57 -> fn0xed0x57, 0x58 -> fn0xed0x58, 0x59 -> fn0xed0x59,
+    0x5a -> fn0xed0x5a, 0x5b -> fn0xed0x5b, 0x5e -> fn0xed0x5e, 0x5f -> fn0xed0x5f, 0x60 -> fn0xed0x60,
+    0x61  -> fn0xed0x61, 0x62  -> fn0xed0x62, 0x63  -> fn0xed0x63,  0x48 -> fn0xed0x48,
+    0x67 -> fn0xed0x67, 0x68 -> fn0xed0x68, 0x69 -> fn0xed0x69, 0x6a -> fn0xed0x6a, 0x6b -> fn0xed0x6b,
+    0x6f  -> fn0xed0x6f, 0x70 -> fn0xed0x70, 0x71 -> fn0xed0x71, 0x72 -> fn0xed0x72, 0x73 -> fn0xed0x73,
+    0x78 -> fn0xed0x78, 0x79 -> fn0xed0x79, 0x7a -> fn0xed0x7a, 0x7b -> fn0xed0x7b,
+    0xa0-> fn0xed0xa0, 0xa1 -> fn0xed0xa1, 0xa2-> fn0xed0xa2, 0xa3-> fn0xed0xa3, 0xa8-> fn0xed0xa8,
+    0xa9-> fn0xed0xa9, 0xaa-> fn0xed0xaa, 0xab-> fn0xed0xab, 0xb0-> fn0xed0xb0, 0xb1-> fn0xed0xb1,
+    0xb2-> fn0xed0xb2, 0xb3-> fn0xed0xb3, 0xb8-> fn0xed0xb8, 0xb9-> fn0xed0xb9,
+    0xba-> fn0xed0xba, 0xbb-> fn0xed0xbb
+  )
 
   /**
     * ED Prefix
@@ -3353,996 +3484,1040 @@ class Z80(isBanked: Boolean, override val machine: AbstractMachine) extends Basi
     * @param op
     */
   private def edprefix(op: Int): Unit = {
-    op match {
-      case (0x40) => // IN B,(C)
-        addTStates(12)
-        val temp: Int = MMU.in8(C)
-        B(temp)
-        AF((AF & 0xfe) | rotateShiftTable(temp & 0xff))
+    edexecMap.get(op) match {
+      case Some(x) => x(op)
+      case None =>
+    }
+  }
+  // IN B,(C)
+        private final def fn0xed0x40(x: Int): Unit = {
+        addTStates (12)
+        val temp: Int = MMU.in8 (C)
+        B (temp)
+        AF ((AF & 0xfe) | rotateShiftTable (temp & 0xff) )
+        }
+  // OUT (C),B
+        private final def fn0xed0x41(x: Int): Unit = {
+        addTStates (12)
+        MMU.out8 (C, B)
+        }
+  // SBC HL, BC
+        private final def fn0xed0x42(x: Int): Unit = {
+        addTStates (15)
+        SBC (HL, BC)
+        }
+  // LD (nnnn),BC
+        private final def fn0xed0x43(x: Int): Unit = {
+        addTStates (20)
+        val temp: Int = MMU.get16 (PC)
+        CHECK_LOG_WORD (temp)
+        MMU.put16 (temp, BC)
+        PC (PC + 2)
+        }
+  // 0x44, 0x4c, 0x54, 0x64, 0x6c, 0x74, 0x7c  - NEG
+  private final def fn0xed0xxx1(x: Int): Unit = {
+      NEG
+  }
+  // 0x45, 0x55, 0x5d, 0x65, 0x6d, 0x75, 0x7d - RETN
+  private final def fn0xed0xxx2(x: Int): Unit = {
+      RETN
+  }
+  // IM 0
+  private final def fn0xed0x46(x: Int): Unit = {
+      addTStates(8) // Interrupt mode 0
+  }
+  // LD I,A
+  private final def fn0xed0x47(x: Int): Unit = {
+      addTStates(9)
+      I((I & 0xff) | (AF & ~0xff))
+  }
 
-      case (0x41) => // OUT (C),B
-        addTStates(12)
-        MMU.out8(C, B)
+  // IN C,(C)
+  private final def fn0xed0x48(x: Int): Unit = {
+      addTStates(12)
+      val temp: Int = MMU.in8(C)
+      C(temp)
+      AF((AF & ~0xfe) | rotateShiftTable(temp & 0xff))
+  }
+  // OUT (C),C
+  private final def fn0xed0x49(x: Int): Unit = {
+      addTStates(12)
+      MMU.out8(C, C)
+  }
+  // ADC HL,BC
+  private final def fn0xed0x4a(x: Int): Unit = {
+      addTStates(15)
+      ADC(HL, BC)
+  }
+  // LD BC,(nnnn)
+  private final def fn0xed0x4b(x: Int): Unit = {
+      addTStates(20)
+      val temp: Int = MMU.get16(PC)
+      CHECK_LOG_WORD(temp)
+      BC(MMU.get16(temp))
+      PC(PC + 2)
+  }
+  // RETI
+  private final def fn0xed0x4d(x: Int): Unit = {
+      addTStates(14)
+      IFF(IFF | IFF >> 1)
+      CHECK_LOG_WORD(SP)
+      POP(PC)
+  }
 
-      case (0x42) => // SBC HL, BC
-        addTStates(15)
-        SBC(HL, BC)
+  // LD R,A
+  private final def fn0xed0x4f(x: Int): Unit = {
+      addTStates(9)
+      IR((IR & ~0xff) | ((AF >> 8) & 0xff))
+  }
+  // IN D,(C)
+  private final def fn0xed0x50(x: Int): Unit = {
+      addTStates(12)
+      val temp: UByte = MMU.in8(C)
+      D(temp)
+      AF((AF & 0xfe) | rotateShiftTable(temp))
+  }
+  // OUT (C),D
+  private final def fn0xed0x51(x: Int): Unit = {
+      addTStates(12)
+      MMU.out8(C, D)
+  }
+  // SBC HL,DE
+  private final def fn0xed0x52(x: Int): Unit = {
+      addTStates(15)
+      SBC(HL, DE)
+  }
+  // LD (nnnn),DE
+  private final def fn0xed0x53(x: Int): Unit = {
+      addTStates(20)
+      val temp: Int = MMU.get16(PC)
+      CHECK_LOG_WORD(temp)
+      MMU.put16(temp, DE)
+      PC(PC + 2)
+  }
+  // IM 1
+  private final def fn0xed0x56(x: Int): Unit = {
+      addTStates(8)
+  }
+    // LD A,I
+  private final def fn0xed0x57(x: Int): Unit = {
+      addTStates(9)
+      AF((AF & 0x29) | (IR & ~0xff) | ((IR >> 8) & 0x80) | ({
+        if ((IR & ~0xff) == 0) 1 else 0
+      } << 6) | ((IFF & 2) << 1))
+  }
 
-      case (0x43) => // LD (nnnn),BC
-        addTStates(20)
-        val temp: Int = MMU.get16(PC)
-        CHECK_LOG_WORD(temp)
-        MMU.put16(temp, BC)
-        PC(PC + 2)
+  // IN E,(C)
+  private final def fn0xed0x58(x: Int): Unit = {
+      addTStates(12)
+      val temp: UByte = MMU.in8((C))
+      E(temp)
+      AF((AF & 0xfe) | rotateShiftTable(temp))
+  }
+  // OUT (C),E
+  private final def fn0xed0x59(x: Int): Unit = {
+      addTStates(12)
+      MMU.out8(C, E)
+  }
+  // ADC HL,DE
+  private final def fn0xed0x5a(x: Int): Unit = {
+      addTStates(15)
+      ADC(HL, DE)
+  }
+  // LD DE,(nnnn)
+  private final def fn0xed0x5b(x: Int): Unit = {
+      addTStates(20)
+      val temp: Int = MMU.get16(PC)
+      CHECK_LOG_WORD(temp)
+      DE(MMU.get16(temp))
+      PC(PC + 2)
+  }
 
-      case (0x44) => // NEG
-        NEG
+  // IM 2
+  private final def fn0xed0x5e(x: Int): Unit = {
+      addTStates(8)
+  }
 
-      case (0x4C) => // NEG
-        NEG
-
-      case (0x54) => // NEG
-        NEG
-
-      case (0x64) => // NEG
-        NEG
-
-      case (0x6C) => // NEG
-        NEG
-
-      case (0x74) => // NEG
-        NEG
-
-      case (0x7C) => // NEG
-        NEG
-
-      case (0x45) => // RETN
-        RETN
-
-      case (0x55) => // RETN
-        RETN
-
-      case (0x5D) => // RETN
-        RETN
-
-      case (0x65) => // RETN
-        RETN
-
-      case (0x6D) => // RETN
-        RETN
-
-      case (0x75) => // RETN
-        RETN
-
-      case (0x7D) => // RETN
-        RETN
-
-      case (0x46) => // IM 0
-        addTStates(8) // Interrupt mode 0
-
-      case (0x47) => // LD I,A
-        addTStates(9)
-        I((I & 0xff) | (AF & ~0xff))
-
-      case (0x48) => // IN C,(C)
-        addTStates(12)
-        val temp: Int = MMU.in8(C)
-        C(temp)
-        AF((AF & ~0xfe) | rotateShiftTable(temp & 0xff))
-
-      case (0x49) => // OUT (C),C
-        addTStates(12)
-        MMU.out8(C, C)
-
-      case (0x4a) => // ADC HL,BC
-        addTStates(15)
-        ADC(HL, BC)
-
-      case (0x4b) => // LD BC,(nnnn)
-        addTStates(20)
-        val temp: Int = MMU.get16(PC)
-        CHECK_LOG_WORD(temp)
-        BC(MMU.get16(temp))
-        PC(PC + 2)
-
-      case (0x4d) => // RETI
-        addTStates(14)
-        IFF(IFF | IFF >> 1)
-        CHECK_LOG_WORD(SP)
-        POP(PC)
-
-      case (0x4f) => // LD R,A
-        addTStates(9)
-        IR((IR & ~0xff) | ((AF >> 8) & 0xff))
-
-      case (0x50) => // IN D,(C)
-        addTStates(12)
-        val temp: UByte = MMU.in8(C)
-        D(temp)
-        AF((AF & 0xfe) | rotateShiftTable(temp))
-
-      case (0x51) => // OUT (C),D
-        addTStates(12)
-        MMU.out8(C, D)
-
-      case (0x52) => // SBC HL,DE
-        addTStates(15)
-        SBC(HL, DE)
-
-      case (0x53) => // LD (nnnn),DE
-        addTStates(20)
-        val temp: Int = MMU.get16(PC)
-        CHECK_LOG_WORD(temp)
-        MMU.put16(temp, DE)
-        PC(PC + 2)
-
-      case (0x56) => // IM 1
-        addTStates(8)
-
-      case (0x57) => // LD A,I
-        addTStates(9)
-        AF((AF & 0x29) | (IR & ~0xff) | ((IR >> 8) & 0x80) | ({
-          if ((IR & ~0xff) == 0) 1 else 0
+  // LD A,R
+  private final def fn0xed0x5f(x: Int): Unit = {
+      addTStates(9)
+      AF((AF & 0x29) | ((IR & 0xff) << 8) | (IR & 0x80) |
+        ({
+          if ((IR & 0xff) == 0) 1 else 0
         } << 6) | ((IFF & 2) << 1))
+  }
+  // IN H,(C)
+  private final def fn0xed0x60(x: Int): Unit = {
+      addTStates(12)
+      val temp: UByte = MMU.in8(C)
+      H(temp)
+      AF((AF & 0xfe) | rotateShiftTable(temp))
+  }
+  // OUT (C),H
+  private final def fn0xed0x61(x: Int): Unit = {
+      addTStates(12)
+      MMU.out8(C, H)
+  }
+  // SBC HL,HL
+  private final def fn0xed0x62(x: Int): Unit = {
+      addTStates(15)
+      SBC(HL, HL)
+  }
+  // LD (nnnn),HL
+  private final def fn0xed0x63(x: Int): Unit = {
+      addTStates(20)
+      val temp: Int = MMU.get16(PC)
+      CHECK_LOG_WORD(temp)
+      MMU.put16(temp, HL)
+      PC(PC + 2)
+  }
+  // RRD
+  private final def fn0xed0x67(x: Int): Unit = {
+      addTStates(18)
+      val temp: UByte = MMU.get8(HL)
+      val acu: UByte = A.get8
+      MMU.put8(HL, HIGH_DIGIT(temp) | (LOW_DIGIT(acu) << 4) & 0xff)
+      AF(rrdrldTable((acu & 0xf0) | LOW_DIGIT(temp)) | (AF.get16 & 1))
+  }
+  // IN L,(C)
+  private final def fn0xed0x68(x: Int): Unit = {
+      addTStates(12)
+      val temp: UByte = MMU.in8(C)
+      L(temp)
+      AF((AF & 0xfe) | rotateShiftTable(temp & 0xff))
+  }
+  // OUT (C),L
+  private final def fn0xed0x69(x: Int): Unit = {
+      addTStates(12)
+      MMU.out8(C, L)
+  }
+  // ADC HL,HL
+  private final def fn0xed0x6a(x: Int): Unit = {
+      addTStates(15)
+      ADC(HL, HL)
+  }
+  // LD HL,(nnnn)
+  private final def fn0xed0x6b(x: Int): Unit = {
+      addTStates(20)
+      val temp: Int = MMU.get16(PC)
+      CHECK_LOG_WORD(temp)
+      HL(MMU.get16(temp))
+      PC(PC + 2)
+  }
+  // RLD
+  private final def fn0xed0x6f(x: Int): Unit = {
+      addTStates(18)
+      val temp: UByte = MMU.get8(HL)
+      val acu: UByte = A.get8
+      MMU.put8(HL, (LOW_DIGIT(temp) << 4) | LOW_DIGIT(acu))
+      AF(rrdrldTable((acu & 0xf0) | HIGH_DIGIT(temp)) | (F.get8.intValue & 1))
+  }
+  // IN (C)
+  private final def fn0xed0x70(x: Int): Unit = {
+      addTStates(12)
+      val temp: UByte = MMU.in8(C)
+      AF((AF & 0xfe) | rotateShiftTable(temp))
+  }
+  // OUT (C),0
+  private final def fn0xed0x71(x: Int): Unit = {
+      addTStates(12)
+      MMU.out8(C, UByte(0))
+  }
+  // SBC HL,SP
+  private final def fn0xed0x72(x: Int): Unit = {
+      addTStates(15)
+      SBC(HL, SP)
+  }
+  // LD (nnnn),SP
+  private final def fn0xed0x73(x: Int): Unit = {
+      addTStates(20)
+      val temp: Int = MMU.get16(PC)
+      CHECK_LOG_WORD(temp)
+      MMU.put16(temp, SP)
+      PC(PC + 2)
+  }
+  // IN A,(C)
+  private final def fn0xed0x78(x: Int): Unit = {
+      addTStates(12)
+      val temp: UByte = MMU.in8(C)
+      A(temp)
+      AF((AF & 0xfe) | rotateShiftTable(temp))
+  }
 
-      case (0x58) => // IN E,(C)
-        addTStates(12)
-        val temp: UByte = MMU.in8((C))
-        E(temp)
-        AF((AF & 0xfe) | rotateShiftTable(temp))
+  // OUT (C),A
+  private final def fn0xed0x79(x: Int): Unit = {
+      addTStates(12)
+      MMU.out8(C, A)
+  }
+  // ADC HL,SP
+  private final def fn0xed0x7a(x: Int): Unit = {
+      addTStates(15)
+      ADC(HL, SP)
+  }
+  // LD SP,(nnnn)
+  private final def fn0xed0x7b(x: Int): Unit = {
+      addTStates(20)
+      val temp: Int = MMU.get16(PC)
+      CHECK_LOG_WORD(temp)
+      SP(MMU.get16(temp))
+      PC(PC + 2)
+  }
 
-      case (0x59) => // OUT (C),E
-        addTStates(12)
-        MMU.out8(C, E)
+  // LDI
+  private final def fn0xed0xa0(x: Int): Unit = {
+      addTStates(16)
+      // CHECK_BREAK_TWO_BYTES - HL & DE
+      var acu: UInt = MMU.get8(HL)
+      HL.increment()
+      MMU.put8(DE, acu.intValue)
+      DE.increment()
+      acu = acu + A.get8
+      AF((AF & ~0x3e) | (acu & 8) | ((acu & 2) << 4) | ({
+        BC.decrement()
+        if ((BC & 0xffff) != 0) 1 else 0
+      } << 2))
+  }
 
-      case (0x5a) => // ADC HL,DE
-        addTStates(15)
-        ADC(HL, DE)
-
-      case (0x5b) => // LD DE,(nnnn)
-        addTStates(20)
-        val temp: Int = MMU.get16(PC)
-        CHECK_LOG_WORD(temp)
-        DE(MMU.get16(temp))
-        PC(PC + 2)
-
-      case (0x5e) => // IM 2
-        addTStates(8)
-
-      case (0x5f) => // LD A,R
-        addTStates(9)
-        AF((AF & 0x29) | ((IR & 0xff) << 8) | (IR & 0x80) |
-          ({
-            if ((IR & 0xff) == 0) 1 else 0
-          } << 6) | ((IFF & 2) << 1))
-
-      case (0x60) => // IN H,(C)
-        addTStates(12)
-        val temp: UByte = MMU.in8(C)
-        H(temp)
-        AF((AF & 0xfe) | rotateShiftTable(temp))
-
-      case (0x61) => // OUT (C),H
-        addTStates(12)
-        MMU.out8(C, H)
-
-      case (0x62) => // SBC HL,HL
-        addTStates(15)
-        SBC(HL, HL)
-
-      case (0x63) => // LD (nnnn),HL
-        addTStates(20)
-        val temp: Int = MMU.get16(PC)
-        CHECK_LOG_WORD(temp)
-        MMU.put16(temp, HL)
-        PC(PC + 2)
-
-      case (0x67) => // RRD
-        addTStates(18)
-        val temp: UByte = MMU.get8(HL)
-        val acu: UByte = A.get8
-        MMU.put8(HL, HIGH_DIGIT(temp) | (LOW_DIGIT(acu) << 4) & 0xff)
-        AF(rrdrldTable((acu & 0xf0) | LOW_DIGIT(temp)) | (AF.get16 & 1))
-
-      case (0x68) => // IN L,(C)
-        addTStates(12)
-        val temp: UByte = MMU.in8(C)
-        L(temp)
-        AF((AF & 0xfe) | rotateShiftTable(temp & 0xff))
-
-      case (0x69) => // OUT (C),L
-        addTStates(12)
-        MMU.out8(C, L)
-
-      case (0x6a) => // ADC HL,HL
-        addTStates(15)
-        ADC(HL, HL)
-
-      case (0x6b) => // LD HL,(nnnn)
-        addTStates(20)
-        val temp: Int = MMU.get16(PC)
-        CHECK_LOG_WORD(temp)
-        HL(MMU.get16(temp))
-        PC(PC + 2)
-
-      case (0x6f) => // RLD
-        addTStates(18)
-        val temp: UByte = MMU.get8(HL)
-        val acu: UByte = A.get8
-        MMU.put8(HL, (LOW_DIGIT(temp) << 4) | LOW_DIGIT(acu))
-        AF(rrdrldTable((acu & 0xf0) | HIGH_DIGIT(temp)) | (F.get8.intValue & 1))
-
-      case (0x70) => // IN (C)
-        addTStates(12)
-        val temp: UByte = MMU.in8(C)
-        AF((AF & 0xfe) | rotateShiftTable(temp))
-
-      case (0x71) => // OUT (C),0
-        addTStates(12)
-        MMU.out8(C, UByte(0))
-
-      case (0x72) => // SBC HL,SP
-        addTStates(15)
-        SBC(HL, SP)
-
-      case (0x73) => // LD (nnnn),SP
-        addTStates(20)
-        val temp: Int = MMU.get16(PC)
-        CHECK_LOG_WORD(temp)
-        MMU.put16(temp, SP)
-        PC(PC + 2)
-
-      case (0x78) => // IN A,(C)
-        addTStates(12)
-        val temp: UByte = MMU.in8(C)
-        A(temp)
-        AF((AF & 0xfe) | rotateShiftTable(temp))
-
-      case (0x79) => // OUT (C),A
-        addTStates(12)
-        MMU.out8(C, A)
-
-      case (0x7a) => // ADC HL,SP
-        addTStates(15)
-        ADC(HL, SP)
-
-      case (0x7b) => // LD SP,(nnnn)
-        addTStates(20)
-        val temp: Int = MMU.get16(PC)
-        CHECK_LOG_WORD(temp)
-        SP(MMU.get16(temp))
-        PC(PC + 2)
-
-      case (0xa0) => // LDI
-        addTStates(16)
-        // CHECK_BREAK_TWO_BYTES - HL & DE
-        var acu: UInt = MMU.get8(HL)
-        HL.increment()
-        MMU.put8(DE, acu.intValue)
-        DE.increment()
-        acu = acu + A.get8
-        AF((AF & ~0x3e) | (acu & 8) | ((acu & 2) << 4) | ({
-          BC.decrement()
-          if ((BC & 0xffff) != 0) 1 else 0
-        } << 2))
-
-      case (0xa1) => // CPI
-        addTStates(16)
-        CHECK_LOG_BYTE(HL)
-        val acu: UByte = A.get8
-        val temp: UInt = HL.get16
-        HL.increment()
-        val sum: UInt = acu - temp
-        val cbits: UInt = acu ^ temp ^ sum
-        AF((AF & ~0xfe) | (sum & 0x80) | {
-          if (((sum & 0xff) << 6) == 0) 1 else 0
-        } |
+  // CPI
+  private final def fn0xed0xa1(x: Int): Unit = {
+      addTStates(16)
+      CHECK_LOG_BYTE(HL)
+      val acu: UByte = A.get8
+      val temp: UInt = HL.get16
+      HL.increment()
+      val sum: UInt = acu - temp
+      val cbits: UInt = acu ^ temp ^ sum
+      AF((AF & ~0xfe) | (sum & 0x80) | {
+        if (((sum & 0xff) << 6) == 0) 1 else 0
+      } |
+        (((sum - ((cbits & 16) >> 4)) & 2) << 4) | (cbits & 16) |
+        ((sum - ((cbits >> 4) & 1)) & 8) | {
+        BC.decrement()
+        if ((BC & 0xffff) != 0) 1 else 0
+      } << 2 | 2)
+      if ((sum & 15) == 8 && (cbits & 16) != 0) AF(AF & ~8)
+  }
+  // INI
+  private final def fn0xed0xa2(x: Int): Unit = {
+    /*  SF, ZF, YF, XF flags are affected by decreasing register B, as in DEC B.
+          NF flag A is copy of bit 7 of the value read from or written to an I/O port.
+          INI/INIR/IND/INDR use the C flag in stead of the L register. There is a
+          catch though, because not the value of C is used, but C + 1 if it's INI/INIR or
+          C - 1 if it's IND/INDR. So, first of all INI/INIR:
+              HF and CF Both set if ((HL) + ((C + 1) & 255) > 255)
+              PF The parity of (((HL) + ((C + 1) & 255)) & 7) xor B)                      */
+      addTStates(16)
+      CHECK_LOG_BYTE(HL)
+      val acu: UInt = MMU.in8(C)
+      MMU.put8(HL, acu.intValue)
+      HL.increment()
+      val temp: UByte = B.get8
+      BC(BC - 0x100)
+      INOUTFLAGS_NONZERO((C + 1) & 0xff, acu.intValue, temp.intValue)
+  }
+  // OUTI
+  private final def fn0xed0xa3(x: Int): Unit = {
+    /*  SF, ZF, YF, XF flags are affected by decreasing register B, as in DEC B.
+    NF flag A is copy of bit 7 of the value read from or written to an I/O port.
+    And now the for OUTI/OTIR/OUTD/OTDR instructions. Take state of the L
+    after the increment or decrement of HL; add the value written to the I/O port
+    to; call that k for now. If k > 255, then the CF and HF flags are set. The PF
+    flags is set like the parity of k bitwise and'ed with 7, bitwise xor'ed with B.
+    HF and CF Both set if ((HL) + L > 255)
+    PF The parity of ((((HL) + L) & 7) xor B)                                       */
+      addTStates(16)
+      CHECK_LOG_BYTE(HL)
+      val acu: UInt = MMU.get8(HL)
+      MMU.out8(C, UByte(acu.byteValue))
+      HL.increment()
+      val temp: UByte = B.get8
+      BC(BC - 0x100)
+      INOUTFLAGS_NONZERO(L.get8, acu.intValue, temp.intValue)
+  }
+  // LDD
+  private final def fn0xed0xa8(x: Int): Unit = {
+      addTStates(16)
+      // CHECK_BREAK_TWO_BYTES HL,DE
+      CHECK_LOG_BYTE(HL)
+      CHECK_LOG_BYTE(DE)
+      var acu: UByte = MMU.get8(HL)
+      HL.decrement()
+      MMU.put8(DE, acu)
+      DE.decrement()
+      acu = UByte((acu + A.get8).byteValue)
+      AF((AF & ~0x3e) | (acu & 8) | ((acu & 2) << 4) | {
+        BC.decrement()
+        if ((BC & 0xffff) != 0) 1 else 0
+      } << 2)
+  }
+  // CPD
+  private final def fn0xed0xa9(x: Int): Unit = {
+      addTStates(16)
+      CHECK_LOG_BYTE(HL)
+      val acu: UByte = A.get8
+      val temp: UByte = MMU.get8(HL)
+      HL.decrement()
+      val sum: UInt = acu - temp
+      val cbits: UInt = acu ^ temp ^ sum
+      AF(
+        (AF & ~0xfe) | (sum & 0x80) | ({
+          if ((sum & 0xff) == 0) UInt(1) else UInt(0)
+        } << 6) |
           (((sum - ((cbits & 16) >> 4)) & 2) << 4) | (cbits & 16) |
           ((sum - ((cbits >> 4) & 1)) & 8) | {
           BC.decrement()
-          if ((BC & 0xffff) != 0) 1 else 0
-        } << 2 | 2)
-        if ((sum & 15) == 8 && (cbits & 16) != 0) AF(AF & ~8)
+          if ((BC.get16 & 0xffff) != 0) UInt(1) else UInt(0)
+        } << 2 | 2
+      )
+      if ((sum & 15) == 8 && (cbits & 16) != 0) AF(AF & ~8)
+  }
 
+  // IND
+  private final def fn0xed0xaa(x: Int): Unit = {
+    /*  SF, ZF, YF, XF flags are affected by decreasing register B, as in DEC B.
+    NF flag A is copy of bit 7 of the value read from or written to an I/O port.
+    INI/INIR/IND/INDR use the C flag in stead of the L register. There is a
+    catch though, because not the value of C is used, but C + 1 if it's INI/INIR or
+    C - 1 if it's IND/INDR. And last IND/INDR:
+    HF and CF Both set if ((HL) + ((C - 1) & 255) > 255)
+    PF The parity of (((HL) + ((C - 1) & 255)) & 7) xor B)                      */
+      addTStates(16)
+      CHECK_LOG_BYTE(HL)
+      val acu: UByte = MMU.in8(C)
+      MMU.put8(HL, acu)
+      HL.decrement()
+      val temp: Int = B.get8
+      BC(BC.get16 - 0x100)
+      INOUTFLAGS_NONZERO((C.get8 - 1) & 0xff, acu.intValue, temp)
+  }
 
-      /*  SF, ZF, YF, XF flags are affected by decreasing register B, as in DEC B.
-      NF flag A is copy of bit 7 of the value read from or written to an I/O port.
-      INI/INIR/IND/INDR use the C flag in stead of the L register. There is a
-      catch though, because not the value of C is used, but C + 1 if it's INI/INIR or
-      C - 1 if it's IND/INDR. So, first of all INI/INIR:
-          HF and CF Both set if ((HL) + ((C + 1) & 255) > 255)
-          PF The parity of (((HL) + ((C + 1) & 255)) & 7) xor B)                      */
-      case (0xa2) => // INI
-        addTStates(16)
-        CHECK_LOG_BYTE(HL)
-        val acu: UInt = MMU.in8(C)
-        MMU.put8(HL, acu.intValue)
-        HL.increment()
-        val temp: UByte = B.get8
-        BC(BC - 0x100)
-        INOUTFLAGS_NONZERO((C + 1) & 0xff, acu.intValue, temp.intValue)
-
-      /*  SF, ZF, YF, XF flags are affected by decreasing register B, as in DEC B.
-NF flag A is copy of bit 7 of the value read from or written to an I/O port.
-And now the for OUTI/OTIR/OUTD/OTDR instructions. Take state of the L
-after the increment or decrement of HL; add the value written to the I/O port
-to; call that k for now. If k > 255, then the CF and HF flags are set. The PF
-flags is set like the parity of k bitwise and'ed with 7, bitwise xor'ed with B.
-HF and CF Both set if ((HL) + L > 255)
-PF The parity of ((((HL) + L) & 7) xor B)                                       */
-      case (0xa3) => // OUTI
-        addTStates(16)
-        CHECK_LOG_BYTE(HL)
-        val acu: UInt = MMU.get8(HL)
-        MMU.out8(C, UByte(acu.byteValue))
-        HL.increment()
-        val temp: UByte = B.get8
-        BC(BC - 0x100)
-        INOUTFLAGS_NONZERO(L.get8, acu.intValue, temp.intValue)
-
-      case (0xa8) => // LDD
-        addTStates(16)
-        // CHECK_BREAK_TWO_BYTES HL,DE
+  // OUTD
+  private final def fn0xed0xab(x: Int): Unit = {
+      addTStates(16)
+      CHECK_LOG_BYTE(HL)
+      val acu: UInt = MMU.get8(HL)
+      MMU.out8(C, acu.intValue)
+      HL.decrement()
+      val temp: Int = B.get8
+      BC(BC.get16 - 0x100)
+      INOUTFLAGS_NONZERO(L.get8, acu.intValue, temp.intValue())
+  }
+  // LDIR
+  private final def fn0xed0xb0(x: Int): Unit = {
+      addTStates(-5)
+      // use local variable - quicker
+      //var bc: Int = BC
+      var acu: Int = 0
+      if (BC.get16 == 0) BC(0x10000)
+      do {
+        addTStates(21)
+        INCR(2)
+        // CHECK_BREAK_TWO_BYTES(HL,DE)
         CHECK_LOG_BYTE(HL)
         CHECK_LOG_BYTE(DE)
-        var acu: UByte = MMU.get8(HL)
+        acu = MMU.get8(HL)
+        HL.increment()
+        MMU.put8(DE, acu)
+        DE.increment()
+      } while ( {
+        BC.decrement()
+        BC.get16 != 0
+      })
+      acu += A
+      AF((AF & ~0x3e) | (acu & 8) | ((acu & 2) << 4))
+  }
+  // CPIR
+  private final def fn0xed0xb1(x: Int): Unit = {
+      addTStates(-5)
+      val acu: UByte = A.get8
+      var temp: UInt = UInt(0)
+      var sum: UInt = UInt(0)
+      var op: Int = 0
+
+      if (BC.get16 == 0) BC(0x10000)
+      do {
+        addTStates(21)
+        INCR(1)
+        CHECK_LOG_BYTE(HL)
+        temp = MMU.get8(HL)
+        HL.increment()
+        BC.decrement()
+        op = {
+          if (BC.get16 != 0) 1 else 0
+        }
+        sum = acu - temp
+
+      } while (op != 0 && sum != 0)
+      val cbits: UInt = acu ^ temp ^ sum
+
+      val nc = {
+        if ((sum & 0xff) == 0) UInt(1) else UInt(0)
+      }
+      AF((AF & ~0xfe) | (sum & 0x80) | (nc << 6) |
+        (((sum - ((cbits & 16) >> 4)) & 2) << 4) |
+        (cbits & 16) | ((sum - ((cbits >> 4) & 1)) & 8) |
+        op << 2 | 2)
+      if ((sum & 15) == 8 && (cbits & 16) != 0) AF(AF & ~8)
+  }
+  // INIR
+  private final def fn0xed0xb2(x: Int): Unit = {
+      addTStates(-5)
+      var temp: Int = {
+        if (B.intValue == 0) 0x100 else B.get8
+      }
+      var acu: Int = 0
+      do {
+        addTStates(21)
+        INCR(1)
+        CHECK_LOG_BYTE(HL)
+        acu = MMU.in8(C)
+        MMU.put8(HL, acu)
+        HL.increment()
+
+      } while ( {
+        temp -= 1
+        temp != 0
+      })
+      temp = B.get8
+      B(0)
+      INOUTFLAGS_ZERO((C + 1) & 0xff, acu, temp)
+  }
+
+  // OTIR
+  private final def fn0xed0xb3(x: Int): Unit = {
+      addTStates(-5)
+      var temp = B.get8.intValue
+      var acu = 0
+      if (temp == 0) temp = 0x100
+      do {
+        addTStates(21)
+        INCR(1)
+        CHECK_LOG_BYTE(HL)
+        acu = MMU.get8(HL)
+        MMU.out8(C, acu)
+        HL.increment()
+      } while ( {
+        temp -= 1
+        temp != 0
+      })
+      temp = B
+      B(0)
+      INOUTFLAGS_ZERO(L, acu, temp)
+  }
+  // LDDR
+  private final def fn0xed0xb8(x: Int): Unit = {
+      addTStates(-5)
+      var acu: Int = 0
+      if (BC.get16 == 0) BC(0x10000)
+      do {
+        addTStates(21)
+        INCR(2)
+        // CHECK_BREAK_TWO_BYTES(HL,DE)
+        CHECK_LOG_BYTE(HL)
+        CHECK_LOG_BYTE(DE)
+        acu = MMU.get8(HL)
         HL.decrement()
         MMU.put8(DE, acu)
         DE.decrement()
-        acu = UByte((acu + A.get8).byteValue)
-        AF((AF & ~0x3e) | (acu & 8) | ((acu & 2) << 4) | {
-          BC.decrement()
-          if ((BC & 0xffff) != 0) 1 else 0
-        } << 2)
+      } while ( {
+        BC.decrement()
+        BC.get16 != 0
+      })
+      acu += A.get8
+      AF((AF & ~0x3e) | (acu & 8) | ((acu & 2) << 4))
+  }
+  // CPDR
+  private final def fn0xed0xb9(op : Int = 0xb9): Unit = {
+      addTStates(-5)
+      val acu: UByte = A.get8
+      var temp: UByte = UByte(0)
+      var sum: UInt = UInt(0)
 
-      case (0xa9) => // CPD
-        addTStates(16)
+      if (BC.get16 == 0) BC(0x10000)
+      do {
+        addTStates(21)
+        INCR(1)
         CHECK_LOG_BYTE(HL)
-        val acu: UByte = A.get8
-        val temp: UByte = MMU.get8(HL)
+        temp = MMU.get8(HL)
         HL.decrement()
-        val sum: UInt = acu - temp
-        val cbits: UInt = acu ^ temp ^ sum
-        AF(
-          (AF & ~0xfe) | (sum & 0x80) | ({
-            if ((sum & 0xff) == 0) UInt(1) else UInt(0)
-          } << 6) |
-            (((sum - ((cbits & 16) >> 4)) & 2) << 4) | (cbits & 16) |
-            ((sum - ((cbits >> 4) & 1)) & 8) | {
-            BC.decrement()
-            if ((BC.get16 & 0xffff) != 0) UInt(1) else UInt(0)
-          } << 2 | 2
-        )
-        if ((sum & 15) == 8 && (cbits & 16) != 0) AF(AF & ~8)
+        BC.decrement()
+        val op = {
+          if (BC.get16 != 0) 1 else 0
+        }
+        sum = acu - temp
 
-      /*  SF, ZF, YF, XF flags are affected by decreasing register B, as in DEC B.
-NF flag A is copy of bit 7 of the value read from or written to an I/O port.
-INI/INIR/IND/INDR use the C flag in stead of the L register. There is a
-catch though, because not the value of C is used, but C + 1 if it's INI/INIR or
-C - 1 if it's IND/INDR. And last IND/INDR:
-HF and CF Both set if ((HL) + ((C - 1) & 255) > 255)
-PF The parity of (((HL) + ((C - 1) & 255)) & 7) xor B)                      */
-      case (0xaa) => // IND
-        addTStates(16)
+      } while (op != 0 && sum != 0)
+      val cbits: UInt = acu ^ temp ^ sum
+      val nc = {
+        if ((sum & 0xff) == 0) 1 else 0
+      }
+      AF((AF & ~0xfe) | (sum & 0x80) | (nc << 6) |
+        (((sum - ((cbits & 16) >> 4)) & 2) << 4) |
+        (cbits & 16) | ((sum - ((cbits >> 4) & 1)) & 8) |
+        op << 2 | 2)
+      if ((sum & 15) == 8 && (cbits & 16) != 0) AF(AF & ~8)
+  }
+  // INDR
+  private final def fn0xed0xba(x: Int): Unit = {
+      addTStates(-5)
+      var temp: Int = {
+        if (B.intValue == 0) 0x100 else B.get8
+      }
+      var acu: Int = 0
+      do {
+        addTStates(21)
+        INCR(1)
         CHECK_LOG_BYTE(HL)
-        val acu: UByte = MMU.in8(C)
+        acu = MMU.in8(C)
         MMU.put8(HL, acu)
         HL.decrement()
-        val temp: Int = B.get8
-        BC(BC.get16 - 0x100)
-        INOUTFLAGS_NONZERO((C.get8 - 1) & 0xff, acu.intValue, temp)
 
-      case (0xab) => // OUTD
-        addTStates(16)
-        CHECK_LOG_BYTE(HL)
-        val acu: UInt = MMU.get8(HL)
-        MMU.out8(C, acu.intValue)
-        HL.decrement()
-        val temp: Int = B.get8
-        BC(BC.get16 - 0x100)
-        INOUTFLAGS_NONZERO(L.get8, acu.intValue, temp.intValue())
-
-      case (0xb0) => // LDIR
-        addTStates(-5)
-        // use local variable - quicker
-        //var bc: Int = BC
-        var acu: Int = 0
-        if (BC.get16 == 0) BC(0x10000)
-        do {
-          addTStates(21)
-          INCR(2)
-          // CHECK_BREAK_TWO_BYTES(HL,DE)
-          CHECK_LOG_BYTE(HL)
-          CHECK_LOG_BYTE(DE)
-          acu = MMU.get8(HL)
-          HL.increment()
-          MMU.put8(DE, acu)
-          DE.increment()
-        } while ( {
-          BC.decrement()
-          BC.get16 != 0
-        })
-        acu += A
-        AF((AF & ~0x3e) | (acu & 8) | ((acu & 2) << 4))
-
-      case (0xb1) => // CPIR
-        addTStates(-5)
-        val acu: UByte = A.get8
-        var temp: UInt = UInt(0)
-        var sum: UInt = UInt(0)
-        var op: Int = 0
-
-        if (BC.get16 == 0) BC(0x10000)
-        do {
-          addTStates(21)
-          INCR(1)
-          CHECK_LOG_BYTE(HL)
-          temp = MMU.get8(HL)
-          HL.increment()
-          BC.decrement()
-          op = {
-            if (BC.get16 != 0) 1 else 0
-          }
-          sum = acu - temp
-
-        } while (op != 0 && sum != 0)
-        val cbits: UInt = acu ^ temp ^ sum
-
-        val nc = {
-          if ((sum & 0xff) == 0) UInt(1) else UInt(0)
-        }
-        AF((AF & ~0xfe) | (sum & 0x80) | (nc << 6) |
-          (((sum - ((cbits & 16) >> 4)) & 2) << 4) |
-          (cbits & 16) | ((sum - ((cbits >> 4) & 1)) & 8) |
-          op << 2 | 2)
-        if ((sum & 15) == 8 && (cbits & 16) != 0) AF(AF & ~8)
-
-      case (0xb2) => // INIR
-        addTStates(-5)
-        var temp: Int = {
-          if (B.intValue == 0) 0x100 else B.get8
-        }
-        var acu: Int = 0
-        do {
-          addTStates(21)
-          INCR(1)
-          CHECK_LOG_BYTE(HL)
-          acu = MMU.in8(C)
-          MMU.put8(HL, acu)
-          HL.increment()
-
-        } while ( {
-          temp -= 1
-          temp != 0
-        })
-        temp = B.get8
-        B(0)
-        INOUTFLAGS_ZERO((C + 1) & 0xff, acu, temp)
-
-      case (0xb3) => // OTIR
-        addTStates(-5)
-        var temp = B.get8.intValue
-        var acu = 0
-        if (temp == 0) temp = 0x100
-        do {
-          addTStates(21)
-          INCR(1)
-          CHECK_LOG_BYTE(HL)
-          acu = MMU.get8(HL)
-          MMU.out8(C, acu)
-          HL.increment()
-        } while ( {
-          temp -= 1
-          temp != 0
-        })
-        temp = B
-        B(0)
-        INOUTFLAGS_ZERO(L, acu, temp)
-
-
-      case (0xb8) => // LDDR
-        addTStates(-5)
-        var acu: Int = 0
-        if (BC.get16 == 0) BC(0x10000)
-        do {
-          addTStates(21)
-          INCR(2)
-          // CHECK_BREAK_TWO_BYTES(HL,DE)
-          CHECK_LOG_BYTE(HL)
-          CHECK_LOG_BYTE(DE)
-          acu = MMU.get8(HL)
-          HL.decrement()
-          MMU.put8(DE, acu)
-          DE.decrement()
-        } while ( {
-          BC.decrement()
-          BC.get16 != 0
-        })
-        acu += A.get8
-        AF((AF & ~0x3e) | (acu & 8) | ((acu & 2) << 4))
-
-      case (0xb9) => // CPDR
-        addTStates(-5)
-        val acu: UByte = A.get8
-        var temp: UByte = UByte(0)
-        var sum: UInt = UInt(0)
-
-        if (BC.get16 == 0) BC(0x10000)
-        do {
-          addTStates(21)
-          INCR(1)
-          CHECK_LOG_BYTE(HL)
-          temp = MMU.get8(HL)
-          HL.decrement()
-          BC.decrement()
-          val op = {
-            if (BC.get16 != 0) 1 else 0
-          }
-          sum = acu - temp
-
-        } while (op != 0 && sum != 0)
-        val cbits: UInt = acu ^ temp ^ sum
-        val nc = {
-          if ((sum & 0xff) == 0) 1 else 0
-        }
-        AF((AF & ~0xfe) | (sum & 0x80) | (nc << 6) |
-          (((sum - ((cbits & 16) >> 4)) & 2) << 4) |
-          (cbits & 16) | ((sum - ((cbits >> 4) & 1)) & 8) |
-          op << 2 | 2)
-        if ((sum & 15) == 8 && (cbits & 16) != 0) AF(AF & ~8)
-
-      case (0xba) => // INDR
-        addTStates(-5)
-        var temp: Int = {
-          if (B.intValue == 0) 0x100 else B.get8
-        }
-        var acu: Int = 0
-        do {
-          addTStates(21)
-          INCR(1)
-          CHECK_LOG_BYTE(HL)
-          acu = MMU.in8(C)
-          MMU.put8(HL, acu)
-          HL.decrement()
-
-        } while ( {
-          temp -= 1
-          temp != 0
-        })
-        temp = B
-        B(0)
-        INOUTFLAGS_ZERO((C + 1) & 0xff, acu, temp)
-
-      case (0xbb) => // OTDR
-        addTStates(-5)
-        var temp: Int = {
-          if (B.intValue == 0) 0x100 else B
-        }
-        var acu: Int = 0
-        do {
-          addTStates(21)
-          INCR(1)
-          CHECK_LOG_BYTE(HL)
-          acu = MMU.in8(C)
-          MMU.put8(HL, acu)
-          HL.decrement()
-
-        } while ( {
-          temp -= 1
-          temp != 0
-        })
-        temp = B
-        B(0)
-        INOUTFLAGS_ZERO((C + 1) & 0xff, acu, temp)
-
-      case _ =>
-    }
+      } while ( {
+        temp -= 1
+        temp != 0
+      })
+      temp = B
+      B(0)
+      INOUTFLAGS_ZERO((C + 1) & 0xff, acu, temp)
   }
+
+  // OTDR
+  private final def fn0xed0xbb(x: Int): Unit = {
+            addTStates(-5)
+            var temp: Int = {
+              if (B.intValue == 0) 0x100 else B
+            }
+            var acu: Int = 0
+            do {
+              addTStates(21)
+              INCR(1)
+              CHECK_LOG_BYTE(HL)
+              acu = MMU.in8(C)
+              MMU.put8(HL, acu)
+              HL.decrement()
+
+            } while ( {
+              temp -= 1
+              temp != 0
+            })
+            temp = B
+            B(0)
+            INOUTFLAGS_ZERO((C + 1) & 0xff, acu, temp)
+        }
+
+
+
+  private val fdexecMap: Map[Int, Function[Int, Unit]] = Map[Int, (Int) => Unit]()
 
   /**
     * FD Prefix
     */
   private def fdprefix(op: Int): Unit = {
 
-    op match {
-      case (0x09) => // ADD IY,BC
-        addTStates(15)
-        ADD(IY, BC)
-
-      case (0x19) => // ADD IY,DE
-        addTStates(15)
-        ADD(IY, DE)
-
-      case (0x21) => // LD IY,nnnn
-        addTStates(14)
-        IY(MMU.get16(PC))
-        PC(PC + 2)
-
-      case (0x22) => // LD (nnnn),IY
-        addTStates(20)
-        val temp: Int = MMU.get16(PC)
-        CHECK_LOG_WORD(temp)
-        MMU.put16(temp, IY)
-        PC(PC + 2)
-
-      case (0x23) => // INC IY
-        addTStates(10)
-        IY.increment()
-
-      case (0x24) => // INC IYH
-        addTStates(9)
-        IYH.increment()
-        AF((AF & ~0xfe) | incZ80Table(IYH))
-
-      case (0x25) => // DEC IYH
-        addTStates(9)
-        IYH.decrement()
-        AF((AF & ~0xfe) | decZ80Table(IYH))
-
-      case (0x26) => // LD IYH,nn
-        addTStates(9)
-        IYH(MMU.get8(PC))
-        PC.increment()
-
-      case (0x29) => // ADD IY,IY
-        addTStates(15)
-        val sum: UInt = IY.get16 + IY.get16
-        AF((AF & ~0x3b) | cbitsDup16Table(sum.intValue >> 8))
-        IY(sum & 0xffff)
-
-      case (0x2a) => // LD IY,(nnnn)
-        addTStates(20)
-        val tmp: Int = MMU.get16(PC)
-        CHECK_LOG_WORD(tmp)
-        IY(MMU.get16(tmp))
-        PC(PC + 2)
-
-      case (0x2b) => // DEC IY
-        addTStates(10)
-        IY.decrement()
-
-      case (0x2c) => // INC IYL
-        addTStates(9)
-        IYL.increment()
-        AF((AF & ~0xfe) | incZ80Table(IYL))
-
-      case (0x2d) => // DEC IYL
-        addTStates(9)
-        IYL.decrement()
-        AF((AF & ~0xfe) | decZ80Table(IYL))
-
-      case (0x2e) => // LD IYL,nn
-        addTStates(9)
-        IYL(MMU.get8(PC))
-        PC.increment()
-
-      case (0x34) => // INC (IY+dd)
-        addTStates(23)
-        INCIDXdd(IY)
-
-      case (0x35) => // DEC (IY+dd)
-        addTStates(23)
-        DECIDXdd(IY)
-
-      case (0x36) => // LD (IY+dd),nn
-        addTStates(19)
-        val adr: Int = IY.get16.intValue + MMU.get8(PC).intValue
-        PC.increment()
-        CHECK_LOG_BYTE(adr)
-        MMU.put8(adr, MMU.get8(PC))
-        PC.increment()
-
-      case (0x39) => // ADD IY,SP
-        addTStates(15)
-        val sum: UInt = IY.get16 + SP.get16
-        AF((AF & ~0x3b) | ((sum >> 8) & 0x28) | cbitsTable((IY ^ SP ^ sum) >> 8))
-        IY(sum & 0xffff)
-
-      case (0x44) => // LD B,IYH
-        addTStates(9)
-        B(IYH)
-
-      case (0x45) => // LD B,IYL
-        addTStates(9)
-        B(IYL)
+    fdexecMap.get(op) match {
+      case Some(x) => x(op)
+      case None =>
+
+        op match {
+          case (0x09) => // ADD IY,BC
+            addTStates(15)
+            ADD(IY, BC)
+
+          case (0x19) => // ADD IY,DE
+            addTStates(15)
+            ADD(IY, DE)
+
+          case (0x21) => // LD IY,nnnn
+            addTStates(14)
+            IY(MMU.get16(PC))
+            PC(PC + 2)
+
+          case (0x22) => // LD (nnnn),IY
+            addTStates(20)
+            val temp: Int = MMU.get16(PC)
+            CHECK_LOG_WORD(temp)
+            MMU.put16(temp, IY)
+            PC(PC + 2)
+
+          case (0x23) => // INC IY
+            addTStates(10)
+            IY.increment()
+
+          case (0x24) => // INC IYH
+            addTStates(9)
+            IYH.increment()
+            AF((AF & ~0xfe) | incZ80Table(IYH))
+
+          case (0x25) => // DEC IYH
+            addTStates(9)
+            IYH.decrement()
+            AF((AF & ~0xfe) | decZ80Table(IYH))
+
+          case (0x26) => // LD IYH,nn
+            addTStates(9)
+            IYH(MMU.get8(PC))
+            PC.increment()
+
+          case (0x29) => // ADD IY,IY
+            addTStates(15)
+            val sum: UInt = IY.get16 + IY.get16
+            AF((AF & ~0x3b) | cbitsDup16Table(sum.intValue >> 8))
+            IY(sum & 0xffff)
+
+          case (0x2a) => // LD IY,(nnnn)
+            addTStates(20)
+            val tmp: Int = MMU.get16(PC)
+            CHECK_LOG_WORD(tmp)
+            IY(MMU.get16(tmp))
+            PC(PC + 2)
+
+          case (0x2b) => // DEC IY
+            addTStates(10)
+            IY.decrement()
+
+          case (0x2c) => // INC IYL
+            addTStates(9)
+            IYL.increment()
+            AF((AF & ~0xfe) | incZ80Table(IYL))
+
+          case (0x2d) => // DEC IYL
+            addTStates(9)
+            IYL.decrement()
+            AF((AF & ~0xfe) | decZ80Table(IYL))
+
+          case (0x2e) => // LD IYL,nn
+            addTStates(9)
+            IYL(MMU.get8(PC))
+            PC.increment()
+
+          case (0x34) => // INC (IY+dd)
+            addTStates(23)
+            INCIDXdd(IY)
+
+          case (0x35) => // DEC (IY+dd)
+            addTStates(23)
+            DECIDXdd(IY)
+
+          case (0x36) => // LD (IY+dd),nn
+            addTStates(19)
+            val adr: Int = IY.get16.intValue + MMU.get8(PC).intValue
+            PC.increment()
+            CHECK_LOG_BYTE(adr)
+            MMU.put8(adr, MMU.get8(PC))
+            PC.increment()
+
+          case (0x39) => // ADD IY,SP
+            addTStates(15)
+            val sum: UInt = IY.get16 + SP.get16
+            AF((AF & ~0x3b) | ((sum >> 8) & 0x28) | cbitsTable((IY ^ SP ^ sum) >> 8))
+            IY(sum & 0xffff)
+
+          case (0x44) => // LD B,IYH
+            addTStates(9)
+            B(IYH)
 
-      case (0x46) => // LD B,(IY+dd)
-        addTStates(19)
-        LDIDXdd(B, IY)
+          case (0x45) => // LD B,IYL
+            addTStates(9)
+            B(IYL)
 
-      case (0x4c) => // LD C,IYH
-        addTStates(9)
-        C(IYH)
+          case (0x46) => // LD B,(IY+dd)
+            addTStates(19)
+            LDIDXdd(B, IY)
 
-      case (0x4d) => // LD C,IYL
-        addTStates(9)
-        C(IYL)
+          case (0x4c) => // LD C,IYH
+            addTStates(9)
+            C(IYH)
 
-      case (0x4e) => // LD C,(IY+dd)
-        addTStates(19)
-        LDIDXdd(C, IY)
+          case (0x4d) => // LD C,IYL
+            addTStates(9)
+            C(IYL)
 
-      case (0x54) => // LD D,IYH
-        addTStates(9)
-        D(IYH)
+          case (0x4e) => // LD C,(IY+dd)
+            addTStates(19)
+            LDIDXdd(C, IY)
 
-      case (0x55) => // LD D,IYL
-        addTStates(9)
-        D(IYL)
+          case (0x54) => // LD D,IYH
+            addTStates(9)
+            D(IYH)
 
-      case (0x56) => // LD D,(IY+dd)
-        addTStates(19)
-        LDIDXdd(D, IY)
+          case (0x55) => // LD D,IYL
+            addTStates(9)
+            D(IYL)
 
-      case (0x5c) => // LD E,IYH
-        addTStates(9)
-        E(IYH)
+          case (0x56) => // LD D,(IY+dd)
+            addTStates(19)
+            LDIDXdd(D, IY)
 
-      case (0x5d) => // LD E,IYL
-        addTStates(9)
-        E(IYL)
+          case (0x5c) => // LD E,IYH
+            addTStates(9)
+            E(IYH)
 
-      case (0x5e) => // LD E,(IY+dd)
-        addTStates(19)
-        LDIDXdd(E, IY)
+          case (0x5d) => // LD E,IYL
+            addTStates(9)
+            E(IYL)
 
-      case (0x60) => // LD IYH,B
-        addTStates(9)
-        IYH(B)
+          case (0x5e) => // LD E,(IY+dd)
+            addTStates(19)
+            LDIDXdd(E, IY)
 
-      case (0x61) => // LD IYH,C
-        addTStates(9)
-        IYH(C)
+          case (0x60) => // LD IYH,B
+            addTStates(9)
+            IYH(B)
 
-      case (0x62) => // LD IYH,D
-        addTStates(9)
-        IYH(D)
+          case (0x61) => // LD IYH,C
+            addTStates(9)
+            IYH(C)
 
-      case (0x63) => // LD IYH,E
-        addTStates(9)
-        IYH(E)
-
-      case (0x64) => // LD IYH,IYH
-        addTStates(9)
+          case (0x62) => // LD IYH,D
+            addTStates(9)
+            IYH(D)
 
-      case (0x65) => // LD IYH,IYL
-        addTStates(9)
-        IYH(IYL)
+          case (0x63) => // LD IYH,E
+            addTStates(9)
+            IYH(E)
+
+          case (0x64) => // LD IYH,IYH
+            addTStates(9)
 
-      case (0x66) => // LD H,(IY+dd)
-        addTStates(19)
-        LDIDXdd(H, IY)
+          case (0x65) => // LD IYH,IYL
+            addTStates(9)
+            IYH(IYL)
 
-      case (0x67) => // LD IYH,A
-        addTStates(9)
-        IYH(A)
+          case (0x66) => // LD H,(IY+dd)
+            addTStates(19)
+            LDIDXdd(H, IY)
 
-      case (0x68) => // LD IYL,B
-        addTStates(9)
-        IYL(B)
+          case (0x67) => // LD IYH,A
+            addTStates(9)
+            IYH(A)
 
-      case (0x69) => // LD IYL,C
-        addTStates(9)
-        IYL(C)
-
-      case (0x6a) => // LD IYL,D
-        addTStates(9)
-        IYL(D)
-
-      case (0x6b) => // LD IYL,E
-        addTStates(9)
-        IYL(E)
-
-      case (0x6c) => // LD IYL,IYH
-        addTStates(9)
-        IYL(IYH)
-
-      case (0x6e) => // LD L,(IY+dd)
-        addTStates(19)
-        LDIDXdd(L, IY)
-
-      case (0x6f) => // LD IYL,A
-        addTStates(9)
-        IYL(A)
-
-      case (0x70) => // LD (IY+dd),B
-        addTStates(19)
-        LDIDXdd(IY, B)
-
-      case (0x71) => // LD (IY+dd),C
-        addTStates(19)
-        LDIDXdd(IY, C)
-
-      case (0x72) => // LD (IY+dd),D
-        addTStates(19)
-        LDIDXdd(IY, D)
-
-      case (0x73) => // LD (IY+dd),E
-        addTStates(19)
-        LDIDXdd(IY, E)
-
-      case (0x74) => // LD (IY+dd),H
-        addTStates(19)
-        LDIDXdd(IY, H)
-
-      case (0x75) => // LD (IY+dd),L
-        addTStates(19)
-        LDIDXdd(IY, L)
-
-      case (0x77) => // LD (IY+dd),A
-        addTStates(19)
-        LDIDXdd(IY, A)
-
-      case (0x7c) => // LD A,IYH
-        addTStates(9)
-        A(IYH)
-
-      case (0x7d) => // LD A,IYL
-        addTStates(9)
-        A(IYL)
-
-      case (0x7e) => // LD A,(IY+dd)
-        addTStates(19)
-        LDIDXdd(A, IY)
-
-      case (0x84) => // ADD A,IYH
-        addTStates(9)
-        ADDIDX(A, IYH)
-
-      case (0x85) => // ADD A,IYL
-        addTStates(9)
-        ADDIDX(A, IYL)
-
-
-      case (0x86) => // ADD A,(IY+dd)
-        addTStates(19)
-        val adr: UInt = IY.get16 + MMU.get8(PC)
-        PC.increment()
-        CHECK_LOG_BYTE(adr.intValue)
-        W(MMU.get8(adr.intValue))
-        ADDIDX(A, W)
-
-
-      case (0x8c) => // ADC A,IYH
-        addTStates(9)
-        ADCIDX(A, IYH)
-
-      case (0x8d) => // ADC A,IYL
-        addTStates(9)
-        ADCIDX(A, IYL)
-
-      case (0x8e) => // ADC A,(IY+dd)
-        addTStates(19)
-        val adr: UInt = IY.get16 + MMU.get8(PC)
-        PC.increment()
-        CHECK_LOG_BYTE(adr.intValue)
-        W(MMU.get8(adr.intValue))
-        ADCIDX(A, W)
-
-      case (0x96) => // SUB (IY+dd)
-        addTStates(19)
-        val adr: UInt = IY.get16 + MMU.get8(PC)
-        PC.increment()
-        CHECK_LOG_BYTE(adr.intValue)
-        W(MMU.get8(adr.intValue))
-        SUBIDX(W)
-
-      case (0x94) => // SUB IYH
-        addTStates(9)
-        setFlag(FLAG_C, clear = true)
-        SUBIDX(IYH)
-
-      case (0x9c) => // SBC A,IYH
-        addTStates(9)
-        SBCAIDX(A, IYH)
-
-      case (0x95) => // SUB IYL
-        addTStates(9)
-        setFlag(FLAG_C, clear = true)
-        SUBIDX(IYL)
-
-      case (0x9d) => // SBC A,IYL
-        addTStates(9)
-        SBCAIDX(A, IYL)
-
-      case (0x9e) => // SBC A,(IY+dd)
-        addTStates(19)
-        val adr: UInt = IY.get16 + MMU.get8(PC)
-        PC.increment()
-        CHECK_LOG_BYTE(adr.intValue)
-        W(MMU.get8(adr.intValue))
-        SBCAIDX(A, W)
-
-      case (0xa4) => // AND IYH
-        addTStates(9)
-        AF(andTable(((AF & IY) >> 8) & 0xff))
-
-      case (0xa5) => // AND IYL
-        addTStates(9)
-        AF(andTable(((AF >> 8) & IY) & 0xff))
-
-      case (0xa6) => // AND (IY+dd)
-        addTStates(19)
-        val adr: Int = IY + MMU.get8(PC)
-        PC.increment()
-        CHECK_LOG_BYTE(adr)
-        AF(andTable(((AF >> 8) & MMU.get8(adr)) & 0xff))
-
-      case (0xac) => // XOR IYH
-        addTStates(9)
-        AF(xororTable(((AF ^ IY) >> 8) & 0xff))
-
-      case (0xad) => // XOR IYL
-        addTStates(9)
-        AF(xororTable(((AF >> 8) ^ IY) & 0xff))
-
-      case (0xae) => // XOR (IY+dd)
-        addTStates(19)
-        val adr: Int = IY + MMU.get8(PC)
-        PC.increment()
-        CHECK_LOG_BYTE(adr)
-        AF(xororTable(((AF >> 8) ^ MMU.get8(adr)) & 0xff))
-
-      case (0xb4) => // OR IYH
-        addTStates(9)
-        AF(xororTable(((AF | IY) >> 8) & 0xff))
-
-      case (0xb5) => // OR IYL
-        addTStates(9)
-        AF(xororTable(((AF >> 8) | IY) & 0xff))
-
-      case (0xbc) => // CP IYH
-        addTStates(9)
-        W(IYH.get8)
-        ICP(W)
-
-      case (0xbd) => // CP IYL
-        addTStates(9)
-        W(IYL.get8)
-        ICP(W)
-
-      case (0xbe) => // CP (IY+dd)
-        addTStates(9)
-        val adr: UInt = IY.get16 + MMU.get8(PC)
-        PC.increment()
-        CHECK_LOG_BYTE(adr.intValue)
-        W(MMU.get8(adr.intValue))
-        ICP(W)
-
-
-      case (0xcb) => // ******************************************************** FD CB Prefix
-        val adr: Int = IY + MMU.get8(PC)
-        PC.increment()
-        val op: Int = MMU.get8(PC)
-        fdcbprefix(op, adr)
-
-      case (0xe1) => // POP IY
-        addTStates(14)
-        CHECK_LOG_WORD(SP)
-        POP(IY)
-
-      case (0xe3) => // EX (SP),IY
-        addTStates(23)
-        CHECK_LOG_WORD(SP)
-        val tmp: UInt = IY.get16
-        POP(IY)
-        PUSH(tmp.intValue)
-
-      case (0xe5) => // PUSH IY
-        addTStates(15)
-        CHECK_LOG_WORD(SP - 2)
-        PUSH(IY)
-
-      case (0xe9) => // JP (IY)
-        addTStates(8)
-        PC(IY)
-
-      case (0xf9) => // LD SP,IY
-        addTStates(10)
-        SP(IY)
-
-      case _ =>
-        PC.decrement()
+          case (0x68) => // LD IYL,B
+            addTStates(9)
+            IYL(B)
+
+          case (0x69) => // LD IYL,C
+            addTStates(9)
+            IYL(C)
+
+          case (0x6a) => // LD IYL,D
+            addTStates(9)
+            IYL(D)
+
+          case (0x6b) => // LD IYL,E
+            addTStates(9)
+            IYL(E)
+
+          case (0x6c) => // LD IYL,IYH
+            addTStates(9)
+            IYL(IYH)
+
+          case (0x6e) => // LD L,(IY+dd)
+            addTStates(19)
+            LDIDXdd(L, IY)
+
+          case (0x6f) => // LD IYL,A
+            addTStates(9)
+            IYL(A)
+
+          case (0x70) => // LD (IY+dd),B
+            addTStates(19)
+            LDIDXdd(IY, B)
+
+          case (0x71) => // LD (IY+dd),C
+            addTStates(19)
+            LDIDXdd(IY, C)
+
+          case (0x72) => // LD (IY+dd),D
+            addTStates(19)
+            LDIDXdd(IY, D)
+
+          case (0x73) => // LD (IY+dd),E
+            addTStates(19)
+            LDIDXdd(IY, E)
+
+          case (0x74) => // LD (IY+dd),H
+            addTStates(19)
+            LDIDXdd(IY, H)
+
+          case (0x75) => // LD (IY+dd),L
+            addTStates(19)
+            LDIDXdd(IY, L)
+
+          case (0x77) => // LD (IY+dd),A
+            addTStates(19)
+            LDIDXdd(IY, A)
+
+          case (0x7c) => // LD A,IYH
+            addTStates(9)
+            A(IYH)
+
+          case (0x7d) => // LD A,IYL
+            addTStates(9)
+            A(IYL)
+
+          case (0x7e) => // LD A,(IY+dd)
+            addTStates(19)
+            LDIDXdd(A, IY)
+
+          case (0x84) => // ADD A,IYH
+            addTStates(9)
+            ADDIDX(A, IYH)
+
+          case (0x85) => // ADD A,IYL
+            addTStates(9)
+            ADDIDX(A, IYL)
+
+
+          case (0x86) => // ADD A,(IY+dd)
+            addTStates(19)
+            val adr: UInt = IY.get16 + MMU.get8(PC)
+            PC.increment()
+            CHECK_LOG_BYTE(adr.intValue)
+            W(MMU.get8(adr.intValue))
+            ADDIDX(A, W)
+
+
+          case (0x8c) => // ADC A,IYH
+            addTStates(9)
+            ADCIDX(A, IYH)
+
+          case (0x8d) => // ADC A,IYL
+            addTStates(9)
+            ADCIDX(A, IYL)
+
+          case (0x8e) => // ADC A,(IY+dd)
+            addTStates(19)
+            val adr: UInt = IY.get16 + MMU.get8(PC)
+            PC.increment()
+            CHECK_LOG_BYTE(adr.intValue)
+            W(MMU.get8(adr.intValue))
+            ADCIDX(A, W)
+
+          case (0x96) => // SUB (IY+dd)
+            addTStates(19)
+            val adr: UInt = IY.get16 + MMU.get8(PC)
+            PC.increment()
+            CHECK_LOG_BYTE(adr.intValue)
+            W(MMU.get8(adr.intValue))
+            SUBIDX(W)
+
+          case (0x94) => // SUB IYH
+            addTStates(9)
+            setFlag(FLAG_C, clear = true)
+            SUBIDX(IYH)
+
+          case (0x9c) => // SBC A,IYH
+            addTStates(9)
+            SBCAIDX(A, IYH)
+
+          case (0x95) => // SUB IYL
+            addTStates(9)
+            setFlag(FLAG_C, clear = true)
+            SUBIDX(IYL)
+
+          case (0x9d) => // SBC A,IYL
+            addTStates(9)
+            SBCAIDX(A, IYL)
+
+          case (0x9e) => // SBC A,(IY+dd)
+            addTStates(19)
+            val adr: UInt = IY.get16 + MMU.get8(PC)
+            PC.increment()
+            CHECK_LOG_BYTE(adr.intValue)
+            W(MMU.get8(adr.intValue))
+            SBCAIDX(A, W)
+
+          case (0xa4) => // AND IYH
+            addTStates(9)
+            AF(andTable(((AF & IY) >> 8) & 0xff))
+
+          case (0xa5) => // AND IYL
+            addTStates(9)
+            AF(andTable(((AF >> 8) & IY) & 0xff))
+
+          case (0xa6) => // AND (IY+dd)
+            addTStates(19)
+            val adr: Int = IY + MMU.get8(PC)
+            PC.increment()
+            CHECK_LOG_BYTE(adr)
+            AF(andTable(((AF >> 8) & MMU.get8(adr)) & 0xff))
+
+          case (0xac) => // XOR IYH
+            addTStates(9)
+            AF(xororTable(((AF ^ IY) >> 8) & 0xff))
+
+          case (0xad) => // XOR IYL
+            addTStates(9)
+            AF(xororTable(((AF >> 8) ^ IY) & 0xff))
+
+          case (0xae) => // XOR (IY+dd)
+            addTStates(19)
+            val adr: Int = IY + MMU.get8(PC)
+            PC.increment()
+            CHECK_LOG_BYTE(adr)
+            AF(xororTable(((AF >> 8) ^ MMU.get8(adr)) & 0xff))
+
+          case (0xb4) => // OR IYH
+            addTStates(9)
+            AF(xororTable(((AF | IY) >> 8) & 0xff))
+
+          case (0xb5) => // OR IYL
+            addTStates(9)
+            AF(xororTable(((AF >> 8) | IY) & 0xff))
+
+          case (0xbc) => // CP IYH
+            addTStates(9)
+            W(IYH.get8)
+            ICP(W)
+
+          case (0xbd) => // CP IYL
+            addTStates(9)
+            W(IYL.get8)
+            ICP(W)
+
+          case (0xbe) => // CP (IY+dd)
+            addTStates(9)
+            val adr: UInt = IY.get16 + MMU.get8(PC)
+            PC.increment()
+            CHECK_LOG_BYTE(adr.intValue)
+            W(MMU.get8(adr.intValue))
+            ICP(W)
+
+
+          case (0xcb) => // ******************************************************** FD CB Prefix
+            val adr: Int = IY + MMU.get8(PC)
+            PC.increment()
+            val op: Int = MMU.get8(PC)
+            fdcbprefix(op, adr)
+
+          case (0xe1) => // POP IY
+            addTStates(14)
+            CHECK_LOG_WORD(SP)
+            POP(IY)
+
+          case (0xe3) => // EX (SP),IY
+            addTStates(23)
+            CHECK_LOG_WORD(SP)
+            val tmp: UInt = IY.get16
+            POP(IY)
+            PUSH(tmp.intValue)
+
+          case (0xe5) => // PUSH IY
+            addTStates(15)
+            CHECK_LOG_WORD(SP - 2)
+            PUSH(IY)
+
+          case (0xe9) => // JP (IY)
+            addTStates(8)
+            PC(IY)
+
+          case (0xf9) => // LD SP,IY
+            addTStates(10)
+            SP(IY)
+
+          case _ =>
+            PC.decrement()
+        }
     }
   }
 
